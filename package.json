@@ -1,9 +1,11 @@
 {
   "name": "@dialectlabs/monitoring",
   "version": "0.1.0",
-  "main": "index.js",
   "repository": "git@github.com:dialectlabs/monitor.git",
   "license": "MIT",
+  "scripts": {
+    "build": "tsc --project ./"
+  },
   "dependencies": {
     "@dialectlabs/web3": "file:../protocol",
     "@jet-lab/jet-engine": "0.2.1",
