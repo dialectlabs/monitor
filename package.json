@@ -2,9 +2,13 @@
   "name": "@dialectlabs/monitor",
   "version": "0.1.0",
   "repository": "git@github.com:dialectlabs/monitor.git",
+  "author": "dialectlabs",
   "license": "MIT",
+  "module": "./lib/es/index.js",
+  "main": "./lib/es/index.js",
+  "types": "./lib/es/types.d.ts",
   "scripts": {
-    "build": "tsc --project ./"
+    "build": "rm -rf lib && tsc"
   },
   "dependencies": {
     "@dialectlabs/web3": "file:../protocol",

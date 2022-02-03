@@ -22,7 +22,7 @@
     "@cspotcode/source-map-consumer" "0.8.0"
 
 "@dialectlabs/web3@file:../protocol":
-  version "0.1.0"
+  version "0.1.2"
   dependencies:
     "@project-serum/anchor" "^0.18.2"
     "@solana/spl-token" "^0.1.8"

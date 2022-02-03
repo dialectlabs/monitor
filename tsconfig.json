@@ -15,15 +15,16 @@
     "moduleResolution": "node",
     "resolveJsonModule": true,
     "isolatedModules": true,
-    "outDir": "dist",
+    "outDir": "lib/cjs",
     "noEmit": false,
     "declaration": true
   },
   "include": [
-    "**/*.ts"
+    "**/*.ts",
   ],
   "exclude": [
     "node_modules",
+    "lib",
     "examples"
   ],
   "type": "module"
