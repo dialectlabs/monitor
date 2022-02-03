@@ -1,11 +1,12 @@
 import { Program } from '@project-serum/anchor';
 import { Event, EventSink, ResourceId } from '../monitor-api';
 import { Keypair } from '@solana/web3.js';
-import { getDialectForMembers, sendMessage } from '@dialectlabs/web3';
+import { sendMessage } from '@dialectlabs/web3';
+import { getDialectAccount } from './dialect-extensions';
 
 export class DialectEventSink implements EventSink {
   constructor(
-    private readonly program: Program,
+    private readonly dialectProgram: Program,
     private readonly monitorKeypair: Keypair,
   ) {}
 
@@ -13,23 +14,16 @@ export class DialectEventSink implements EventSink {
     const notificationText = `${event.message}`;
     return Promise.all(
       recipients
-        .map(
-          (it) =>
-            getDialectForMembers(this.program, [
-              {
-                publicKey: this.monitorKeypair.publicKey,
-                scopes: [true, true],
-              },
-              {
-                publicKey: it,
-                scopes: [true, true],
-              },
-            ]), // TODO: add api to get dialect by public keys in protocol
+        .map((it) =>
+          getDialectAccount(this.dialectProgram, [
+            this.monitorKeypair.publicKey,
+            it,
+          ]),
         )
         .map((dialectAccountPromise) =>
           dialectAccountPromise.then((dialectAccount) =>
             sendMessage(
-              this.program,
+              this.dialectProgram,
               dialectAccount,
               this.monitorKeypair,
               notificationText,

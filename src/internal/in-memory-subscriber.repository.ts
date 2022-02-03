@@ -37,7 +37,6 @@ export class InMemorySubscriberRepository implements SubscriberRepository {
 
   private async updateSubscribers() {
     const subscribers = await this.loadSubscribers();
-    console.log(`Found ${subscribers.length} subscribers`);
     subscribers.forEach((it) =>
       this.subscribers.set(it.resourceId.toString(), it),
     );

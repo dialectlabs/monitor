@@ -13,9 +13,9 @@ import {
   DialectDeletedEvent,
   EventSubscription,
   findDialects,
-  getDialectForMembers,
   subscribeToEvents,
 } from '@dialectlabs/web3';
+import { getDialectAccount } from './dialect-extensions';
 
 export class OnChainSubscriberRepository implements SubscriberRepository {
   private readonly eventSubscriptions: EventSubscription[] = [];
@@ -29,16 +29,10 @@ export class OnChainSubscriberRepository implements SubscriberRepository {
 
   async findByResourceId(resourceId: ResourceId): Promise<Subscriber | null> {
     try {
-      const dialectAccount = await getDialectForMembers(this.dialectProgram, [
-        {
-          publicKey: this.monitorKeypair.publicKey,
-          scopes: [true, true],
-        },
-        {
-          publicKey: resourceId,
-          scopes: [true, true],
-        },
-      ]); // TODO: add api to get dialect by public keys in protocol
+      const dialectAccount = await getDialectAccount(this.dialectProgram, [
+        this.monitorKeypair.publicKey,
+        resourceId,
+      ]);
       return this.extractSubscriber(dialectAccount);
     } catch (e) {
       console.error(e);
@@ -114,12 +108,9 @@ export class OnChainSubscriberRepository implements SubscriberRepository {
   private async findSubscriberInEvent(
     event: DialectCreatedEvent | DialectDeletedEvent,
   ): Promise<Subscriber> {
-    const dialectAccount = await getDialectForMembers(
+    const dialectAccount = await getDialectAccount(
       this.dialectProgram,
-      event.members.map((publicKey) => ({
-        publicKey,
-        scopes: [true, true],
-      })), // TODO: add api to get dialect by public keys in protocol
+      event.members,
     );
     return this.extractSubscriber(dialectAccount);
   }
