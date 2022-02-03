@@ -88,9 +88,7 @@ export class UnicastMonitor<T> implements Monitor<T> {
         concatMap((parameterObservable) => {
           const { resourceId, parameterId } =
             UnicastMonitor.deStringifyGroupingKey(parameterObservable.key);
-          console.log(parameterId);
           const pipeline = this.eventDetectionPipelines[parameterId]!; // safe to do this since we've already checked presence above
-          console.log(pipeline);
           return pipeline(parameterObservable).pipe(
             exhaustMap((event) =>
               from(this.eventSink.push(event, [resourceId])),
