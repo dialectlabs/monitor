@@ -4,9 +4,9 @@
   "repository": "git@github.com:dialectlabs/monitor.git",
   "author": "dialectlabs",
   "license": "MIT",
-  "module": "./lib/es/index.js",
-  "main": "./lib/es/index.js",
-  "types": "./lib/es/types.d.ts",
+  "module": "./lib/cjs/index.js",
+  "main": "./lib/cjs/index.js",
+  "types": "./lib/cjs/index.d.ts",
   "scripts": {
     "build": "rm -rf lib && tsc"
   },
