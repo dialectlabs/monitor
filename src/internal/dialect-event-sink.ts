@@ -1,5 +1,5 @@
 import { Program } from '@project-serum/anchor';
-import { Event, EventSink, ResourceId } from '../monitor-api';
+import { Event, EventSink, ResourceId } from '../monitor';
 import { Keypair } from '@solana/web3.js';
 import { sendMessage } from '@dialectlabs/web3';
 import { getDialectAccount } from './dialect-extensions';

@@ -12,7 +12,7 @@ import {
 } from 'rxjs';
 import { map, tap } from 'rxjs/operators';
 import { Duration } from 'luxon';
-import { Event, ParameterData } from './monitor-api';
+import { Event, ParameterData } from './monitor';
 
 export enum PipeLogLevel {
   TRACE,

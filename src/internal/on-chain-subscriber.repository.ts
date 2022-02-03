@@ -2,11 +2,9 @@ import { Program } from '@project-serum/anchor';
 import { Keypair, PublicKey } from '@solana/web3.js';
 import {
   ResourceId,
-  Subscriber,
-  SubscriberAddedEventHandler,
-  SubscriberRemovedEventHandler,
+  SubscriberEventHandler,
   SubscriberRepository,
-} from '../monitor-api';
+} from '../monitor';
 import {
   DialectAccount,
   DialectCreatedEvent,
@@ -27,13 +25,13 @@ export class OnChainSubscriberRepository implements SubscriberRepository {
     this.unsubscribeOnShutDown();
   }
 
-  async findByResourceId(resourceId: ResourceId): Promise<Subscriber | null> {
+  async findByResourceId(resourceId: ResourceId): Promise<ResourceId | null> {
     try {
       const dialectAccount = await getDialectAccount(this.dialectProgram, [
         this.monitorKeypair.publicKey,
         resourceId,
       ]);
-      return this.extractSubscriber(dialectAccount);
+      return this.findSubscriberInDialectAccount(dialectAccount);
     } catch (e) {
       console.error(e);
       return Promise.resolve(null);
@@ -41,57 +39,38 @@ export class OnChainSubscriberRepository implements SubscriberRepository {
   }
 
   private unsubscribeOnShutDown() {
-    process.on('SIGINT', async () => {
+    process.on('SIGINT', () => {
       console.log(
         `Canceling ${this.eventSubscriptions.length} dialect event subscriptions`,
       );
-      await Promise.all(
-        this.eventSubscriptions.map(async (it) => it.unsubscribe()),
-      );
+      Promise.all(this.eventSubscriptions.map(async (it) => it.unsubscribe()));
       console.log(
         `Canceled ${this.eventSubscriptions.length} dialect event subscriptions`,
       );
     });
   }
 
-  async findAll(): Promise<Subscriber[]> {
+  async findAll(): Promise<ResourceId[]> {
     const dialectAccounts = await findDialects(this.dialectProgram, {
       userPk: this.monitorKeypair.publicKey,
     });
     console.log(`Found ${dialectAccounts.length} accounts`);
-    return dialectAccounts.map((it) => this.extractSubscriber(it));
-  }
-
-  private extractSubscriber(dialectAccount: DialectAccount): Subscriber {
-    return {
-      resourceId: this.findSubscriberResource(
-        dialectAccount.dialect.members.map((it) => it.publicKey),
-      ),
-      dialectAccount,
-    };
-  }
-
-  private findSubscriberResource(publicKeys: PublicKey[]): ResourceId {
-    const subscriberPublicKey = publicKeys.find(
-      (it) => !it.equals(this.monitorKeypair.publicKey),
+    return dialectAccounts.map((dialectAccount) =>
+      this.findSubscriberInDialectAccount(dialectAccount),
     );
-    if (!subscriberPublicKey) {
-      throw new Error('Cannot find subscriber member');
-    }
-    return subscriberPublicKey;
   }
 
   async subscribe(
-    onSubscriberAdded: SubscriberAddedEventHandler,
-    onSubscriberRemoved: SubscriberRemovedEventHandler,
+    onSubscriberAdded: SubscriberEventHandler,
+    onSubscriberRemoved: SubscriberEventHandler,
   ) {
     const subscription = subscribeToEvents(
       this.dialectProgram,
       async (event) => {
         if (event.type === 'dialect-created' && this.shouldBeTracked(event)) {
-          const subscriber = await this.findSubscriberInEvent(event);
-          console.log(`Subscriber added  ${subscriber.resourceId}`);
-          await onSubscriberAdded(subscriber);
+          const subscriberResource = await this.findSubscriberInEvent(event);
+          console.log(`Subscriber added  ${subscriberResource}`);
+          await onSubscriberAdded(subscriberResource);
         }
         if (event.type === 'dialect-deleted' && this.shouldBeTracked(event)) {
           const subscriberResource = this.findSubscriberResource(event.members);
@@ -107,12 +86,28 @@ export class OnChainSubscriberRepository implements SubscriberRepository {
 
   private async findSubscriberInEvent(
     event: DialectCreatedEvent | DialectDeletedEvent,
-  ): Promise<Subscriber> {
+  ): Promise<ResourceId> {
     const dialectAccount = await getDialectAccount(
       this.dialectProgram,
       event.members,
     );
-    return this.extractSubscriber(dialectAccount);
+    return this.findSubscriberInDialectAccount(dialectAccount);
+  }
+
+  private findSubscriberInDialectAccount(dialectAccount: DialectAccount) {
+    return this.findSubscriberResource(
+      dialectAccount.dialect.members.map((it) => it.publicKey),
+    );
+  }
+
+  private findSubscriberResource(publicKeys: PublicKey[]): ResourceId {
+    const subscriberPublicKey = publicKeys.find(
+      (it) => !it.equals(this.monitorKeypair.publicKey),
+    );
+    if (!subscriberPublicKey) {
+      throw new Error('Cannot find subscriber member');
+    }
+    return subscriberPublicKey;
   }
 
   private shouldBeTracked(event: DialectCreatedEvent | DialectDeletedEvent) {

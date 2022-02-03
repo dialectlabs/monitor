@@ -1,15 +1,13 @@
 import {
   ResourceId,
-  Subscriber,
-  SubscriberAddedEventHandler,
-  SubscriberRemovedEventHandler,
+  SubscriberEventHandler,
   SubscriberRepository,
-} from '../monitor-api';
+} from '../monitor';
 
 export class InMemorySubscriberRepository implements SubscriberRepository {
-  private readonly subscribers: Map<String, Subscriber> = new Map<
+  private readonly subscribers: Map<String, ResourceId> = new Map<
     String,
-    Subscriber
+    ResourceId
   >();
 
   constructor(private readonly delegate: SubscriberRepository) {}
@@ -29,38 +27,33 @@ export class InMemorySubscriberRepository implements SubscriberRepository {
 
   private async subscribeToSubscriberEvents() {
     this.delegate.subscribe(
-      (subscriber) =>
-        this.subscribers.set(subscriber.resourceId.toString(), subscriber),
+      (subscriber) => this.subscribers.set(subscriber.toString(), subscriber),
       (resourceId) => this.subscribers.delete(resourceId.toString()),
     );
   }
 
   private async updateSubscribers() {
     const subscribers = await this.loadSubscribers();
-    subscribers.forEach((it) =>
-      this.subscribers.set(it.resourceId.toString(), it),
-    );
+    subscribers.forEach((it) => this.subscribers.set(it.toString(), it));
   }
 
   private async loadSubscribers() {
     const subscribers = await this.delegate.findAll();
-    subscribers.forEach((it) =>
-      this.subscribers.set(it.resourceId.toString(), it),
-    );
+    subscribers.forEach((it) => this.subscribers.set(it.toString(), it));
     return subscribers;
   }
 
-  async findAll(): Promise<Subscriber[]> {
+  async findAll(): Promise<ResourceId[]> {
     return Array(...this.subscribers.values());
   }
 
-  findByResourceId(resourceId: ResourceId): Promise<Subscriber | null> {
+  findByResourceId(resourceId: ResourceId): Promise<ResourceId | null> {
     return Promise.resolve(this.subscribers.get(resourceId.toString()) ?? null);
   }
 
   async subscribe(
-    onSubscriberAdded: SubscriberAddedEventHandler,
-    onSubscriberRemoved: SubscriberRemovedEventHandler,
+    onSubscriberAdded: SubscriberEventHandler,
+    onSubscriberRemoved: SubscriberEventHandler,
   ) {
     return this.delegate.subscribe(onSubscriberAdded, onSubscriberRemoved);
   }

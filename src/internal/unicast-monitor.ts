@@ -9,6 +9,7 @@ import {
   switchMap,
 } from 'rxjs';
 import {
+  DataPackage,
   EventDetectionPipeline,
   EventSink,
   Monitor,
@@ -18,7 +19,7 @@ import {
   ResourceId,
   ResourceParameterData,
   SubscriberRepository,
-} from '../monitor-api';
+} from '../monitor';
 import { Duration } from 'luxon';
 import { Operators } from '../monitor-pipeline-operators';
 import { PublicKey } from '@solana/web3.js';
@@ -41,8 +42,8 @@ export class UnicastMonitor<T> implements Monitor<T> {
   }
 
   private unsubscribeOnShutDown() {
-    process.on('SIGINT', async () => {
-      await this.stop();
+    process.on('SIGINT', () => {
+      this.stop();
     });
   }
 
@@ -61,11 +62,11 @@ export class UnicastMonitor<T> implements Monitor<T> {
       Duration.fromObject({ seconds: 5 }).toMillis(), // TODO: extract timer to parameters
     )
       .pipe(
-        switchMap((_) => this.subscriberRepository.findAll()),
-        switchMap((resources) =>
-          from(this.dataSource.extract(resources.map((it) => it.resourceId))),
+        switchMap(() => this.subscriberRepository.findAll()),
+        switchMap((resources: ResourceId[]) =>
+          from(this.dataSource.extract(resources)),
         ),
-        concatMap((it) => it),
+        concatMap((dataPackage: DataPackage<T>) => dataPackage),
       )
       .pipe(
         filter(({ parameterData: { parameterId } }) => {
@@ -104,6 +105,7 @@ export class UnicastMonitor<T> implements Monitor<T> {
     this.subscriptions.forEach((it) => it.unsubscribe());
     this.subscriptions = [];
     this.started = false;
+    this.dataSource.disconnect();
     return Promise.resolve();
   }
 

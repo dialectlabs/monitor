@@ -1,6 +1,5 @@
 import { Keypair, PublicKey } from '@solana/web3.js';
 import { Observable } from 'rxjs';
-import { DialectAccount } from '@dialectlabs/web3';
 import { UnicastMonitor } from './internal/unicast-monitor';
 import { InMemorySubscriberRepository } from './internal/in-memory-subscriber.repository';
 import { Program } from '@project-serum/anchor';
@@ -71,18 +70,7 @@ export type EventDetectionPipeline<T> = (
   parameterData: Observable<ParameterData<T>>,
 ) => Observable<Event>;
 
-/**
- * A resource, that have created a dialect with monitor => subscriber of events
- */
-export type Subscriber = {
-  resourceId: ResourceId;
-  dialectAccount: DialectAccount;
-};
-
-export type SubscriberAddedEventHandler = (subscriber: Subscriber) => any;
-export type SubscriberRemovedEventHandler = (
-  subscriberResourceId: ResourceId,
-) => any;
+export type SubscriberEventHandler = (subscriber: ResourceId) => any;
 
 /**
  * Repository containing all subscribers, also provides subscribe semantics to get updates
@@ -91,19 +79,19 @@ export interface SubscriberRepository {
   /**
    * Return all subscribers of the monitor
    */
-  findAll(): Promise<Subscriber[]>;
+  findAll(): Promise<ResourceId[]>;
 
   /**
    * Finds subscriber by resource id
    */
-  findByResourceId(resourceId: ResourceId): Promise<Subscriber | null>;
+  findByResourceId(resourceId: ResourceId): Promise<ResourceId | null>;
 
   /**
    * Can be used to set handlers to react if set of subscribers is changed
    */
   subscribe(
-    onSubscriberAdded: SubscriberAddedEventHandler,
-    onSubscriberRemoved: SubscriberRemovedEventHandler,
+    onSubscriberAdded: SubscriberEventHandler,
+    onSubscriberRemoved: SubscriberEventHandler,
   ): any;
 }
 
