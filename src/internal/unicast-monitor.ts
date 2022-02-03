@@ -5,6 +5,7 @@ import {
   from,
   groupBy,
   interval,
+  mergeMap,
   Subscription as RxJsSubscription,
   switchMap,
 } from 'rxjs';
@@ -33,7 +34,7 @@ export class UnicastMonitor<T> implements Monitor<T> {
     private readonly dataSource: PollableDataSource<T>,
     private readonly eventDetectionPipelines: Record<
       ParameterId,
-      EventDetectionPipeline<T>
+      EventDetectionPipeline<T>[]
     >,
     private readonly eventSink: EventSink,
     private readonly subscriberRepository: SubscriberRepository,
@@ -85,17 +86,22 @@ export class UnicastMonitor<T> implements Monitor<T> {
             element: ({ parameterData }) => parameterData,
           },
         ),
-        concatMap((parameterObservable) => {
+        mergeMap((parameterObservable) => {
           const { resourceId, parameterId } =
             UnicastMonitor.deStringifyGroupingKey(parameterObservable.key);
-          const pipeline = this.eventDetectionPipelines[parameterId]!; // safe to do this since we've already checked presence above
-          return pipeline(parameterObservable).pipe(
-            exhaustMap((event) =>
-              from(this.eventSink.push(event, [resourceId])),
+          const pipelines = this.eventDetectionPipelines[parameterId] ?? []; // safe to do this since we've already checked presence above
+          return pipelines.map((it) =>
+            it(parameterObservable).pipe(
+              exhaustMap((event) => {
+                console.log(parameterId, resourceId, JSON.stringify(event));
+                return from(this.eventSink.push(event, [resourceId]));
+              }),
             ),
           );
         }),
+        mergeMap((it) => it),
       )
+      .pipe()
       .pipe(...Operators.FlowControl.onErrorRetry())
       .subscribe();
     this.subscriptions.push(monitorPipelineSubscription);

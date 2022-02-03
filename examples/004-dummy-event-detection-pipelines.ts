@@ -9,6 +9,14 @@ export const dummyNumericPipeline: EventDetectionPipeline<number> = (source) =>
     ),
   );
 
+export const dummyNumericPipeline2: EventDetectionPipeline<number> = (source) =>
+  source.pipe(
+    Operators.Event.info(
+      'Dummy numeric pipeline2',
+      ({ parameterId, data }) => `Hello world from ${parameterId}: ${data}`,
+    ),
+  );
+
 export const dummyObjectPipeline: EventDetectionPipeline<SomeOnChainObject> = (
   source,
 ) =>

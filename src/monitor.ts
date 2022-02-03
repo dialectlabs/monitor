@@ -128,7 +128,7 @@ export interface Monitor<T> {
 export class Monitors {
   static createUnicast<T>(
     dataSource: PollableDataSource<T>,
-    eventDetectionPipelines: Record<ParameterId, EventDetectionPipeline<T>>,
+    eventDetectionPipelines: Record<ParameterId, EventDetectionPipeline<T>[]>,
     dialectProgram: Program,
     monitorKeypair: Keypair,
   ): Monitor<T> {
