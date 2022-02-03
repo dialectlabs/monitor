@@ -69,10 +69,10 @@ export class UnicastMonitor<T> implements Monitor<T> {
         concatMap((dataPackage: DataPackage<T>) => dataPackage),
       )
       .pipe(
-        filter(({ parameterData: { parameterId } }) => {
-          console.log(parameterId);
-          return this.eventDetectionPipelines[parameterId] !== undefined;
-        }),
+        filter(
+          ({ parameterData: { parameterId } }) =>
+            this.eventDetectionPipelines[parameterId] !== undefined,
+        ),
       )
       .pipe(
         groupBy<ResourceParameterData<T>, string, ParameterData<T>>(
@@ -88,7 +88,9 @@ export class UnicastMonitor<T> implements Monitor<T> {
         concatMap((parameterObservable) => {
           const { resourceId, parameterId } =
             UnicastMonitor.deStringifyGroupingKey(parameterObservable.key);
+          console.log(parameterId);
           const pipeline = this.eventDetectionPipelines[parameterId]!; // safe to do this since we've already checked presence above
+          console.log(pipeline);
           return pipeline(parameterObservable).pipe(
             exhaustMap((event) =>
               from(this.eventSink.push(event, [resourceId])),
@@ -109,16 +111,22 @@ export class UnicastMonitor<T> implements Monitor<T> {
     return Promise.resolve();
   }
 
-  // NB: rxjs cannot group by arbitrary type
+  // NB: rxjs cannot group by arbitrary type => need to concat using separator
+  private static GROUPING_KEY_SEPARATOR = `¿`;
+
   private static stringifyGroupingKey({
     resourceId,
     parameterId,
   }: GroupingKey) {
-    return `${resourceId.toString()}_${parameterId}`;
+    return `${resourceId.toString()}${
+      UnicastMonitor.GROUPING_KEY_SEPARATOR
+    }${parameterId}`;
   }
 
   private static deStringifyGroupingKey(groupingKey: string): GroupingKey {
-    const [resourceId, parameterId] = groupingKey.split('_');
+    const [resourceId, parameterId] = groupingKey.split(
+      UnicastMonitor.GROUPING_KEY_SEPARATOR,
+    );
     return {
       parameterId,
       resourceId: new PublicKey(resourceId),
