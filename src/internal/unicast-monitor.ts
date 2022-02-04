@@ -38,6 +38,9 @@ export class UnicastMonitor<T> implements Monitor<T> {
     >,
     private readonly eventSink: EventSink,
     private readonly subscriberRepository: SubscriberRepository,
+    private readonly pollInterval: Duration = Duration.fromObject({
+      seconds: 5,
+    }),
   ) {
     this.unsubscribeOnShutDown();
   }
@@ -59,9 +62,7 @@ export class UnicastMonitor<T> implements Monitor<T> {
   }
 
   private async startMonitorPipeline() {
-    const monitorPipelineSubscription = interval(
-      Duration.fromObject({ seconds: 5 }).toMillis(), // TODO: extract timer to parameters
-    )
+    const monitorPipelineSubscription = interval(this.pollInterval.toMillis())
       .pipe(
         switchMap(() => this.subscriberRepository.findAll()),
         switchMap((resources: ResourceId[]) =>

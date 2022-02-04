@@ -5,6 +5,7 @@ import { InMemorySubscriberRepository } from './internal/in-memory-subscriber.re
 import { Program } from '@project-serum/anchor';
 import { DialectEventSink } from './internal/dialect-event-sink';
 import { OnChainSubscriberRepository } from './internal/on-chain-subscriber.repository';
+import { Duration } from 'luxon';
 
 /**
  * Parameter id is a unique name of monitored entity
@@ -61,6 +62,7 @@ export interface DataSource<T> {
  */
 export interface PollableDataSource<T> extends DataSource<T> {
   extract(subscribers: ResourceId[]): Promise<DataPackage<T>>;
+  pollInterval(): Duration;
 }
 
 /**
@@ -131,6 +133,7 @@ export class Monitors {
     eventDetectionPipelines: Record<ParameterId, EventDetectionPipeline<T>[]>,
     dialectProgram: Program,
     monitorKeypair: Keypair,
+    pollInterval: Duration = Duration.fromObject({ seconds: 5 }),
   ): Monitor<T> {
     const eventSink = new DialectEventSink(dialectProgram, monitorKeypair);
     const subscriberRepository = InMemorySubscriberRepository.decorate(
@@ -141,6 +144,7 @@ export class Monitors {
       eventDetectionPipelines,
       eventSink,
       subscriberRepository,
+      pollInterval,
     );
   }
 }
