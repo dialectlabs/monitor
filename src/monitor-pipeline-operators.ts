@@ -36,21 +36,24 @@ export class Operators {
     static filter<T>(predicate: (data: T) => boolean): OperatorFunction<T, T> {
       return filter(predicate);
     }
+    static map<T, R>(mapper: (data: T) => R): OperatorFunction<T, R> {
+      return map(mapper);
+    }
   };
 
   static Window = class {
-    static fixedSize(size: number): OperatorFunction<number, number[]> {
+    static fixedSize<T>(size: number): OperatorFunction<T, T[]> {
       return bufferCount(size);
     }
 
-    static fixedSizeSliding(size: number): OperatorFunction<number, number[]> {
-      return scan<number, number[]>(
+    static fixedSizeSliding<T>(size: number): OperatorFunction<T, T[]> {
+      return scan<T, T[]>(
         (values, value) => values.slice(1 - size).concat(value),
         [],
       );
     }
 
-    static fixedTime(timeSpan: Duration): OperatorFunction<number, number[]> {
+    static fixedTime<T>(timeSpan: Duration): OperatorFunction<T, T[]> {
       return bufferTime(timeSpan.milliseconds);
     }
   };
