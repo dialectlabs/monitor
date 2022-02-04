@@ -1,12 +1,11 @@
 import {
   EventDetectionPipeline,
-  EventSink,
+  Monitors,
   ParameterId,
   PipeLogLevel,
   PollableDataSource,
   setPipeLogLevel,
 } from '../src';
-import { UnicastMonitor } from '../src/internal/unicast-monitor';
 import {
   NUMERIC_PARAMETER1_ID,
   NUMERIC_PARAMETER2_ID,
@@ -19,9 +18,7 @@ import {
 } from './004-dummy-event-detection-pipelines';
 import { ConsoleEventSink } from './005-console-event-sink';
 import { DummySubscriberRepository } from './003-dummy-subscriber-repository';
-import { MonitorFactory } from '../src';
 import { Duration } from 'luxon';
-import { sleep } from '@dialectlabs/web3/lib/es';
 import { Keypair } from '@solana/web3.js';
 
 const numericDataSource: PollableDataSource<number> = new NumericDataSource();
@@ -34,7 +31,7 @@ const numericDataSourceEventDetectionPipelines: Record<
 ]);
 
 const dummySubscriberRepository = new DummySubscriberRepository();
-const monitorFactory = new MonitorFactory({
+const monitorFactory = Monitors.factory({
   eventSink: new ConsoleEventSink(),
   subscriberRepository: dummySubscriberRepository,
 });

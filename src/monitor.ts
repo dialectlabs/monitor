@@ -1,11 +1,8 @@
 import { Keypair, PublicKey } from '@solana/web3.js';
-import { concatMap, from, interval, Observable, switchMap } from 'rxjs';
-import { UnicastMonitor } from './internal/unicast-monitor';
-import { InMemorySubscriberRepository } from './internal/in-memory-subscriber.repository';
+import { Observable } from 'rxjs';
 import { Program } from '@project-serum/anchor';
-import { DialectEventSink } from './internal/dialect-event-sink';
-import { OnChainSubscriberRepository } from './internal/on-chain-subscriber.repository';
 import { Duration } from 'luxon';
+import { DefaultMonitorFactory } from './internal/default-monitor-factory';
 
 /**
  * Parameter id is a unique name of monitored entity
@@ -125,6 +122,15 @@ export interface Monitor<T> {
 
 export type SubscriberEvent = 'added' | 'removed';
 
+/**
+ * A set of factory methods to create monitors
+ */
+export class Monitors {
+  static factory(props: MonitorFactoryProps): MonitorFactory {
+    return new DefaultMonitorFactory(props);
+  }
+}
+
 export interface MonitorFactoryProps {
   dialectProgram?: Program;
   monitorKeypair?: Keypair;
@@ -132,106 +138,14 @@ export interface MonitorFactoryProps {
   subscriberRepository?: SubscriberRepository;
 }
 
-/**
- * A set of factory methods to create monitors
- */
-export class MonitorFactory {
-  private readonly eventSink: EventSink;
-  private readonly subscriberRepository: SubscriberRepository;
-
-  constructor({
-    dialectProgram,
-    monitorKeypair,
-    eventSink,
-    subscriberRepository,
-  }: MonitorFactoryProps) {
-    if (dialectProgram && monitorKeypair) {
-      this.eventSink = new DialectEventSink(dialectProgram, monitorKeypair);
-      this.subscriberRepository = InMemorySubscriberRepository.decorate(
-        new OnChainSubscriberRepository(dialectProgram, monitorKeypair),
-      );
-    }
-    if (eventSink) {
-      this.eventSink = eventSink;
-    }
-    if (subscriberRepository) {
-      this.subscriberRepository = subscriberRepository;
-    }
-    // @ts-ignore
-    if (!this.eventSink || !this.subscriberRepository) {
-      throw new Error(
-        'Please specify either dialectProgram & monitorKeypair or eventSink & subscriberRepository',
-      );
-    }
-  }
-
+export interface MonitorFactory {
   createUnicastMonitor<T>(
     dataSource: PollableDataSource<T>,
     eventDetectionPipelines: Record<ParameterId, EventDetectionPipeline<T>[]>,
-    pollInterval: Duration = Duration.fromObject({ seconds: 10 }),
-  ): Monitor<T> {
-    const observableDataSource = this.toObservable(
-      dataSource,
-      pollInterval,
-      this.subscriberRepository,
-    );
-    return new UnicastMonitor<T>(
-      observableDataSource,
-      eventDetectionPipelines,
-      this.eventSink,
-    );
-  }
-
-  private toObservable<T>(
-    dataSource: PollableDataSource<T>,
     pollInterval: Duration,
-    subscriberRepository: SubscriberRepository,
-  ) {
-    const observableDataSource: Observable<ResourceParameterData<T>> = interval(
-      pollInterval.toMillis(),
-    ).pipe(
-      switchMap(() => subscriberRepository.findAll()),
-      switchMap((resources: ResourceId[]) =>
-        from(dataSource.extract(resources)),
-      ),
-      concatMap((dataPackage: DataPackage<T>) => dataPackage),
-    );
-    return observableDataSource;
-  }
+  ): Monitor<T>;
 
   createSubscriberEventMonitor(
     eventDetectionPipelines: EventDetectionPipeline<SubscriberEvent>[],
-  ): Monitor<SubscriberEvent> {
-    const parameterId = 'subscriber-state';
-    const observableDataSource: Observable<
-      ResourceParameterData<SubscriberEvent>
-    > = new Observable<ResourceParameterData<SubscriberEvent>>((subscriber) =>
-      this.subscriberRepository.subscribe(
-        (resourceId) =>
-          subscriber.next({
-            resourceId,
-            parameterData: {
-              parameterId: 'subscriber-state',
-              data: 'added',
-            },
-          }),
-        (resourceId) =>
-          subscriber.next({
-            resourceId,
-            parameterData: {
-              parameterId: 'subscriber-state',
-              data: 'removed',
-            },
-          }),
-      ),
-    );
-    const eventDetectionPipelinesRecord = Object.fromEntries([
-      [parameterId, eventDetectionPipelines],
-    ]);
-    return new UnicastMonitor<SubscriberEvent>(
-      observableDataSource,
-      eventDetectionPipelinesRecord,
-      this.eventSink,
-    );
-  }
+  ): Monitor<SubscriberEvent>;
 }
