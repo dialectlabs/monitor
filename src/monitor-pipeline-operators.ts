@@ -12,7 +12,7 @@ import {
 } from 'rxjs';
 import { map, tap } from 'rxjs/operators';
 import { Duration } from 'luxon';
-import { Event, ParameterData } from './monitor';
+import { Event, ResourceParameterData } from './monitor';
 
 export enum PipeLogLevel {
   TRACE,
@@ -29,8 +29,8 @@ export function setPipeLogLevel(level: PipeLogLevel) {
 
 export class Operators {
   static Transform = class {
-    static getRaw<T>(): OperatorFunction<ParameterData<T>, T> {
-      return map(({ data }) => data);
+    static getRaw<T>(): OperatorFunction<ResourceParameterData<T>, T> {
+      return map(({ parameterData: { data } }) => data);
     }
   };
 
