@@ -1,4 +1,4 @@
-import { EventSink, Event, ResourceId } from '../';
+import { EventSink, Event, ResourceId } from '../src';
 
 export class ConsoleEventSink implements EventSink {
   push(event: Event, recipients: ResourceId[]): Promise<void> {

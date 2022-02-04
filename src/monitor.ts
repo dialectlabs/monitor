@@ -67,7 +67,7 @@ export interface PollableDataSource<T> extends DataSource<T> {
  * A set of transformations that are executed on-top of unbound data stream to detect events
  */
 export type EventDetectionPipeline<T> = (
-  parameterData: Observable<ParameterData<T>>,
+  source: Observable<ResourceParameterData<T>>,
 ) => Observable<Event>;
 
 export type SubscriberEventHandler = (subscriber: ResourceId) => any;

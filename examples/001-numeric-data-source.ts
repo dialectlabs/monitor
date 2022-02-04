@@ -3,7 +3,7 @@ import {
   DataSourceMetadata,
   PollableDataSource,
   ResourceId,
-} from '../';
+} from '../src';
 
 export const NUMERIC_PARAMETER1_ID = 'NUMERIC_PARAMETER1_ID';
 export const NUMERIC_PARAMETER2_ID = 'NUMERIC_PARAMETER2_ID';

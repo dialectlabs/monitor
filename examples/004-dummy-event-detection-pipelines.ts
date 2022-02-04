@@ -1,20 +1,24 @@
-import { EventDetectionPipeline, Operators } from '../';
+import { EventDetectionPipeline, Operators, PipeLogLevel } from '../src';
 import { SomeOnChainObject } from './002-object-data-source';
 
 export const dummyNumericPipeline: EventDetectionPipeline<number> = (source) =>
   source.pipe(
     Operators.Event.info(
       'Dummy numeric pipeline',
-      ({ parameterId, data }) => `Hello world from ${parameterId}: ${data}`,
+      ({ resourceId, parameterData: { parameterId, data } }) =>
+        `Hello world from (${resourceId}, ${parameterId}): ${data}`,
     ),
+    Operators.Utility.log(PipeLogLevel.INFO),
   );
 
 export const dummyNumericPipeline2: EventDetectionPipeline<number> = (source) =>
   source.pipe(
     Operators.Event.info(
-      'Dummy numeric pipeline2',
-      ({ parameterId, data }) => `Hello world from ${parameterId}: ${data}`,
+      'Dummy numeric pipeline 2',
+      ({ resourceId, parameterData: { parameterId, data } }) =>
+        `Hello world from (${resourceId}, ${parameterId}): ${data}`,
     ),
+    Operators.Utility.log(PipeLogLevel.INFO),
   );
 
 export const dummyObjectPipeline: EventDetectionPipeline<SomeOnChainObject> = (
@@ -22,7 +26,9 @@ export const dummyObjectPipeline: EventDetectionPipeline<SomeOnChainObject> = (
 ) =>
   source.pipe(
     Operators.Event.info(
-      'Dummy object pipeline',
-      ({ parameterId, data }) => `Hello world from ${parameterId}: ${data}`,
+      'Dummy object pipeline 2',
+      ({ resourceId, parameterData: { parameterId, data } }) =>
+        `Hello world from (${resourceId}, ${parameterId}): ${data}`,
     ),
+    Operators.Utility.log(PipeLogLevel.INFO),
   );

@@ -3,7 +3,7 @@ import {
   DataSourceMetadata,
   PollableDataSource,
   ResourceId,
-} from '../';
+} from '../src';
 
 export type SomeOnChainObject = {
   name: string;

@@ -2,8 +2,10 @@ import {
   EventDetectionPipeline,
   EventSink,
   ParameterId,
+  PipeLogLevel,
   PollableDataSource,
-} from '../';
+  setPipeLogLevel,
+} from '../src';
 import { UnicastMonitor } from '../src/internal/unicast-monitor';
 import {
   NUMERIC_PARAMETER1_ID,
@@ -35,4 +37,5 @@ const unicastMonitor = new UnicastMonitor(
   subscriberRepository,
 );
 
+setPipeLogLevel(PipeLogLevel.INFO);
 unicastMonitor.start();

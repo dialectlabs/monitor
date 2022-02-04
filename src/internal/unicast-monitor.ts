@@ -4,6 +4,7 @@ import {
   filter,
   from,
   groupBy,
+  GroupedObservable,
   interval,
   mergeMap,
   Subscription as RxJsSubscription,
@@ -14,7 +15,6 @@ import {
   EventDetectionPipeline,
   EventSink,
   Monitor,
-  ParameterData,
   ParameterId,
   PollableDataSource,
   ResourceId,
@@ -76,29 +76,35 @@ export class UnicastMonitor<T> implements Monitor<T> {
         ),
       )
       .pipe(
-        groupBy<ResourceParameterData<T>, string, ParameterData<T>>(
+        groupBy<ResourceParameterData<T>, string, ResourceParameterData<T>>(
           ({ resourceId, parameterData: { parameterId } }) =>
             UnicastMonitor.stringifyGroupingKey({
               resourceId,
               parameterId,
             }),
           {
-            element: ({ parameterData }) => parameterData,
+            element: (it) => it,
           },
         ),
-        mergeMap((parameterObservable) => {
-          const { resourceId, parameterId } =
-            UnicastMonitor.deStringifyGroupingKey(parameterObservable.key);
-          const pipelines = this.eventDetectionPipelines[parameterId] ?? []; // safe to do this since we've already checked presence above
-          return pipelines.map((it) =>
-            it(parameterObservable).pipe(
-              exhaustMap((event) => {
-                console.log(parameterId, resourceId, JSON.stringify(event));
-                return from(this.eventSink.push(event, [resourceId]));
-              }),
-            ),
-          );
-        }),
+        mergeMap(
+          (
+            resourceParameterData: GroupedObservable<
+              string,
+              ResourceParameterData<T>
+            >,
+          ) => {
+            const { resourceId, parameterId } =
+              UnicastMonitor.deStringifyGroupingKey(resourceParameterData.key);
+            const pipelines = this.eventDetectionPipelines[parameterId] ?? []; // safe to do this since we've already checked presence above
+            return pipelines.map((pipeline) => {
+              return pipeline(resourceParameterData).pipe(
+                exhaustMap((event) =>
+                  from(this.eventSink.push(event, [resourceId])),
+                ),
+              );
+            });
+          },
+        ),
         mergeMap((it) => it),
       )
       .pipe()

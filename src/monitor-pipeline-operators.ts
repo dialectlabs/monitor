@@ -136,13 +136,10 @@ export class Operators {
   };
 
   static Utility = class {
-    static log<T>(
-      level: PipeLogLevel,
-      message: string,
-    ): MonoTypeOperatorFunction<T> {
+    static log<T>(level: PipeLogLevel): MonoTypeOperatorFunction<T> {
       return tap((value: T) => {
         if (level >= pipeLogLevel) {
-          console.log(message + ': ', value);
+          console.log(value);
         }
         return value;
       });

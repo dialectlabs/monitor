@@ -1,4 +1,8 @@
-import { ResourceId, SubscriberEventHandler, SubscriberRepository } from '../';
+import {
+  ResourceId,
+  SubscriberEventHandler,
+  SubscriberRepository,
+} from '../src';
 import { Keypair } from '@solana/web3.js';
 
 export class DummySubscriberRepository implements SubscriberRepository {
