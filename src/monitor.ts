@@ -62,7 +62,6 @@ export interface DataSource<T> {
  */
 export interface PollableDataSource<T> extends DataSource<T> {
   extract(subscribers: ResourceId[]): Promise<DataPackage<T>>;
-  pollInterval(): Duration;
 }
 
 /**
