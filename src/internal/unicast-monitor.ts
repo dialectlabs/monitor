@@ -78,7 +78,7 @@ export class UnicastMonitor<T> implements Monitor<T> {
           ) => {
             const { resourceId, parameterId } =
               UnicastMonitor.deStringifyGroupingKey(resourceParameterData.key);
-            const pipelines = this.eventDetectionPipelines[parameterId] ?? []; // safe to do this since we've already checked presence above
+            const pipelines = this.eventDetectionPipelines[parameterId] ?? [];
             return pipelines.map((pipeline) => {
               return pipeline(resourceParameterData).pipe(
                 exhaustMap((event) =>
