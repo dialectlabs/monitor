@@ -11,6 +11,9 @@ export class DummySubscriberRepository implements SubscriberRepository {
     new Keypair().publicKey,
   ];
 
+  private readonly onSubscriberAddedHandlers: SubscriberEventHandler[] = [];
+  private readonly onSubscriberRemovedHandlers: SubscriberEventHandler[] = [];
+
   findAll(): Promise<ResourceId[]> {
     return Promise.resolve(this.subscribers);
   }
@@ -24,5 +27,13 @@ export class DummySubscriberRepository implements SubscriberRepository {
   subscribe(
     onSubscriberAdded: SubscriberEventHandler,
     onSubscriberRemoved: SubscriberEventHandler,
-  ): any {}
+  ): any {
+    this.onSubscriberAddedHandlers.push(onSubscriberAdded);
+    this.onSubscriberRemovedHandlers.push(onSubscriberRemoved);
+  }
+
+  addNewSubscriber(resourceId: ResourceId) {
+    this.subscribers.push(resourceId);
+    this.onSubscriberAddedHandlers.forEach((it) => it(resourceId));
+  }
 }

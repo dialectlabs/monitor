@@ -1,27 +1,21 @@
 import {
-  concatMap,
   exhaustMap,
   filter,
   from,
   groupBy,
   GroupedObservable,
-  interval,
   mergeMap,
+  Observable,
   Subscription as RxJsSubscription,
-  switchMap,
 } from 'rxjs';
 import {
-  DataPackage,
   EventDetectionPipeline,
   EventSink,
   Monitor,
   ParameterId,
-  PollableDataSource,
   ResourceId,
   ResourceParameterData,
-  SubscriberRepository,
 } from '../monitor';
-import { Duration } from 'luxon';
 import { Operators } from '../monitor-pipeline-operators';
 import { PublicKey } from '@solana/web3.js';
 
@@ -31,16 +25,12 @@ export class UnicastMonitor<T> implements Monitor<T> {
   private subscriptions: RxJsSubscription[] = [];
 
   constructor(
-    private readonly dataSource: PollableDataSource<T>,
+    private readonly dataSource: Observable<ResourceParameterData<T>>,
     private readonly eventDetectionPipelines: Record<
       ParameterId,
       EventDetectionPipeline<T>[]
     >,
     private readonly eventSink: EventSink,
-    private readonly subscriberRepository: SubscriberRepository,
-    private readonly pollInterval: Duration = Duration.fromObject({
-      seconds: 5,
-    }),
   ) {
     this.unsubscribeOnShutDown();
   }
@@ -56,20 +46,12 @@ export class UnicastMonitor<T> implements Monitor<T> {
       console.log('Already started');
       return;
     }
-    await this.dataSource.connect();
     this.startMonitorPipeline();
     this.started = true;
   }
 
   private async startMonitorPipeline() {
-    const monitorPipelineSubscription = interval(this.pollInterval.toMillis())
-      .pipe(
-        switchMap(() => this.subscriberRepository.findAll()),
-        switchMap((resources: ResourceId[]) =>
-          from(this.dataSource.extract(resources)),
-        ),
-        concatMap((dataPackage: DataPackage<T>) => dataPackage),
-      )
+    const monitorPipelineSubscription = this.dataSource
       .pipe(
         filter(
           ({ parameterData: { parameterId } }) =>
@@ -118,7 +100,6 @@ export class UnicastMonitor<T> implements Monitor<T> {
     this.subscriptions.forEach((it) => it.unsubscribe());
     this.subscriptions = [];
     this.started = false;
-    this.dataSource.disconnect();
     return Promise.resolve();
   }
 

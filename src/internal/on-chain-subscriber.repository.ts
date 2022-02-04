@@ -16,7 +16,10 @@ import {
 import { getDialectAccount } from './dialect-extensions';
 
 export class OnChainSubscriberRepository implements SubscriberRepository {
-  private readonly eventSubscriptions: EventSubscription[] = [];
+  private eventSubscription?: EventSubscription;
+
+  private readonly onSubscriberAddedHandlers: SubscriberEventHandler[] = [];
+  private readonly onSubscriberRemovedHandlers: SubscriberEventHandler[] = [];
 
   constructor(
     private dialectProgram: Program,
@@ -40,13 +43,7 @@ export class OnChainSubscriberRepository implements SubscriberRepository {
 
   private unsubscribeOnShutDown() {
     process.on('SIGINT', () => {
-      console.log(
-        `Canceling ${this.eventSubscriptions.length} dialect event subscriptions`,
-      );
-      Promise.all(this.eventSubscriptions.map(async (it) => it.unsubscribe()));
-      console.log(
-        `Canceled ${this.eventSubscriptions.length} dialect event subscriptions`,
-      );
+      this.eventSubscription && this.eventSubscription.unsubscribe();
     });
   }
 
@@ -61,27 +58,37 @@ export class OnChainSubscriberRepository implements SubscriberRepository {
   }
 
   async subscribe(
-    onSubscriberAdded: SubscriberEventHandler,
-    onSubscriberRemoved: SubscriberEventHandler,
+    onSubscriberAdded?: SubscriberEventHandler,
+    onSubscriberRemoved?: SubscriberEventHandler,
   ) {
-    const subscription = subscribeToEvents(
-      this.dialectProgram,
-      async (event) => {
-        if (event.type === 'dialect-created' && this.shouldBeTracked(event)) {
-          const subscriberResource = await this.findSubscriberInEvent(event);
-          console.log(`Subscriber added  ${subscriberResource}`);
-          await onSubscriberAdded(subscriberResource);
-        }
-        if (event.type === 'dialect-deleted' && this.shouldBeTracked(event)) {
-          const subscriberResource = this.findSubscriberResource(event.members);
-          console.log(`Subscriber removed  ${subscriberResource}`);
-          await onSubscriberRemoved(subscriberResource);
-        }
-        return Promise.resolve();
-      },
-    );
-    subscription.then((it) => this.eventSubscriptions.push(it));
-    return subscription;
+    onSubscriberAdded && this.onSubscriberAddedHandlers.push(onSubscriberAdded);
+    onSubscriberRemoved &&
+      this.onSubscriberRemovedHandlers.push(onSubscriberRemoved);
+    if (!this.eventSubscription) {
+      this.eventSubscription = await subscribeToEvents(
+        this.dialectProgram,
+        async (event) => {
+          if (event.type === 'dialect-created' && this.shouldBeTracked(event)) {
+            const subscriberResource = await this.findSubscriberInEvent(event);
+            console.log(`Subscriber added  ${subscriberResource}`);
+            this.onSubscriberAddedHandlers.forEach((it) =>
+              it(subscriberResource),
+            );
+          }
+          if (event.type === 'dialect-deleted' && this.shouldBeTracked(event)) {
+            const subscriberResource = this.findSubscriberResource(
+              event.members,
+            );
+            console.log(`Subscriber removed  ${subscriberResource}`);
+            this.onSubscriberRemovedHandlers.forEach((it) =>
+              it(subscriberResource),
+            );
+          }
+          return Promise.resolve();
+        },
+      );
+    }
+    return;
   }
 
   private async findSubscriberInEvent(

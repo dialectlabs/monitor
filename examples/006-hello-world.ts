@@ -15,12 +15,16 @@ import {
 import {
   dummyNumericPipeline,
   dummyNumericPipeline2,
+  welcomeMessagePipeline,
 } from './004-dummy-event-detection-pipelines';
 import { ConsoleEventSink } from './005-console-event-sink';
 import { DummySubscriberRepository } from './003-dummy-subscriber-repository';
+import { MonitorFactory } from '../src';
+import { Duration } from 'luxon';
+import { sleep } from '@dialectlabs/web3/lib/es';
+import { Keypair } from '@solana/web3.js';
 
 const numericDataSource: PollableDataSource<number> = new NumericDataSource();
-const subscriberRepository = new DummySubscriberRepository();
 const numericDataSourceEventDetectionPipelines: Record<
   ParameterId,
   EventDetectionPipeline<number>[]
@@ -28,13 +32,26 @@ const numericDataSourceEventDetectionPipelines: Record<
   [NUMERIC_PARAMETER1_ID, [dummyNumericPipeline, dummyNumericPipeline2]],
   [NUMERIC_PARAMETER2_ID, [dummyNumericPipeline]],
 ]);
-const eventSink: EventSink = new ConsoleEventSink();
 
-const unicastMonitor = new UnicastMonitor(
+const dummySubscriberRepository = new DummySubscriberRepository();
+const monitorFactory = new MonitorFactory({
+  eventSink: new ConsoleEventSink(),
+  subscriberRepository: dummySubscriberRepository,
+});
+
+const subscriberEventMonitor = monitorFactory.createSubscriberEventMonitor([
+  welcomeMessagePipeline,
+]);
+subscriberEventMonitor
+  .start()
+  .then(() =>
+    dummySubscriberRepository.addNewSubscriber(new Keypair().publicKey),
+  );
+
+const unicastMonitor = monitorFactory.createUnicastMonitor(
   numericDataSource,
   numericDataSourceEventDetectionPipelines,
-  eventSink,
-  subscriberRepository,
+  Duration.fromObject({ seconds: 5 }),
 );
 
 setPipeLogLevel(PipeLogLevel.INFO);

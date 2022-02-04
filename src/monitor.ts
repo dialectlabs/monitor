@@ -1,5 +1,5 @@
 import { Keypair, PublicKey } from '@solana/web3.js';
-import { Observable } from 'rxjs';
+import { concatMap, from, interval, Observable, switchMap } from 'rxjs';
 import { UnicastMonitor } from './internal/unicast-monitor';
 import { InMemorySubscriberRepository } from './internal/in-memory-subscriber.repository';
 import { Program } from '@project-serum/anchor';
@@ -91,8 +91,8 @@ export interface SubscriberRepository {
    * Can be used to set handlers to react if set of subscribers is changed
    */
   subscribe(
-    onSubscriberAdded: SubscriberEventHandler,
-    onSubscriberRemoved: SubscriberEventHandler,
+    onSubscriberAdded?: SubscriberEventHandler,
+    onSubscriberRemoved?: SubscriberEventHandler,
   ): any;
 }
 
@@ -123,27 +123,115 @@ export interface Monitor<T> {
   stop(): Promise<void>;
 }
 
+export type SubscriberEvent = 'added' | 'removed';
+
+export interface MonitorFactoryProps {
+  dialectProgram?: Program;
+  monitorKeypair?: Keypair;
+  eventSink?: EventSink;
+  subscriberRepository?: SubscriberRepository;
+}
+
 /**
  * A set of factory methods to create monitors
  */
-export class Monitors {
-  static createUnicast<T>(
+export class MonitorFactory {
+  private readonly eventSink: EventSink;
+  private readonly subscriberRepository: SubscriberRepository;
+
+  constructor({
+    dialectProgram,
+    monitorKeypair,
+    eventSink,
+    subscriberRepository,
+  }: MonitorFactoryProps) {
+    if (dialectProgram && monitorKeypair) {
+      this.eventSink = new DialectEventSink(dialectProgram, monitorKeypair);
+      this.subscriberRepository = InMemorySubscriberRepository.decorate(
+        new OnChainSubscriberRepository(dialectProgram, monitorKeypair),
+      );
+    }
+    if (eventSink) {
+      this.eventSink = eventSink;
+    }
+    if (subscriberRepository) {
+      this.subscriberRepository = subscriberRepository;
+    }
+    // @ts-ignore
+    if (!this.eventSink || !this.subscriberRepository) {
+      throw new Error(
+        'Please specify either dialectProgram & monitorKeypair or eventSink & subscriberRepository',
+      );
+    }
+  }
+
+  createUnicastMonitor<T>(
     dataSource: PollableDataSource<T>,
     eventDetectionPipelines: Record<ParameterId, EventDetectionPipeline<T>[]>,
-    dialectProgram: Program,
-    monitorKeypair: Keypair,
-    pollInterval: Duration = Duration.fromObject({ seconds: 5 }),
+    pollInterval: Duration = Duration.fromObject({ seconds: 10 }),
   ): Monitor<T> {
-    const eventSink = new DialectEventSink(dialectProgram, monitorKeypair);
-    const subscriberRepository = InMemorySubscriberRepository.decorate(
-      new OnChainSubscriberRepository(dialectProgram, monitorKeypair),
+    const observableDataSource = this.toObservable(
+      dataSource,
+      pollInterval,
+      this.subscriberRepository,
     );
     return new UnicastMonitor<T>(
-      dataSource,
+      observableDataSource,
       eventDetectionPipelines,
-      eventSink,
-      subscriberRepository,
-      pollInterval,
+      this.eventSink,
+    );
+  }
+
+  private toObservable<T>(
+    dataSource: PollableDataSource<T>,
+    pollInterval: Duration,
+    subscriberRepository: SubscriberRepository,
+  ) {
+    const observableDataSource: Observable<ResourceParameterData<T>> = interval(
+      pollInterval.toMillis(),
+    ).pipe(
+      switchMap(() => subscriberRepository.findAll()),
+      switchMap((resources: ResourceId[]) =>
+        from(dataSource.extract(resources)),
+      ),
+      concatMap((dataPackage: DataPackage<T>) => dataPackage),
+    );
+    return observableDataSource;
+  }
+
+  createSubscriberEventMonitor(
+    eventDetectionPipelines: EventDetectionPipeline<SubscriberEvent>[],
+  ): Monitor<SubscriberEvent> {
+    const parameterId = 'subscriber-state';
+    const observableDataSource: Observable<
+      ResourceParameterData<SubscriberEvent>
+    > = new Observable<ResourceParameterData<SubscriberEvent>>((subscriber) =>
+      this.subscriberRepository.subscribe(
+        (resourceId) =>
+          subscriber.next({
+            resourceId,
+            parameterData: {
+              parameterId: 'subscriber-state',
+              data: 'added',
+            },
+          }),
+        (resourceId) =>
+          subscriber.next({
+            resourceId,
+            parameterData: {
+              parameterId: 'subscriber-state',
+              data: 'removed',
+            },
+          }),
+      ),
+    );
+    const eventDetectionPipelinesRecord = Object.fromEntries([
+      [parameterId, eventDetectionPipelines],
+    ]);
+    return new UnicastMonitor<SubscriberEvent>(
+      observableDataSource,
+      eventDetectionPipelinesRecord,
+      this.eventSink,
     );
   }
 }

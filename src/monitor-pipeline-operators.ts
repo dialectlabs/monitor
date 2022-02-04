@@ -32,6 +32,10 @@ export class Operators {
     static getRaw<T>(): OperatorFunction<ResourceParameterData<T>, T> {
       return map(({ parameterData: { data } }) => data);
     }
+
+    static filter<T>(predicate: (data: T) => boolean): OperatorFunction<T, T> {
+      return filter(predicate);
+    }
   };
 
   static Window = class {

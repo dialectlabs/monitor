@@ -1,4 +1,9 @@
-import { EventDetectionPipeline, Operators, PipeLogLevel } from '../src';
+import {
+  EventDetectionPipeline,
+  Operators,
+  PipeLogLevel,
+  SubscriberEvent,
+} from '../src';
 import { SomeOnChainObject } from './002-object-data-source';
 
 export const dummyNumericPipeline: EventDetectionPipeline<number> = (source) =>
@@ -32,3 +37,17 @@ export const dummyObjectPipeline: EventDetectionPipeline<SomeOnChainObject> = (
     ),
     Operators.Utility.log(PipeLogLevel.INFO),
   );
+
+export const welcomeMessagePipeline: EventDetectionPipeline<SubscriberEvent> = (
+  source,
+) =>
+  source
+    .pipe(Operators.Utility.log(PipeLogLevel.INFO))
+    .pipe(
+      Operators.Transform.filter(
+        ({ parameterData: { data } }) => data === 'added',
+      ),
+    )
+    .pipe(
+      Operators.Event.info('Welcome', () => `Welcome message from example`),
+    );

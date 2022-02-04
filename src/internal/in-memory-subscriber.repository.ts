@@ -52,8 +52,8 @@ export class InMemorySubscriberRepository implements SubscriberRepository {
   }
 
   async subscribe(
-    onSubscriberAdded: SubscriberEventHandler,
-    onSubscriberRemoved: SubscriberEventHandler,
+    onSubscriberAdded?: SubscriberEventHandler,
+    onSubscriberRemoved?: SubscriberEventHandler,
   ) {
     return this.delegate.subscribe(onSubscriberAdded, onSubscriberRemoved);
   }
