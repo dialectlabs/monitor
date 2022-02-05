@@ -31,15 +31,7 @@ export class UnicastMonitor<T> implements Monitor<T> {
       EventDetectionPipeline<T>[]
     >,
     private readonly eventSink: EventSink,
-  ) {
-    this.unsubscribeOnShutDown();
-  }
-
-  private unsubscribeOnShutDown() {
-    process.on('SIGINT', () => {
-      this.stop();
-    });
-  }
+  ) {}
 
   async start() {
     if (this.started) {
@@ -97,6 +89,9 @@ export class UnicastMonitor<T> implements Monitor<T> {
   }
 
   stop(): Promise<void> {
+    if (!this.started) {
+      return Promise.resolve();
+    }
     this.subscriptions.forEach((it) => it.unsubscribe());
     this.subscriptions = [];
     this.started = false;

@@ -23,6 +23,8 @@ export class DefaultMonitorFactory implements MonitorFactory {
   private readonly eventSink: EventSink;
   private readonly subscriberRepository: SubscriberRepository;
 
+  private readonly shutdownHooks: (() => Promise<any>)[] = [];
+
   constructor({
     dialectProgram,
     monitorKeypair,
@@ -31,8 +33,13 @@ export class DefaultMonitorFactory implements MonitorFactory {
   }: MonitorFactoryProps) {
     if (dialectProgram && monitorKeypair) {
       this.eventSink = new DialectEventSink(dialectProgram, monitorKeypair);
+      const onChainSubscriberRepository = new OnChainSubscriberRepository(
+        dialectProgram,
+        monitorKeypair,
+      );
+      this.shutdownHooks.push(() => onChainSubscriberRepository.tearDown());
       this.subscriberRepository = InMemorySubscriberRepository.decorate(
-        new OnChainSubscriberRepository(dialectProgram, monitorKeypair),
+        onChainSubscriberRepository,
       );
     }
     if (eventSink) {
@@ -49,6 +56,10 @@ export class DefaultMonitorFactory implements MonitorFactory {
     }
   }
 
+  async shutdown() {
+    return Promise.all(this.shutdownHooks.map((it) => it()));
+  }
+
   createUnicastMonitor<T>(
     dataSource: PollableDataSource<T>,
     eventDetectionPipelines: Record<ParameterId, EventDetectionPipeline<T>[]>,
@@ -59,11 +70,13 @@ export class DefaultMonitorFactory implements MonitorFactory {
       pollInterval,
       this.subscriberRepository,
     );
-    return new UnicastMonitor<T>(
+    const unicastMonitor = new UnicastMonitor<T>(
       observableDataSource,
       eventDetectionPipelines,
       this.eventSink,
     );
+    this.shutdownHooks.push(() => unicastMonitor.stop());
+    return unicastMonitor;
   }
 
   private toObservable<T>(
@@ -112,10 +125,12 @@ export class DefaultMonitorFactory implements MonitorFactory {
     const eventDetectionPipelinesRecord = Object.fromEntries([
       [parameterId, eventDetectionPipelines],
     ]);
-    return new UnicastMonitor<SubscriberEvent>(
+    const unicastMonitor = new UnicastMonitor<SubscriberEvent>(
       observableDataSource,
       eventDetectionPipelinesRecord,
       this.eventSink,
     );
+    this.shutdownHooks.push(() => unicastMonitor.stop());
+    return unicastMonitor;
   }
 }

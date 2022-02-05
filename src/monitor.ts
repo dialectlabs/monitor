@@ -126,8 +126,18 @@ export type SubscriberEvent = 'added' | 'removed';
  * A set of factory methods to create monitors
  */
 export class Monitors {
+  private static factoryInstance: DefaultMonitorFactory;
+  private constructor() {}
+
   static factory(props: MonitorFactoryProps): MonitorFactory {
-    return new DefaultMonitorFactory(props);
+    if (!Monitors.factoryInstance) {
+      Monitors.factoryInstance = new DefaultMonitorFactory(props);
+    }
+    return Monitors.factoryInstance;
+  }
+
+  static async shutdown() {
+    return Monitors.factoryInstance && Monitors.factoryInstance.shutdown();
   }
 }
 

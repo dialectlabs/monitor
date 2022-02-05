@@ -24,9 +24,7 @@ export class OnChainSubscriberRepository implements SubscriberRepository {
   constructor(
     private dialectProgram: Program,
     private readonly monitorKeypair: Keypair,
-  ) {
-    this.unsubscribeOnShutDown();
-  }
+  ) {}
 
   async findByResourceId(resourceId: ResourceId): Promise<ResourceId | null> {
     try {
@@ -41,17 +39,14 @@ export class OnChainSubscriberRepository implements SubscriberRepository {
     }
   }
 
-  private unsubscribeOnShutDown() {
-    process.on('SIGINT', () => {
-      this.eventSubscription && this.eventSubscription.unsubscribe();
-    });
+  async tearDown() {
+    this.eventSubscription && (await this.eventSubscription.unsubscribe());
   }
 
   async findAll(): Promise<ResourceId[]> {
     const dialectAccounts = await findDialects(this.dialectProgram, {
       userPk: this.monitorKeypair.publicKey,
     });
-    console.log(`Found ${dialectAccounts.length} accounts`);
     return dialectAccounts.map((dialectAccount) =>
       this.findSubscriberInDialectAccount(dialectAccount),
     );
