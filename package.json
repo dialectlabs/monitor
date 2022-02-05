@@ -1,6 +1,6 @@
 {
   "name": "@dialectlabs/monitor",
-  "version": "0.1.0",
+  "version": "0.1.2",
   "repository": "git@github.com:dialectlabs/monitor.git",
   "author": "dialectlabs",
   "license": "MIT",
@@ -18,10 +18,10 @@
     "rxjs": "^7.5.2"
   },
   "devDependencies": {
-    "ts-node": "^10.4.0",
-    "@types/node": "^17.0.14",
     "@types/luxon": "^2.0.9",
+    "@types/node": "^17.0.14",
     "prettier": "2.5.1",
+    "ts-node": "^10.4.0",
     "typescript": "^4.5.5"
   }
 }
