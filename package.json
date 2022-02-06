@@ -1,6 +1,6 @@
 {
   "name": "@dialectlabs/monitor",
-  "version": "0.1.2",
+  "version": "0.1.4",
   "repository": "git@github.com:dialectlabs/monitor.git",
   "author": "dialectlabs",
   "license": "MIT",
@@ -11,7 +11,7 @@
     "build": "rm -rf lib && tsc"
   },
   "dependencies": {
-    "@dialectlabs/web3": "file:../protocol",
+    "@dialectlabs/web3": "0.1.2",
     "@project-serum/anchor": "^0.18.0",
     "@solana/web3.js": "^1.27.0",
     "luxon": "^2.3.0",
