@@ -63,7 +63,10 @@ export class Operators {
       OperatorFunction<T, Observable<T>>,
       OperatorFunction<Observable<T>, T[]>,
     ] {
-      return [windowTime<T>(3000), concatMap((value) => value.pipe(toArray()))];
+      return [
+        windowTime<T>(timeSpan.toMillis()),
+        concatMap((value) => value.pipe(toArray())),
+      ];
     }
   };
 
