@@ -6,10 +6,11 @@ import {
 import { Keypair } from '@solana/web3.js';
 
 export class DummySubscriberRepository implements SubscriberRepository {
-  private subscribers: ResourceId[] = [
-    new Keypair().publicKey,
-    new Keypair().publicKey,
-  ];
+  private subscribers: ResourceId[] = [];
+
+  constructor(size: number = 2) {
+    this.subscribers = Array(size).map((it) => new Keypair().publicKey);
+  }
 
   private readonly onSubscriberAddedHandlers: SubscriberEventHandler[] = [];
   private readonly onSubscriberRemovedHandlers: SubscriberEventHandler[] = [];

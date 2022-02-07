@@ -1,14 +1,17 @@
 import {
   bufferCount,
-  bufferTime,
   catchError,
+  concatMap,
   filter,
   MonoTypeOperatorFunction,
+  Observable,
   OperatorFunction,
   retry,
   scan,
   throttleTime,
   throwError,
+  toArray,
+  windowTime,
 } from 'rxjs';
 import { map, tap } from 'rxjs/operators';
 import { Duration } from 'luxon';
@@ -36,6 +39,7 @@ export class Operators {
     static filter<T>(predicate: (data: T) => boolean): OperatorFunction<T, T> {
       return filter(predicate);
     }
+
     static map<T, R>(mapper: (data: T) => R): OperatorFunction<T, R> {
       return map(mapper);
     }
@@ -53,8 +57,13 @@ export class Operators {
       );
     }
 
-    static fixedTime<T>(timeSpan: Duration): OperatorFunction<T, T[]> {
-      return bufferTime(timeSpan.milliseconds);
+    static fixedTime<T>(
+      timeSpan: Duration,
+    ): [
+      OperatorFunction<T, Observable<T>>,
+      OperatorFunction<Observable<T>, T[]>,
+    ] {
+      return [windowTime<T>(3000), concatMap((value) => value.pipe(toArray()))];
     }
   };
 

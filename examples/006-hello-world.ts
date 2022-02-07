@@ -30,7 +30,7 @@ const numericDataSourceEventDetectionPipelines: Record<
   [NUMERIC_PARAMETER2_ID, [dummyNumericPipeline]],
 ]);
 
-const dummySubscriberRepository = new DummySubscriberRepository();
+const dummySubscriberRepository = new DummySubscriberRepository(10);
 const monitorFactory = Monitors.factory({
   eventSink: new ConsoleEventSink(),
   subscriberRepository: dummySubscriberRepository,
