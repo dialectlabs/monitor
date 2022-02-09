@@ -1,22 +1,29 @@
 import { Operators, PipeLogLevel } from './monitor-pipeline-operators';
-import { EventDetectionPipeline } from './monitor';
+import { Event, ResourceData } from './monitor';
+import { Observable } from 'rxjs';
 
-export const dummyNumericPipeline2: EventDetectionPipeline<number> = (source) =>
+export type DeveloperFacingEventDetectionPipeline<V> = (
+  source: Observable<V>,
+) => Observable<Event>;
+
+export const dummyNumericPipeline2: DeveloperFacingEventDetectionPipeline<
+  number
+> = (source) =>
   source.pipe(
     Operators.Event.info(
       'Dummy numeric pipeline 2',
-      ({ resourceId, parameterData: { parameterId, data } }) =>
-        `Hello world from (${resourceId}, ${parameterId}): ${data}`,
+      (v) => `Hello world from ${v}`,
     ),
     Operators.Utility.log(PipeLogLevel.INFO),
   );
 
-export const forward: EventDetectionPipeline<string> = (source) =>
+export const forward: DeveloperFacingEventDetectionPipeline<string> = (
+  source,
+) =>
   source.pipe(
     Operators.Event.info(
       'Dummy numeric pipeline 2',
-      ({ resourceId, parameterData: { parameterId, data } }) =>
-        `Hello world from (${resourceId}, ${parameterId}): ${data}`,
+      (v) => `Hello world from ${v}`,
     ),
     Operators.Utility.log(PipeLogLevel.INFO),
   );

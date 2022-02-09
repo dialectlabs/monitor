@@ -4,24 +4,25 @@ import { Pipelines } from './pipelines';
 import { Monitors } from './monitor-client-api';
 import { ResourceId } from './monitor';
 
-type DataType = {
+export type DataType = {
   cratio: number;
   cratio2: number;
   smth: string;
 };
 
-const monitor = Monitors.builder<DataType>()
+const monitor = Monitors.builder<DataType>({})
   .pollDataFrom(
-    (subscribers: ResourceId[]) => [
-      {
-        data: {
-          smth: '31231',
-          cratio: 312,
-          cratio2: 331,
+    (subscribers: ResourceId[]) =>
+      Promise.resolve([
+        {
+          data: {
+            smth: '31231',
+            cratio: 312,
+            cratio2: 331,
+          },
+          resourceId: subscribers[0],
         },
-        resourceId: subscribers[0],
-      },
-    ],
+      ]),
     Duration.fromObject({ seconds: 10 }),
   )
   .transform<number>({
@@ -34,3 +35,5 @@ const monitor = Monitors.builder<DataType>()
   })
   .dispatch('unicast')
   .build();
+
+monitor.start();

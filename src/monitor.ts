@@ -3,48 +3,11 @@ import { Observable } from 'rxjs';
 import { Program } from '@project-serum/anchor';
 import { Duration } from 'luxon';
 import { DefaultMonitorFactory } from './internal/default-monitor-factory';
-import { ResourceData } from './monitor-client-api';
-
-/**
- * Parameter id is a unique name of monitored entity
- */
-export type ParameterId = string;
-
-/**
- * Parameter may have some metadata
- */
-export type Parameter = {
-  id: ParameterId;
-  description?: string;
-};
-
-/**
- * Parameter-bound data (i.e. parameter measurement)
- */
-export type ParameterData<T> = { parameterId: ParameterId; data: T };
-
-export type DataSourceMetadata = {
-  id: string;
-  parameters: Parameter[];
-};
 
 /**
  * A user or a dApp, just an alias to
  */
 export type ResourceId = PublicKey;
-
-/**
- * Resource-bound parameter data (i.e. a parameter measurement bound to a specific user)
- */
-export type ResourceParameterData<T> = {
-  resourceId: ResourceId;
-  parameterData: ParameterData<T>;
-};
-
-/**
- * A batch of multiple parameter data
- */
-export type DataPackage<T> = ResourceParameterData<T>[];
 
 /**
  * An abstraction that represents a source of data, bound to specific type
@@ -55,15 +18,21 @@ export interface DataSource<T extends object> {}
  * Pollable data source will be polled by framework to get next datapackage
  */
 export interface PollableDataSource<T extends object> extends DataSource<T> {
-  (subscribers: ResourceId[]): Promise<ResourceData<T>>[];
+  (subscribers: ResourceId[]): Promise<ResourceData<T>[]>;
 }
+
+export type ResourceData<T extends Object> = {
+  resourceId: ResourceId;
+  data: T;
+};
+
+export type MonitorEventDetectionPipeline<T> = (
+  source: Observable<T>,
+) => Observable<Event>;
 
 /**
  * A set of transformations that are executed on-top of unbound data stream to detect events
  */
-export type EventDetectionPipeline<T> = (
-  source: Observable<ResourceParameterData<T>>,
-) => Observable<Event>;
 
 export type SubscriberEventHandler = (subscriber: ResourceId) => any;
 
@@ -148,14 +117,15 @@ export class MonitorsInternal {
     );
   }
 }
+
 export interface MonitorFactory {
   createUnicastMonitor<T extends object>(
     dataSource: PollableDataSource<T>,
-    eventDetectionPipelines: Record<ParameterId, EventDetectionPipeline<T>[]>,
+    eventDetectionPipelines: MonitorEventDetectionPipeline<T>[],
     pollInterval: Duration,
   ): Monitor<T>;
 
-  createSubscriberEventMonitor(
-    eventDetectionPipelines: EventDetectionPipeline<SubscriberEvent>[],
-  ): Monitor<SubscriberEvent>;
+  // createSubscriberEventMonitor(
+  //   eventDetectionPipelines: MonitorEventDetectionPipeline<SubscriberEvent>[],
+  // ): Monitor<SubscriberEvent>;
 }

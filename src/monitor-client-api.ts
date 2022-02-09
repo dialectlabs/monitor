@@ -1,18 +1,42 @@
 import { Duration } from 'luxon';
-import { EventDetectionPipeline, Monitor, ResourceId } from './monitor';
+import {
+  Event,
+  EventSink,
+  Monitor,
+  MonitorEventDetectionPipeline,
+  MonitorsInternal,
+  PollableDataSource,
+  SubscriberRepository,
+} from './monitor';
+import { Program } from '@project-serum/anchor';
+import { Keypair } from '@solana/web3.js';
+import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
+import { DeveloperFacingEventDetectionPipeline } from './pipelines';
+
+export interface MonitorBuilderProps {
+  dialectProgram?: Program;
+  monitorKeypair?: Keypair;
+  eventSink?: EventSink;
+  subscriberRepository?: SubscriberRepository;
+}
 
 /**
  * A set of factory methods to create monitors
  */
 
-class MonitorsBuilderSteps<T extends Object> {
+class MonitorsBuilderState<T extends Object> {
+  constructor(readonly builderProps: MonitorBuilderProps) {}
+
   setDataSourceStep?: SetDataSourceStepImpl<T>;
   addTransformationsStep?: AddTransformationsStepImpl<T>;
 }
 
 export class Monitors {
-  static builder<T extends object>(): SetDataSourceStep<T> {
-    const monitorsBuilderSteps = new MonitorsBuilderSteps<T>();
+  static builder<T extends object>(
+    builderProps: MonitorBuilderProps,
+  ): SetDataSourceStep<T> {
+    const monitorsBuilderSteps = new MonitorsBuilderState<T>(builderProps);
     return new SetDataSourceStepImpl(monitorsBuilderSteps);
   }
 }
@@ -23,26 +47,26 @@ export type KeysMatching<T extends object, V> = {
 
 export interface Transformation<T extends object, V> {
   parameters: KeysMatching<T, V>[];
-  pipelines: EventDetectionPipeline<V>[];
+  pipelines: DeveloperFacingEventDetectionPipeline<V>[];
 }
 
 interface SetDataSourceStep<T extends object> {
   pollDataFrom(
-    dataSource: (subscribers: ResourceId[]) => ResourceData<T>[],
+    dataSource: PollableDataSource<T>,
     pollInterval: Duration,
   ): AddTransformationsStep<T>;
 }
 
 class SetDataSourceStepImpl<T extends object> implements SetDataSourceStep<T> {
-  dataSource?: (subscribers: ResourceId[]) => ResourceData<any>[];
+  dataSource?: PollableDataSource<T>;
   pollInterval?: Duration;
 
-  constructor(private readonly monitorBuilderSteps: MonitorsBuilderSteps<T>) {
+  constructor(private readonly monitorBuilderSteps: MonitorsBuilderState<T>) {
     monitorBuilderSteps.setDataSourceStep = this;
   }
 
   pollDataFrom(
-    dataSource: (subscribers: ResourceId[]) => ResourceData<T>[],
+    dataSource: PollableDataSource<T>,
     pollInterval: Duration,
   ): AddTransformationsStep<T> {
     this.dataSource = dataSource;
@@ -52,7 +76,10 @@ class SetDataSourceStepImpl<T extends object> implements SetDataSourceStep<T> {
 }
 
 interface AddTransformationsStep<T extends object> {
-  transform<V>(transformation: Transformation<T, V>): AddTransformationsStep<T>;
+  transform<V>(
+    transformation: Transformation<T, V>,
+    o?: T,
+  ): AddTransformationsStep<T>;
 
   dispatch(strategy: 'unicast'): BuildStep<T>;
 }
@@ -60,17 +87,42 @@ interface AddTransformationsStep<T extends object> {
 class AddTransformationsStepImpl<T extends object>
   implements AddTransformationsStep<T>
 {
-  transformations: Transformation<T, any>[] = [];
+  transformations: Transformation<T, unknown>[] = [];
+  composedPipelines: MonitorEventDetectionPipeline<T>[] = [];
   dispatchStrategy?: 'unicast';
 
-  constructor(private readonly monitorBuilderSteps: MonitorsBuilderSteps<T>) {
+  constructor(private readonly monitorBuilderSteps: MonitorsBuilderState<T>) {
     monitorBuilderSteps.addTransformationsStep = this;
   }
 
   transform<V>(
     transformation: Transformation<T, V>,
   ): AddTransformationsStep<T> {
-    this.transformations.push(transformation);
+    const { parameters, pipelines } = transformation;
+    const composedPipelines = parameters.flatMap((key: KeysMatching<T, V>) =>
+      pipelines.map(
+        (
+          singleKeyProcessingPipeline: (
+            source: Observable<V>,
+          ) => Observable<Event>,
+        ) => {
+          const composedPipeline: (
+            dataSource: Observable<T>,
+          ) => Observable<Event> = (dataSource: Observable<T>) =>
+            singleKeyProcessingPipeline(
+              dataSource.pipe(
+                map((it: T) => {
+                  // @ts-ignore // TODO: how to avoid ts-ignore?
+                  return it[key] as V;
+                }),
+              ),
+            );
+          return composedPipeline;
+        },
+      ),
+    );
+    this.composedPipelines.push(...composedPipelines);
+    this.transformations.push(transformation as Transformation<T, unknown>);
     return this;
   }
 
@@ -81,29 +133,37 @@ class AddTransformationsStepImpl<T extends object>
 }
 
 interface BuildStep<T extends object> {
-  build(): Monitor<any>;
+  build(): Monitor<T>;
 }
 
 class BuildStepImpl<T extends object> implements BuildStep<T> {
-  constructor(private readonly monitorBuilderSteps: MonitorsBuilderSteps<T>) {}
+  constructor(private readonly monitorBuilderSteps: MonitorsBuilderState<T>) {}
 
-  build(): Monitor<any> {
-    const { setDataSourceStep, addTransformationsStep } =
+  build(): Monitor<T> {
+    const { builderProps, setDataSourceStep, addTransformationsStep } =
       this.monitorBuilderSteps;
-    if (!setDataSourceStep || !addTransformationsStep) {
+    if (!builderProps || !setDataSourceStep || !addTransformationsStep) {
       throw new Error('Should not happen');
     }
     const { dataSource, pollInterval } = setDataSourceStep;
-    const { transformations, dispatchStrategy } = addTransformationsStep;
-    if (!dataSource || !pollInterval || transformations || dispatchStrategy) {
+    const { transformations, composedPipelines, dispatchStrategy } =
+      addTransformationsStep;
+    if (
+      !dataSource ||
+      !pollInterval ||
+      !transformations ||
+      !composedPipelines ||
+      !dispatchStrategy
+    ) {
       throw new Error('Should not happen');
     }
 
-    throw new Error();
+    const monitorFactory = MonitorsInternal.factory(builderProps);
+
+    return monitorFactory.createUnicastMonitor<T>(
+      dataSource,
+      composedPipelines,
+      pollInterval,
+    );
   }
 }
-
-export type ResourceData<T extends Object> = {
-  resourceId: ResourceId;
-  data: T;
-};
