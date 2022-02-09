@@ -3,6 +3,7 @@ import { Observable } from 'rxjs';
 import { Program } from '@project-serum/anchor';
 import { Duration } from 'luxon';
 import { DefaultMonitorFactory } from './internal/default-monitor-factory';
+import { ResourceData } from './monitor-client-api';
 
 /**
  * Parameter id is a unique name of monitored entity
@@ -147,73 +148,6 @@ export class MonitorsInternal {
     );
   }
 }
-
-type KeysMatching<T extends object, V> = {
-  [K in keyof T]: T[K] extends V ? K : never;
-}[keyof T];
-
-interface Transformation<T extends object, V> {
-  parameters: KeysMatching<T, V>[];
-  pipelines: EventDetectionPipeline<V>[];
-}
-
-interface SetDataSourceStep {
-  pollDataFrom<T extends object>(
-    dataSource: (subscribers: ResourceId[]) => ResourceData<T>[],
-    pollInterval: Duration,
-  ): AddTransformationStep<T>;
-}
-
-class SetDataSourceStepImpl implements SetDataSourceStep {
-  dataSource?: (subscribers: ResourceId[]) => ResourceData<any>[];
-  pollInterval?: Duration;
-
-  pollDataFrom<T extends object>(
-    dataSource: (subscribers: ResourceId[]) => ResourceData<T>[],
-    pollInterval: Duration,
-  ): AddTransformationStep<T> {
-    this.dataSource = dataSource;
-    this.pollInterval = pollInterval;
-    return new AddTransformationStepImpl();
-  }
-}
-
-interface AddTransformationStep<T extends object> {
-  transform<V>(transformation: Transformation<T, V>): AddTransformationStep<T>;
-
-  dispatch(strategy: 'unicast'): BuildStep;
-}
-
-class AddTransformationStepImpl<T extends object>
-  implements AddTransformationStep<T>
-{
-  transformations: Transformation<T, any>[] = [];
-
-  transform<V>(transformation: Transformation<T, V>): AddTransformationStep<T> {
-    this.transformations.push(transformation);
-    return this;
-  }
-
-  dispatch(strategy: 'unicast' = 'unicast'): BuildStep {
-    return new BuildStepImpl();
-  }
-}
-
-interface BuildStep {
-  build(): Monitor<any>;
-}
-
-class BuildStepImpl implements BuildStep {
-  build(): Monitor<any> {
-    throw new Error();
-  }
-}
-
-export type ResourceData<T extends Object> = {
-  resourceId: ResourceId;
-  data: T;
-};
-
 export interface MonitorFactory {
   createUnicastMonitor<T extends object>(
     dataSource: PollableDataSource<T>,
