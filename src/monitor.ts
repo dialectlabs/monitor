@@ -1,9 +1,8 @@
-import { Keypair, PublicKey } from "@solana/web3.js";
-import { Observable } from "rxjs";
-import { Program } from "@project-serum/anchor";
-import { Duration } from "luxon";
-import { DefaultMonitorFactory } from "./internal/default-monitor-factory";
-import { Operators, PipeLogLevel } from "./monitor-pipeline-operators";
+import { Keypair, PublicKey } from '@solana/web3.js';
+import { Observable } from 'rxjs';
+import { Program } from '@project-serum/anchor';
+import { Duration } from 'luxon';
+import { DefaultMonitorFactory } from './internal/default-monitor-factory';
 
 /**
  * Parameter id is a unique name of monitored entity
@@ -49,24 +48,20 @@ export type DataPackage<T> = ResourceParameterData<T>[];
 /**
  * An abstraction that represents a source of data, bound to specific type
  */
-export interface DataSource<T> {
-  connect(): Promise<DataSourceMetadata>;
-
-  disconnect(): Promise<void>;
-}
+export interface DataSource<T extends object> {}
 
 /**
  * Pollable data source will be polled by framework to get next datapackage
  */
-export interface PollableDataSource<T> extends DataSource<T> {
-  extract(subscribers: ResourceId[]): Promise<DataPackage<T>>;
+export interface PollableDataSource<T extends object> extends DataSource<T> {
+  (subscribers: ResourceId[]): Promise<ResourceData<T>>[];
 }
 
 /**
  * A set of transformations that are executed on-top of unbound data stream to detect events
  */
 export type EventDetectionPipeline<T> = (
-  source: Observable<ResourceParameterData<T>>
+  source: Observable<ResourceParameterData<T>>,
 ) => Observable<Event>;
 
 export type SubscriberEventHandler = (subscriber: ResourceId) => any;
@@ -90,7 +85,7 @@ export interface SubscriberRepository {
    */
   subscribe(
     onSubscriberAdded?: SubscriberEventHandler,
-    onSubscriberRemoved?: SubscriberEventHandler
+    onSubscriberRemoved?: SubscriberEventHandler,
   ): any;
 }
 
@@ -106,7 +101,7 @@ export interface EventSink {
  */
 export interface Event {
   timestamp: Date;
-  type: "warning" | "info";
+  type: 'warning' | 'info';
   title: string;
   message: string;
 }
@@ -121,188 +116,112 @@ export interface Monitor<T> {
   stop(): Promise<void>;
 }
 
-export type SubscriberEvent = "added" | "removed";
+export type SubscriberEvent = 'added' | 'removed';
 
-/**
- * A set of factory methods to create monitors
- */
-export class Monitors {
-  private static factoryInstance: DefaultMonitorFactory;
-
-  static create<T extends object>(): SetDataSourceStep<T> {
-    throw new Error();
-  }
-
-  private constructor() {
-  }
-
-  static factory(props: MonitorFactoryProps): MonitorFactory {
-    if (!Monitors.factoryInstance) {
-      Monitors.factoryInstance = new DefaultMonitorFactory(props);
-    }
-    return Monitors.factoryInstance;
-  }
-
-  static async shutdown() {
-    return Monitors.factoryInstance && Monitors.factoryInstance.shutdown();
-  }
-}
-
-interface SetDataSourceStep<T extends object> {
-  extract(
-    dataSource: (subscribers: ResourceId[]) => Data<T>[]
-  ): AddTransformationStep<T, keyof T>;
-}
-
-type KeysMatching<T extends object, V> = {
-  [K in keyof T]: T[K] extends V ? K : never;
-}[keyof T];
-
-interface Transform<T extends object, R> {
-  parameters: KeysMatching<T, R>[];
-  pipelines: EventDetectionPipeline<R>[];
-}
-
-interface AddTransformationStep<T extends object, KeyType extends keyof T> {
-  transform<R>(transform: Transform<T, R>): AddTransformationStep<T, KeyType>;
-
-  also(): AddTransformationStep<T, KeyType>;
-
-  dispatch(): SetDispatchMethodStep;
-}
-
-
-interface SetDispatchMethodStep {
-
-  unicast(): Monitor<any>;
-
-  broadcast(): Monitor<any>;
-}
-
-
-export type Data<T> = {
-  resourceId: ResourceId;
-  data: T;
-};
-
-export const dummyNumericPipeline2: EventDetectionPipeline<number> = (source) =>
-  source.pipe(
-    Operators.Event.info(
-      "Dummy numeric pipeline 2",
-      e({ resourceId, parameterData: { parameterId, data } })
-=>
-`Hello world from (${resourceId}, ${parameterId}): ${data}`,
-),
-Operators.Utility.log(PipeLogLevel.INFO),
-)
-;
-
-export const forward: EventDetectionPipeline<string> = (source) =>
-  source.pipe(
-    Operators.Event.info(
-      "Dummy numeric pipeline 2",
-      ({ resourceId, parameterData: { parameterId, data } }) =>
-        `Hello world from (${resourceId}, ${parameterId}): ${data}`
-    ),
-    Operators.Utility.log(PipeLogLevel.INFO)
-  );
-
-export class Pipelines {
-  static fallingEdge(threshold: number) {
-    return dummyNumericPipeline2;
-  }
-
-  static risingEdge(threshold: number) {
-    return dummyNumericPipeline2;
-  }
-
-  static forward() {
-    return forward;
-  }
-}
-
-interface MonitorFactoryProps {
+export interface MonitorFactoryProps {
   dialectProgram?: Program;
   monitorKeypair?: Keypair;
   eventSink?: EventSink;
   subscriberRepository?: SubscriberRepository;
 }
 
+/**
+ * A set of factory methods to create monitors
+ */
+export class MonitorsInternal {
+  private static factoryInstance: DefaultMonitorFactory;
+
+  private constructor() {}
+
+  static factory(props: MonitorFactoryProps): MonitorFactory {
+    if (!MonitorsInternal.factoryInstance) {
+      MonitorsInternal.factoryInstance = new DefaultMonitorFactory(props);
+    }
+    return MonitorsInternal.factoryInstance;
+  }
+
+  static async shutdown() {
+    return (
+      MonitorsInternal.factoryInstance &&
+      MonitorsInternal.factoryInstance.shutdown()
+    );
+  }
+}
+
+type KeysMatching<T extends object, V> = {
+  [K in keyof T]: T[K] extends V ? K : never;
+}[keyof T];
+
+interface Transformation<T extends object, V> {
+  parameters: KeysMatching<T, V>[];
+  pipelines: EventDetectionPipeline<V>[];
+}
+
+interface SetDataSourceStep {
+  pollDataFrom<T extends object>(
+    dataSource: (subscribers: ResourceId[]) => ResourceData<T>[],
+    pollInterval: Duration,
+  ): AddTransformationStep<T>;
+}
+
+class SetDataSourceStepImpl implements SetDataSourceStep {
+  dataSource?: (subscribers: ResourceId[]) => ResourceData<any>[];
+  pollInterval?: Duration;
+
+  pollDataFrom<T extends object>(
+    dataSource: (subscribers: ResourceId[]) => ResourceData<T>[],
+    pollInterval: Duration,
+  ): AddTransformationStep<T> {
+    this.dataSource = dataSource;
+    this.pollInterval = pollInterval;
+    return new AddTransformationStepImpl();
+  }
+}
+
+interface AddTransformationStep<T extends object> {
+  transform<V>(transformation: Transformation<T, V>): AddTransformationStep<T>;
+
+  dispatch(strategy: 'unicast'): BuildStep;
+}
+
+class AddTransformationStepImpl<T extends object>
+  implements AddTransformationStep<T>
+{
+  transformations: Transformation<T, any>[] = [];
+
+  transform<V>(transformation: Transformation<T, V>): AddTransformationStep<T> {
+    this.transformations.push(transformation);
+    return this;
+  }
+
+  dispatch(strategy: 'unicast' = 'unicast'): BuildStep {
+    return new BuildStepImpl();
+  }
+}
+
+interface BuildStep {
+  build(): Monitor<any>;
+}
+
+class BuildStepImpl implements BuildStep {
+  build(): Monitor<any> {
+    throw new Error();
+  }
+}
+
+export type ResourceData<T extends Object> = {
+  resourceId: ResourceId;
+  data: T;
+};
+
 export interface MonitorFactory {
-  createUnicastMonitor<T>(
+  createUnicastMonitor<T extends object>(
     dataSource: PollableDataSource<T>,
     eventDetectionPipelines: Record<ParameterId, EventDetectionPipeline<T>[]>,
-    pollInterval: Duration
+    pollInterval: Duration,
   ): Monitor<T>;
 
   createSubscriberEventMonitor(
-    eventDetectionPipelines: EventDetectionPipeline<SubscriberEvent>[]
+    eventDetectionPipelines: EventDetectionPipeline<SubscriberEvent>[],
   ): Monitor<SubscriberEvent>;
 }
-
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-//
-
-type DataType = {
-  cratio: number;
-  cratio2: number;
-  smth: string;
-};
-
-const monitor = Monitors.create<DataType>()
-  .extract((subscribers: ResourceId[]) => [
-    {
-      data: {
-        smth: "31231",
-        cratio: 312,
-        cratio2: 331
-      },
-      resourceId: subscribers[0]
-    }
-  ])
-  .transform({
-    parameters: ["cratio", "cratio2"],
-    pipelines: [Pipelines.fallingEdge(111), Pipelines.risingEdge(150)]
-  })
-  .also()
-  .transform({
-    parameters: ["smth"],
-    pipelines: [Pipelines.forward()]
-  })
-  .dispatch()
-  .unicast();
-
-Monitors.create().extract((subscribers) => 3);
