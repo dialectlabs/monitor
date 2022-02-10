@@ -5,7 +5,7 @@ import {
   PipeLogLevel,
   PollableDataSource,
   setPipeLogLevel,
-} from '../src';
+} from '..';
 import {
   NUMERIC_PARAMETER1_ID,
   NUMERIC_PARAMETER2_ID,

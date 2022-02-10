@@ -1,7 +1,7 @@
-import { Monitors } from './monitor-client-api';
-import { Data, Event, EventSink, ResourceId } from './monitor';
+import { Monitors } from '..';
+import { Data, Event, EventSink, ResourceId } from '..';
 import { Duration } from 'luxon';
-import { Pipelines } from './pipelines';
+import { Pipelines } from '..';
 import { DataType } from './poc';
 
 import { SubscriberEventHandler, SubscriberRepository } from '../src';

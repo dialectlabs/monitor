@@ -1,8 +1,5 @@
 import { Duration } from 'luxon';
-
-import { Pipelines } from './pipelines';
-import { Monitors } from './monitor-client-api';
-import { ResourceId } from './monitor';
+import { Monitors, ResourceId } from '..';
 
 export type DataType = {
   cratio: number;
