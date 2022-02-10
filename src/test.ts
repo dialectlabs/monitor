@@ -1,5 +1,5 @@
 import { Monitors } from './monitor-client-api';
-import { Event, EventSink, ResourceId } from './monitor';
+import { Data, Event, EventSink, ResourceId } from './monitor';
 import { Duration } from 'luxon';
 import { Pipelines } from './pipelines';
 import { DataType } from './poc';
@@ -23,7 +23,6 @@ export class DummySubscriberRepository implements SubscriberRepository {
   private readonly onSubscriberRemovedHandlers: SubscriberEventHandler[] = [];
 
   findAll(): Promise<ResourceId[]> {
-    console.log('suka', JSON.stringify(this.subscribers));
     return Promise.resolve(this.subscribers);
   }
 
@@ -49,9 +48,9 @@ export class DummySubscriberRepository implements SubscriberRepository {
 
 export class ConsoleEventSink implements EventSink {
   push(event: Event, recipients: ResourceId[]): Promise<void> {
-    console.log(
-      `Got new event ${JSON.stringify(event)} for recipients ${recipients}`,
-    );
+    // console.log(
+    //   `Got new event ${JSON.stringify(event)} for recipients ${recipients}`,
+    // );
     return Promise.resolve();
   }
 }
@@ -63,16 +62,15 @@ describe('Update method', () => {
       eventSink: new ConsoleEventSink(),
     })
       .pollDataFrom((subscribers: ResourceId[]) => {
-        return Promise.resolve([
-          {
-            data: {
-              smth: '31231',
-              cratio: 312,
-              cratio2: 331,
-            },
-            resourceId: subscribers[0],
+        const data: Data<DataType>[] = subscribers.map((resourceId) => ({
+          data: {
+            smth: '31231',
+            cratio: 312,
+            cratio2: 331,
           },
-        ]);
+          resourceId,
+        }));
+        return Promise.resolve(data);
       }, Duration.fromObject({ seconds: 20 }))
       .transform<number>({
         keys: ['cratio', 'cratio2'],

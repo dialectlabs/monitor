@@ -1,11 +1,13 @@
 import { Duration } from 'luxon';
 import {
+  Data,
   Event,
   EventSink,
   Monitor,
   MonitorEventDetectionPipeline,
   MonitorsInternal,
   PollableDataSource,
+  PushyDataSource,
   SubscriberRepository,
 } from './monitor';
 import { Program } from '@project-serum/anchor';
@@ -98,23 +100,19 @@ class AddTransformationsStepImpl<T extends object>
     const { keys, pipelines } = transformation;
     const composedPipelines = keys.flatMap((key: KeysMatching<T, V>) =>
       pipelines.map(
-        (
-          singleKeyProcessingPipeline: (
-            source: Observable<V>,
-          ) => Observable<Event>,
-        ) => {
-          const composedPipeline: (
-            dataSource: Observable<T>,
-          ) => Observable<Event> = (dataSource: Observable<T>) =>
-            singleKeyProcessingPipeline(
+        (pipeline: (source: Observable<Data<V>>) => Observable<Event>) => {
+          const adaptedToDataSourceType: (
+            dataSource: PushyDataSource<T>,
+          ) => Observable<Event> = (dataSource: PushyDataSource<T>) =>
+            pipeline(
               dataSource.pipe(
-                map((it: T) => {
-                  // @ts-ignore // TODO: how to avoid ts-ignore?
-                  return it[key] as V;
-                }),
+                map(({ data, resourceId }) => ({
+                  resourceId,
+                  data: data[key] as unknown as V,
+                })),
               ),
             );
-          return composedPipeline;
+          return adaptedToDataSourceType;
         },
       ),
     );

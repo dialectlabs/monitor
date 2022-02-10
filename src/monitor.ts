@@ -15,19 +15,27 @@ export type ResourceId = PublicKey;
 export interface DataSource<T extends object> {}
 
 /**
- * Pollable data source will be polled by framework to get next datapackage
+ * Pollable data source will be polled by framework to get next data
  */
 export interface PollableDataSource<T extends object> extends DataSource<T> {
-  (subscribers: ResourceId[]): Promise<ResourceData<T>[]>;
+  (subscribers: ResourceId[]): Promise<Data<T>[]>;
 }
 
-export type ResourceData<T extends Object> = {
+/**
+ * Pushing data source
+ */
+export type PushyDataSource<T extends object> = Observable<Data<T>>;
+
+/**
+ * A data bound to a specific on chain resource (e.g. subscriber)
+ */
+export type Data<T extends Object> = {
   resourceId: ResourceId;
   data: T;
 };
 
-export type MonitorEventDetectionPipeline<T> = (
-  source: Observable<T>,
+export type MonitorEventDetectionPipeline<T extends Object> = (
+  dataSource: PushyDataSource<T>,
 ) => Observable<Event>;
 
 /**
@@ -80,7 +88,7 @@ export interface Event {
  * A monitor is an entity that is responsible for execution of unbounded streaming ETL (Extract, Transform, Load)
  * and connects DataSource, EventDetectionPipeline and EventSink
  */
-export interface Monitor<T> {
+export interface Monitor<T extends object> {
   start(): Promise<void>;
 
   stop(): Promise<void>;

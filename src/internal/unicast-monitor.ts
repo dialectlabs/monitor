@@ -4,26 +4,25 @@ import {
   groupBy,
   GroupedObservable,
   mergeMap,
-  Observable,
   Subscription as RxJsSubscription,
 } from 'rxjs';
 import {
+  Data,
   EventSink,
   Monitor,
   MonitorEventDetectionPipeline,
-  ResourceData,
+  PushyDataSource,
 } from '../monitor';
 import { Operators } from '../monitor-pipeline-operators';
 import { PublicKey } from '@solana/web3.js';
-import { map } from 'rxjs/operators';
 
-export class UnicastMonitor<T> implements Monitor<T> {
+export class UnicastMonitor<T extends Object> implements Monitor<T> {
   private started = false;
 
   private subscriptions: RxJsSubscription[] = [];
 
   constructor(
-    private readonly dataSource: Observable<ResourceData<T>>,
+    private readonly dataSource: PushyDataSource<T>,
     private readonly eventDetectionPipelines: MonitorEventDetectionPipeline<T>[],
     private readonly eventSink: EventSink,
   ) {}
@@ -40,16 +39,16 @@ export class UnicastMonitor<T> implements Monitor<T> {
   private async startMonitorPipeline() {
     const monitorPipelineSubscription = this.dataSource
       .pipe(
-        groupBy<ResourceData<T>, string, ResourceData<T>>(
+        groupBy<Data<T>, string, Data<T>>(
           ({ resourceId, data }) => resourceId.toString(),
           {
             element: (it) => it,
           },
         ),
-        mergeMap((resourceData: GroupedObservable<string, ResourceData<T>>) => {
-          const resourceId = new PublicKey(resourceData.key);
+        mergeMap((data: GroupedObservable<string, Data<T>>) => {
+          const resourceId = new PublicKey(data.key);
           return this.eventDetectionPipelines.map((pipeline) => {
-            return pipeline(resourceData.pipe(map((it) => it.data))).pipe(
+            return pipeline(data).pipe(
               exhaustMap((event) =>
                 from(this.eventSink.push(event, [resourceId])),
               ),

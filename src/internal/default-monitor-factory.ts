@@ -3,18 +3,17 @@ import { InMemorySubscriberRepository } from './in-memory-subscriber.repository'
 import { OnChainSubscriberRepository } from './on-chain-subscriber.repository';
 import { Duration } from 'luxon';
 import { UnicastMonitor } from './unicast-monitor';
-import { concatMap, from, interval, Observable, switchMap } from 'rxjs';
+import { concatMap, from, switchMap, timer } from 'rxjs';
 import {
   EventSink,
   Monitor,
+  MonitorEventDetectionPipeline,
   MonitorFactory,
   MonitorFactoryProps,
-  MonitorEventDetectionPipeline,
   PollableDataSource,
+  PushyDataSource,
   ResourceId,
-  SubscriberEvent,
   SubscriberRepository,
-  ResourceData,
 } from '../monitor';
 
 export class DefaultMonitorFactory implements MonitorFactory {
@@ -63,13 +62,13 @@ export class DefaultMonitorFactory implements MonitorFactory {
     eventDetectionPipelines: MonitorEventDetectionPipeline<T>[],
     pollInterval: Duration = Duration.fromObject({ seconds: 10 }),
   ): Monitor<T> {
-    const observableDataSource = this.toObservable(
+    const pushyDataSource = this.toPushyDataSource(
       dataSource,
       pollInterval,
       this.subscriberRepository,
     );
     const unicastMonitor = new UnicastMonitor<T>(
-      observableDataSource,
+      pushyDataSource,
       eventDetectionPipelines,
       this.eventSink,
     );
@@ -77,19 +76,16 @@ export class DefaultMonitorFactory implements MonitorFactory {
     return unicastMonitor;
   }
 
-  private toObservable<T extends object>(
+  private toPushyDataSource<T extends object>(
     dataSource: PollableDataSource<T>,
     pollInterval: Duration,
     subscriberRepository: SubscriberRepository,
-  ) {
-    const observableDataSource: Observable<ResourceData<T>> = interval(
-      pollInterval.toMillis(),
-    ).pipe(
+  ): PushyDataSource<T> {
+    return timer(0, pollInterval.toMillis()).pipe(
       switchMap(() => subscriberRepository.findAll()),
       switchMap((resources: ResourceId[]) => from(dataSource(resources))),
       concatMap((it) => it),
     );
-    return observableDataSource;
   }
 
   // createSubscriberEventMonitor(
