@@ -1,8 +1,9 @@
 import { Program } from '@project-serum/anchor';
-import { Event, EventSink, ResourceId } from '../monitor';
+import { Event, ResourceId } from '../data-model';
 import { Keypair } from '@solana/web3.js';
 import { sendMessage } from '@dialectlabs/web3';
 import { getDialectAccount } from './dialect-extensions';
+import { EventSink } from '../ports';
 
 export class DialectEventSink implements EventSink {
   constructor(

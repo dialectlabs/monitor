@@ -15,7 +15,7 @@ import {
 } from 'rxjs';
 import { map, tap } from 'rxjs/operators';
 import { Duration } from 'luxon';
-import { Event, Data } from './monitor';
+import { Data, Event } from './data-model';
 
 export enum PipeLogLevel {
   TRACE,

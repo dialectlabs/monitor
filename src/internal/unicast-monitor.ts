@@ -6,15 +6,16 @@ import {
   mergeMap,
   Subscription as RxJsSubscription,
 } from 'rxjs';
-import {
-  Data,
-  EventSink,
-  Monitor,
-  MonitorEventDetectionPipeline,
-  PushyDataSource,
-} from '../monitor';
-import { Operators } from '../monitor-pipeline-operators';
+
 import { PublicKey } from '@solana/web3.js';
+import {
+  DataSourceTransformationPipeline,
+  EventSink,
+  PushyDataSource,
+} from '../ports';
+import { Monitor } from '../monitor-api';
+import { Data } from '../data-model';
+import { Operators } from '../transformation-operators';
 
 export class UnicastMonitor<T extends Object> implements Monitor<T> {
   private started = false;
@@ -23,7 +24,7 @@ export class UnicastMonitor<T extends Object> implements Monitor<T> {
 
   constructor(
     private readonly dataSource: PushyDataSource<T>,
-    private readonly eventDetectionPipelines: MonitorEventDetectionPipeline<T>[],
+    private readonly dataSourceTransformationPipelines: DataSourceTransformationPipeline<T>[],
     private readonly eventSink: EventSink,
   ) {}
 
@@ -47,7 +48,7 @@ export class UnicastMonitor<T extends Object> implements Monitor<T> {
         ),
         mergeMap((data: GroupedObservable<string, Data<T>>) => {
           const resourceId = new PublicKey(data.key);
-          return this.eventDetectionPipelines.map((pipeline) => {
+          return this.dataSourceTransformationPipelines.map((pipeline) => {
             return pipeline(data).pipe(
               exhaustMap((event) =>
                 from(this.eventSink.push(event, [resourceId])),

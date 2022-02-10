@@ -1,10 +1,6 @@
 import { Program } from '@project-serum/anchor';
 import { Keypair, PublicKey } from '@solana/web3.js';
-import {
-  ResourceId,
-  SubscriberEventHandler,
-  SubscriberRepository,
-} from '../monitor';
+import { SubscriberEventHandler, SubscriberRepository } from '../ports';
 import {
   DialectAccount,
   DialectCreatedEvent,
@@ -14,6 +10,7 @@ import {
   subscribeToEvents,
 } from '@dialectlabs/web3';
 import { getDialectAccount } from './dialect-extensions';
+import { ResourceId } from '../data-model';
 
 export class OnChainSubscriberRepository implements SubscriberRepository {
   private eventSubscription?: EventSubscription;

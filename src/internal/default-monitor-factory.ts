@@ -4,17 +4,16 @@ import { OnChainSubscriberRepository } from './on-chain-subscriber.repository';
 import { Duration } from 'luxon';
 import { UnicastMonitor } from './unicast-monitor';
 import { concatMap, from, switchMap, timer } from 'rxjs';
+import { MonitorFactory, MonitorFactoryProps } from '../monitor-factory';
 import {
+  DataSourceTransformationPipeline,
   EventSink,
-  Monitor,
-  MonitorEventDetectionPipeline,
-  MonitorFactory,
-  MonitorFactoryProps,
   PollableDataSource,
   PushyDataSource,
-  ResourceId,
   SubscriberRepository,
-} from '../monitor';
+} from '../ports';
+import { Monitor } from '../monitor-api';
+import { ResourceId } from '../data-model';
 
 export class DefaultMonitorFactory implements MonitorFactory {
   private readonly eventSink: EventSink;
@@ -59,7 +58,7 @@ export class DefaultMonitorFactory implements MonitorFactory {
 
   createUnicastMonitor<T extends object>(
     dataSource: PollableDataSource<T>,
-    eventDetectionPipelines: MonitorEventDetectionPipeline<T>[],
+    datasourceTransformationPipelines: DataSourceTransformationPipeline<T>[],
     pollInterval: Duration = Duration.fromObject({ seconds: 10 }),
   ): Monitor<T> {
     const pushyDataSource = this.toPushyDataSource(
@@ -69,7 +68,7 @@ export class DefaultMonitorFactory implements MonitorFactory {
     );
     const unicastMonitor = new UnicastMonitor<T>(
       pushyDataSource,
-      eventDetectionPipelines,
+      datasourceTransformationPipelines,
       this.eventSink,
     );
     this.shutdownHooks.push(() => unicastMonitor.stop());

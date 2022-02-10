@@ -1,8 +1,5 @@
-import {
-  ResourceId,
-  SubscriberEventHandler,
-  SubscriberRepository,
-} from '../monitor';
+import { ResourceId } from '../data-model';
+import { SubscriberEventHandler, SubscriberRepository } from '../ports';
 
 export class InMemorySubscriberRepository implements SubscriberRepository {
   private readonly subscribers: Map<String, ResourceId> = new Map<
