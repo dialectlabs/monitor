@@ -1,7 +1,5 @@
-import { Monitors } from '..';
-import { Data, Event, EventSink, ResourceId } from '..';
+import { Data, Event, EventSink, Monitors, Pipelines, ResourceId } from '..';
 import { Duration } from 'luxon';
-import { Pipelines } from '..';
 import { DataType } from './poc';
 
 import { SubscriberEventHandler, SubscriberRepository } from '../src';

@@ -1,5 +1,5 @@
 import { Data } from './data-model';
-import { Operators, PipeLogLevel } from './transformation-operators';
+import { Operators, PipeLogLevel } from './transformation-pipeline-operators';
 import { TransformationPipeline } from './ports';
 
 export const dummyNumericPipeline1: TransformationPipeline<number> = (source) =>
@@ -30,7 +30,7 @@ export const forward: TransformationPipeline<string> = (source) =>
     Operators.Utility.log(PipeLogLevel.INFO),
   );
 
-export class TransformationPipelines {
+export class Pipelines {
   static fallingEdge(threshold: number) {
     return dummyNumericPipeline2;
   }
