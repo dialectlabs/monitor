@@ -90,27 +90,28 @@ export class DefaultMonitorFactory implements MonitorFactory {
   createSubscriberEventMonitor(
     eventDetectionPipelines: DataSourceTransformationPipeline<SubscriberEvent>[],
   ): Monitor<SubscriberEvent> {
-    const observableDataSource: Observable<Data<SubscriberEvent>> =
-      new Observable<Data<SubscriberEvent>>((subscriber) =>
-        this.subscriberRepository.subscribe(
-          (resourceId) =>
-            subscriber.next({
-              resourceId,
-              data: {
-                state: 'added',
-              },
-            }),
-          (resourceId) =>
-            subscriber.next({
-              resourceId,
-              data: {
-                state: 'removed',
-              },
-            }),
-        ),
-      );
+    const dataSource: PushyDataSource<SubscriberEvent> = new Observable<
+      Data<SubscriberEvent>
+    >((subscriber) =>
+      this.subscriberRepository.subscribe(
+        (resourceId) =>
+          subscriber.next({
+            resourceId,
+            data: {
+              state: 'added',
+            },
+          }),
+        (resourceId) =>
+          subscriber.next({
+            resourceId,
+            data: {
+              state: 'removed',
+            },
+          }),
+      ),
+    );
     const unicastMonitor = new UnicastMonitor<SubscriberEvent>(
-      observableDataSource,
+      dataSource,
       eventDetectionPipelines,
       this.eventSink,
     );

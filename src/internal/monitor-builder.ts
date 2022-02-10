@@ -22,7 +22,9 @@ import { Monitor, Monitors } from '../monitor-api';
  * A set of factory methods to create monitors
  */
 export class MonitorsBuilderState<T extends Object> {
-  constructor(readonly builderProps: MonitorBuilderProps) {}
+  constructor(readonly builderProps: MonitorBuilderProps) {
+    console.log('fads');
+  }
 
   chooseDataSourceStep?: ChooseDataSourceStepImpl;
   defineDataSourceStep?: DefineDataSourceStepImpl<T>;
