@@ -1,12 +1,13 @@
 import {
-  AddDataSourceStep,
   AddTransformationsStep,
   BuildStep,
+  ChooseDataSourceStep,
+  DefineDataSourceStep,
   KeysMatching,
   MonitorBuilderProps,
   Transformation,
 } from '../monitor-builder';
-import { Data, Event } from '../data-model';
+import { Data, Event, SubscriberEvent } from '../data-model';
 import {
   DataSourceTransformationPipeline,
   PollableDataSource,
@@ -23,25 +24,52 @@ import { Monitor, Monitors } from '../monitor-api';
 export class MonitorsBuilderState<T extends Object> {
   constructor(readonly builderProps: MonitorBuilderProps) {}
 
-  addDataSourceStep?: SetDataSourceStepImpl<T>;
+  chooseDataSourceStep?: ChooseDataSourceStepImpl;
+  defineDataSourceStep?: DefineDataSourceStepImpl<T>;
   addTransformationsStep?: AddTransformationsStepImpl<T>;
 }
 
-export class SetDataSourceStepImpl<T extends object>
-  implements AddDataSourceStep<T>
+type DataSourceType = 'user-defined' | 'subscriber-events';
+
+export class ChooseDataSourceStepImpl implements ChooseDataSourceStep {
+  dataSourceType?: DataSourceType;
+
+  constructor(readonly builderProps: MonitorBuilderProps) {}
+
+  subscriberEvents(): AddTransformationsStep<SubscriberEvent> {
+    this.dataSourceType = 'subscriber-events';
+    const monitorsBuilderState = new MonitorsBuilderState<SubscriberEvent>(
+      this.builderProps,
+    );
+    monitorsBuilderState.chooseDataSourceStep = this;
+    return new AddTransformationsStepImpl<SubscriberEvent>(
+      monitorsBuilderState,
+    );
+  }
+
+  defineDataSource<T extends object>(): DefineDataSourceStep<T> {
+    this.dataSourceType = 'user-defined';
+    const monitorsBuilderState = new MonitorsBuilderState<T>(this.builderProps);
+    monitorsBuilderState.chooseDataSourceStep = this;
+    return new DefineDataSourceStepImpl<T>(monitorsBuilderState);
+  }
+}
+
+export class DefineDataSourceStepImpl<T extends object>
+  implements DefineDataSourceStep<T>
 {
-  dataSource?: PollableDataSource<T>;
+  pollableDataSource?: PollableDataSource<T>;
   pollInterval?: Duration;
 
   constructor(private readonly monitorBuilderState: MonitorsBuilderState<T>) {
-    monitorBuilderState.addDataSourceStep = this;
+    monitorBuilderState.defineDataSourceStep = this;
   }
 
-  pollDataFrom(
+  poll(
     dataSource: PollableDataSource<T>,
     pollInterval: Duration,
   ): AddTransformationsStep<T> {
-    this.dataSource = dataSource;
+    this.pollableDataSource = dataSource;
     this.pollInterval = pollInterval;
     return new AddTransformationsStepImpl(this.monitorBuilderState);
   }
@@ -62,25 +90,28 @@ class AddTransformationsStepImpl<T extends object>
     transformation: Transformation<T, V>,
   ): AddTransformationsStep<T> {
     const { keys, pipelines } = transformation;
-    const composedPipelines = keys.flatMap((key: KeysMatching<T, V>) =>
-      pipelines.map(
-        (pipeline: (source: Observable<Data<V>>) => Observable<Event>) => {
-          const adaptedToDataSourceType: (
-            dataSource: PushyDataSource<T>,
-          ) => Observable<Event> = (dataSource: PushyDataSource<T>) =>
-            pipeline(
-              dataSource.pipe(
-                map(({ data, resourceId }) => ({
-                  resourceId,
-                  data: data[key] as unknown as V,
-                })),
-              ),
-            );
-          return adaptedToDataSourceType;
-        },
-      ),
+    const adaptedToDataSourceTypePipelines = keys.flatMap(
+      (key: KeysMatching<T, V>) =>
+        pipelines.map(
+          (pipeline: (source: Observable<Data<V>>) => Observable<Event>) => {
+            const adaptedToDataSourceType: (
+              dataSource: PushyDataSource<T>,
+            ) => Observable<Event> = (dataSource: PushyDataSource<T>) =>
+              pipeline(
+                dataSource.pipe(
+                  map(({ data, resourceId }) => ({
+                    resourceId,
+                    data: data[key] as unknown as V,
+                  })),
+                ),
+              );
+            return adaptedToDataSourceType;
+          },
+        ),
     );
-    this.dataSourceTransformationPipelines.push(...composedPipelines);
+    this.dataSourceTransformationPipelines.push(
+      ...adaptedToDataSourceTypePipelines,
+    );
     this.transformations.push(transformation as Transformation<T, unknown>);
     return this;
   }
@@ -95,28 +126,79 @@ class BuildStepImpl<T extends object> implements BuildStep<T> {
   constructor(private readonly monitorBuilderState: MonitorsBuilderState<T>) {}
 
   build(): Monitor<T> {
-    const { builderProps, addDataSourceStep, addTransformationsStep } =
-      this.monitorBuilderState;
-    if (!builderProps || !addDataSourceStep || !addTransformationsStep) {
-      throw new Error('Should not happen');
-    }
-    const { dataSource, pollInterval } = addDataSourceStep;
     const {
-      transformations,
-      dataSourceTransformationPipelines,
-      dispatchStrategy,
-    } = addTransformationsStep;
+      builderProps,
+      chooseDataSourceStep,
+      defineDataSourceStep,
+      addTransformationsStep,
+    } = this.monitorBuilderState;
+
+    if (!builderProps || !chooseDataSourceStep || !addTransformationsStep) {
+      throw new Error(
+        'Expected [builderProps, chooseDataSourceStep, addTransformationsStep] to be defined',
+      );
+    }
+    switch (chooseDataSourceStep.dataSourceType) {
+      case 'user-defined': {
+        if (!defineDataSourceStep) {
+          throw new Error('Expected data source to be defined');
+        }
+        return this.createUserDefinedMonitor(
+          defineDataSourceStep,
+          addTransformationsStep,
+          builderProps,
+        );
+      }
+      case 'subscriber-events': {
+        return this.buildSubscriberEventMonitor(
+          addTransformationsStep,
+          builderProps,
+        );
+      }
+      default: {
+        throw new Error(
+          `Unexpected data source type: ${chooseDataSourceStep.dataSourceType}`,
+        );
+      }
+    }
+  }
+
+  private buildSubscriberEventMonitor(
+    addTransformationsStep: AddTransformationsStepImpl<T>,
+    builderProps: MonitorBuilderProps,
+  ) {
+    const { dataSourceTransformationPipelines, dispatchStrategy } =
+      addTransformationsStep;
+    if (!dataSourceTransformationPipelines || !dispatchStrategy) {
+      throw new Error(
+        'Expected [dataSourceTransformationPipelines, dispatchStrategy] to be defined',
+      );
+    }
+    return Monitors.factory(builderProps).createSubscriberEventMonitor(
+      dataSourceTransformationPipelines as DataSourceTransformationPipeline<SubscriberEvent>[],
+    );
+  }
+
+  private createUserDefinedMonitor(
+    defineDataSourceStep: DefineDataSourceStepImpl<T>,
+    addTransformationsStep: AddTransformationsStepImpl<T>,
+    builderProps: MonitorBuilderProps,
+  ) {
+    const { pollableDataSource, pollInterval } = defineDataSourceStep;
+    const { dataSourceTransformationPipelines, dispatchStrategy } =
+      addTransformationsStep;
     if (
-      !dataSource ||
+      !pollableDataSource ||
       !pollInterval ||
-      !transformations ||
       !dataSourceTransformationPipelines ||
       !dispatchStrategy
     ) {
-      throw new Error('Should not happen');
+      throw new Error(
+        'Expected [pollableDataSource, pollInterval, dataSourceTransformationPipelines, dispatchStrategy] to be defined',
+      );
     }
     return Monitors.factory(builderProps).createUnicastMonitor<T>(
-      dataSource,
+      pollableDataSource,
       dataSourceTransformationPipelines,
       pollInterval,
     );

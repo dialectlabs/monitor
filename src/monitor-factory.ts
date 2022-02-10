@@ -2,12 +2,13 @@ import { Keypair } from '@solana/web3.js';
 import { Program } from '@project-serum/anchor';
 import { Duration } from 'luxon';
 import {
+  DataSourceTransformationPipeline,
   EventSink,
   PollableDataSource,
   SubscriberRepository,
-  DataSourceTransformationPipeline,
 } from './ports';
 import { Monitor } from './monitor-api';
+import { SubscriberEvent } from './data-model';
 
 export interface MonitorFactoryProps {
   dialectProgram?: Program;
@@ -23,7 +24,7 @@ export interface MonitorFactory {
     pollInterval: Duration,
   ): Monitor<T>;
 
-  // createSubscriberEventMonitor(
-  //   eventDetectionPipelines: MonitorEventDetectionPipeline<SubscriberEvent>[],
-  // ): Monitor<SubscriberEvent>;
+  createSubscriberEventMonitor(
+    eventDetectionPipelines: DataSourceTransformationPipeline<SubscriberEvent>[],
+  ): Monitor<SubscriberEvent>;
 }

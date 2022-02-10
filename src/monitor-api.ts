@@ -1,11 +1,8 @@
 import { DefaultMonitorFactory } from './internal/default-monitor-factory';
 
-import { AddDataSourceStep, MonitorBuilderProps } from './monitor-builder';
+import { ChooseDataSourceStep, MonitorBuilderProps } from './monitor-builder';
 import { MonitorFactory, MonitorFactoryProps } from './monitor-factory';
-import {
-  MonitorsBuilderState,
-  SetDataSourceStepImpl,
-} from './internal/monitor-builder';
+import { ChooseDataSourceStepImpl } from './internal/monitor-builder';
 
 /**
  * A monitor is an entity that is responsible for execution of unbounded streaming ETL (Extract, Transform, Load)
@@ -18,16 +15,12 @@ export interface Monitor<T extends object> {
 }
 
 export class Monitors<T extends object> {
-  private static factories: Record<string, DefaultMonitorFactory>;
   private static factoryInstance: DefaultMonitorFactory;
 
   private constructor() {}
 
-  static builder<T extends object>(
-    builderProps: MonitorBuilderProps,
-  ): AddDataSourceStep<T> {
-    const monitorsBuilderSteps = new MonitorsBuilderState<T>(builderProps);
-    return new SetDataSourceStepImpl(monitorsBuilderSteps);
+  static builder(builderProps: MonitorBuilderProps): ChooseDataSourceStep {
+    return new ChooseDataSourceStepImpl(builderProps);
   }
 
   static factory(props: MonitorFactoryProps): MonitorFactory {

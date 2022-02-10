@@ -3,7 +3,7 @@ import { InMemorySubscriberRepository } from './in-memory-subscriber.repository'
 import { OnChainSubscriberRepository } from './on-chain-subscriber.repository';
 import { Duration } from 'luxon';
 import { UnicastMonitor } from './unicast-monitor';
-import { concatMap, from, switchMap, timer } from 'rxjs';
+import { concatMap, from, Observable, switchMap, timer } from 'rxjs';
 import { MonitorFactory, MonitorFactoryProps } from '../monitor-factory';
 import {
   DataSourceTransformationPipeline,
@@ -13,7 +13,7 @@ import {
   SubscriberRepository,
 } from '../ports';
 import { Monitor } from '../monitor-api';
-import { ResourceId } from '../data-model';
+import { Data, ResourceId, SubscriberEvent } from '../data-model';
 
 export class DefaultMonitorFactory implements MonitorFactory {
   private readonly eventSink: EventSink;
@@ -87,41 +87,34 @@ export class DefaultMonitorFactory implements MonitorFactory {
     );
   }
 
-  // createSubscriberEventMonitor(
-  //   eventDetectionPipelines: MonitorEventDetectionPipeline<SubscriberEvent>[],
-  // ): Monitor<SubscriberEvent> {
-  //   const parameterId = 'subscriber-state';
-  //   const observableDataSource: Observable<
-  //     ResourceParameterData<SubscriberEvent>
-  //   > = new Observable<ResourceParameterData<SubscriberEvent>>((subscriber) =>
-  //     this.subscriberRepository.subscribe(
-  //       (resourceId) =>
-  //         subscriber.next({
-  //           resourceId,
-  //           parameterData: {
-  //             parameterId: 'subscriber-state',
-  //             data: 'added',
-  //           },
-  //         }),
-  //       (resourceId) =>
-  //         subscriber.next({
-  //           resourceId,
-  //           parameterData: {
-  //             parameterId: 'subscriber-state',
-  //             data: 'removed',
-  //           },
-  //         }),
-  //     ),
-  //   );
-  //   const eventDetectionPipelinesRecord = Object.fromEntries([
-  //     [parameterId, eventDetectionPipelines],
-  //   ]);
-  //   const unicastMonitor = new UnicastMonitor<SubscriberEvent>(
-  //     observableDataSource,
-  //     eventDetectionPipelinesRecord,
-  //     this.eventSink,
-  //   );
-  //   this.shutdownHooks.push(() => unicastMonitor.stop());
-  //   return unicastMonitor;
-  // }
+  createSubscriberEventMonitor(
+    eventDetectionPipelines: DataSourceTransformationPipeline<SubscriberEvent>[],
+  ): Monitor<SubscriberEvent> {
+    const observableDataSource: Observable<Data<SubscriberEvent>> =
+      new Observable<Data<SubscriberEvent>>((subscriber) =>
+        this.subscriberRepository.subscribe(
+          (resourceId) =>
+            subscriber.next({
+              resourceId,
+              data: {
+                state: 'added',
+              },
+            }),
+          (resourceId) =>
+            subscriber.next({
+              resourceId,
+              data: {
+                state: 'removed',
+              },
+            }),
+        ),
+      );
+    const unicastMonitor = new UnicastMonitor<SubscriberEvent>(
+      observableDataSource,
+      eventDetectionPipelines,
+      this.eventSink,
+    );
+    this.shutdownHooks.push(() => unicastMonitor.stop());
+    return unicastMonitor;
+  }
 }

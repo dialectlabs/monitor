@@ -23,4 +23,8 @@ export interface Event {
   message: string;
 }
 
-export type SubscriberEvent = 'added' | 'removed';
+export type SubscriberState = 'added' | 'removed';
+
+export interface SubscriberEvent {
+  state: SubscriberState;
+}

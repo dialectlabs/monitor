@@ -1,4 +1,4 @@
-import { Data } from './data-model';
+import { Data, SubscriberState } from './data-model';
 import { Operators, PipeLogLevel } from './transformation-pipeline-operators';
 import { TransformationPipeline } from './ports';
 
@@ -16,6 +16,18 @@ export const dummyNumericPipeline2: TransformationPipeline<number> = (source) =>
     Operators.Event.info(
       'Dummy numeric TransformationPipeline 2',
       (v: Data<number>) => `Hello world  for user ${v.resourceId} from p2 ${v}`,
+    ),
+    Operators.Utility.log(PipeLogLevel.INFO),
+  );
+
+export const generateWelcomeMessage: TransformationPipeline<SubscriberState> = (
+  source,
+) =>
+  source.pipe(Operators.Transform.filter(({ data }) => data === 'added')).pipe(
+    Operators.Event.info(
+      'Welcome',
+      (v) => `Thanks for subscribing for notifications (managed by Dialect). 
+You'll receive notifications about xxx.`,
     ),
     Operators.Utility.log(PipeLogLevel.INFO),
   );
@@ -41,5 +53,9 @@ export class Pipelines {
 
   static forward() {
     return forward;
+  }
+
+  static welcomeMessage(threshold: number) {
+    return dummyNumericPipeline2;
   }
 }

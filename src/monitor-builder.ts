@@ -8,6 +8,7 @@ import {
 import { Program } from '@project-serum/anchor';
 import { Keypair } from '@solana/web3.js';
 import { Monitor } from './monitor-api';
+import { SubscriberEvent } from './data-model';
 
 export interface MonitorBuilderProps {
   dialectProgram?: Program;
@@ -16,8 +17,14 @@ export interface MonitorBuilderProps {
   subscriberRepository?: SubscriberRepository;
 }
 
-export interface AddDataSourceStep<T extends object> {
-  pollDataFrom(
+export interface ChooseDataSourceStep {
+  subscriberEvents(): AddTransformationsStep<SubscriberEvent>;
+
+  defineDataSource<T extends object>(): DefineDataSourceStep<T>;
+}
+
+export interface DefineDataSourceStep<T extends object> {
+  poll(
     dataSource: PollableDataSource<T>,
     pollInterval: Duration,
   ): AddTransformationsStep<T>;

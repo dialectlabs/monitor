@@ -15,7 +15,7 @@ import {
 } from '../ports';
 import { Monitor } from '../monitor-api';
 import { Data } from '../data-model';
-import { Operators } from '../transformation-operators';
+import { Operators } from '../transformation-pipeline-operators';
 
 export class UnicastMonitor<T extends Object> implements Monitor<T> {
   private started = false;
