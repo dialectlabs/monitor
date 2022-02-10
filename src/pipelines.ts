@@ -6,13 +6,24 @@ export type DeveloperFacingEventDetectionPipeline<V> = (
   source: Observable<V>,
 ) => Observable<Event>;
 
+export const dummyNumericPipeline1: DeveloperFacingEventDetectionPipeline<
+  number
+> = (source) =>
+  source.pipe(
+    Operators.Event.info(
+      'Dummy numeric pipeline 1',
+      (v) => `Hello world from p1 ${v}`,
+    ),
+    Operators.Utility.log(PipeLogLevel.INFO),
+  );
+
 export const dummyNumericPipeline2: DeveloperFacingEventDetectionPipeline<
   number
 > = (source) =>
   source.pipe(
     Operators.Event.info(
       'Dummy numeric pipeline 2',
-      (v) => `Hello world from ${v}`,
+      (v) => `Hello world from p2 ${v}`,
     ),
     Operators.Utility.log(PipeLogLevel.INFO),
   );
@@ -22,8 +33,8 @@ export const forward: DeveloperFacingEventDetectionPipeline<string> = (
 ) =>
   source.pipe(
     Operators.Event.info(
-      'Dummy numeric pipeline 2',
-      (v) => `Hello world from ${v}`,
+      'Dummy forward',
+      (v) => `Hello world from forward ${v}`,
     ),
     Operators.Utility.log(PipeLogLevel.INFO),
   );

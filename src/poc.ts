@@ -25,14 +25,14 @@ const monitor = Monitors.builder<DataType>({})
       ]),
     Duration.fromObject({ seconds: 10 }),
   )
-  .transform<number>({
-    parameters: ['cratio', 'cratio2'],
-    pipelines: [Pipelines.fallingEdge(111), Pipelines.risingEdge(150)],
-  })
-  .transform<string>({
-    parameters: ['smth'],
-    pipelines: [Pipelines.forward()],
-  })
+  // .transform<number>({
+  //   parameters: ['cratio', 'cratio2'],
+  //   pipelines: [Pipelines.fallingEdge(111), Pipelines.risingEdge(150)],
+  // })
+  // .transform<string>({
+  //   parameters: ['smth'],
+  //   pipelines: [Pipelines.forward()],
+  // })
   .dispatch('unicast')
   .build();
 

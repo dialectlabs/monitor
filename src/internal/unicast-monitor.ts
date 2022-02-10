@@ -15,7 +15,7 @@ import {
 } from '../monitor';
 import { Operators } from '../monitor-pipeline-operators';
 import { PublicKey } from '@solana/web3.js';
-import { map, tap } from 'rxjs/operators';
+import { map } from 'rxjs/operators';
 
 export class UnicastMonitor<T> implements Monitor<T> {
   private started = false;
@@ -39,7 +39,6 @@ export class UnicastMonitor<T> implements Monitor<T> {
 
   private async startMonitorPipeline() {
     const monitorPipelineSubscription = this.dataSource
-      .pipe(tap((it) => console.log(JSON.stringify(it))))
       .pipe(
         groupBy<ResourceData<T>, string, ResourceData<T>>(
           ({ resourceId, data }) => resourceId.toString(),

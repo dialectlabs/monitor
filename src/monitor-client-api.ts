@@ -46,7 +46,7 @@ export type KeysMatching<T extends object, V> = {
 }[keyof T];
 
 export interface Transformation<T extends object, V> {
-  parameters: KeysMatching<T, V>[];
+  keys: KeysMatching<T, V>[];
   pipelines: DeveloperFacingEventDetectionPipeline<V>[];
 }
 
@@ -76,10 +76,7 @@ class SetDataSourceStepImpl<T extends object> implements SetDataSourceStep<T> {
 }
 
 interface AddTransformationsStep<T extends object> {
-  transform<V>(
-    transformation: Transformation<T, V>,
-    o?: T,
-  ): AddTransformationsStep<T>;
+  transform<V>(transformation: Transformation<T, V>): AddTransformationsStep<T>;
 
   dispatch(strategy: 'unicast'): BuildStep<T>;
 }
@@ -98,8 +95,8 @@ class AddTransformationsStepImpl<T extends object>
   transform<V>(
     transformation: Transformation<T, V>,
   ): AddTransformationsStep<T> {
-    const { parameters, pipelines } = transformation;
-    const composedPipelines = parameters.flatMap((key: KeysMatching<T, V>) =>
+    const { keys, pipelines } = transformation;
+    const composedPipelines = keys.flatMap((key: KeysMatching<T, V>) =>
       pipelines.map(
         (
           singleKeyProcessingPipeline: (

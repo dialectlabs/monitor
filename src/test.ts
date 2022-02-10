@@ -7,6 +7,7 @@ import { DataType } from './poc';
 import { SubscriberEventHandler, SubscriberRepository } from '../src';
 import { Keypair } from '@solana/web3.js';
 import { expect } from '@jest/globals';
+
 jest.setTimeout(30000);
 
 export class DummySubscriberRepository implements SubscriberRepository {
@@ -57,18 +58,11 @@ export class ConsoleEventSink implements EventSink {
 
 describe('Update method', () => {
   it('fsadsafas', async () => {
-    const obj: DataType = {
-      smth: '31231',
-      cratio: 312,
-      cratio2: 331,
-    };
-
     const monitor = Monitors.builder<DataType>({
       subscriberRepository: new DummySubscriberRepository(),
       eventSink: new ConsoleEventSink(),
     })
       .pollDataFrom((subscribers: ResourceId[]) => {
-        console.log(JSON.stringify(subscribers));
         return Promise.resolve([
           {
             data: {
@@ -79,21 +73,15 @@ describe('Update method', () => {
             resourceId: subscribers[0],
           },
         ]);
-      }, Duration.fromObject({ seconds: 2 }))
-      .transform<number>(
-        {
-          parameters: ['cratio', 'cratio2'],
-          pipelines: [Pipelines.fallingEdge(111), Pipelines.risingEdge(150)],
-        },
-        obj,
-      )
-      .transform<string>(
-        {
-          parameters: ['smth'],
-          pipelines: [Pipelines.forward()],
-        },
-        obj,
-      )
+      }, Duration.fromObject({ seconds: 20 }))
+      .transform<number>({
+        keys: ['cratio', 'cratio2'],
+        pipelines: [Pipelines.fallingEdge(111), Pipelines.risingEdge(150)],
+      })
+      .transform<string>({
+        keys: ['smth'],
+        pipelines: [Pipelines.forward()],
+      })
       .dispatch('unicast')
       .build();
 
