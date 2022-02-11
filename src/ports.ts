@@ -7,24 +7,29 @@ import { Data, Notification, ResourceId } from './data-model';
 export interface DataSource<T extends object> {}
 
 /**
- * Pollable data source will be polled by framework to get next data
+ * Pollable data source is polled by framework to get new data
  */
 export interface PollableDataSource<T extends object> extends DataSource<T> {
   (subscribers: ResourceId[]): Promise<Data<T>[]>;
 }
 
 /**
- * Pushing data source
+ * Pushy data source delivers data asynchronously, which eliminates polling
  */
 export type PushyDataSource<T extends object> = Observable<Data<T>>;
 
 /**
  * A set of transformations that are executed on-top of unbound pushy data source
+ * to generate a new notification
  */
 export type DataSourceTransformationPipeline<T extends Object> = (
   dataSource: PushyDataSource<T>,
 ) => Observable<Notification>;
 
+/**
+ * A set of transformations that are executed on-top of a specific key from unbound pushy data source
+ * to generate notification but bound to a
+ */
 export type TransformationPipeline<V> = (
   upstream: Observable<Data<V>>,
 ) => Observable<Notification>;

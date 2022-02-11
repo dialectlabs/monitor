@@ -1,12 +1,13 @@
 import { PublicKey } from '@solana/web3.js';
 
 /**
- * A user or a dApp, just an alias to
+ * A reference to any on-chain resource i.e.g user or a dApp, just an alias to PublicKey
  */
 export type ResourceId = PublicKey;
 
 /**
- * A data bound to a specific on chain resource (e.g. subscriber)
+ * Any data bound to a specific on chain resource that may be stored in account
+ *  @typeParam T data type provided by data source
  */
 export type Data<T extends Object> = {
   resourceId: ResourceId;
@@ -14,7 +15,7 @@ export type Data<T extends Object> = {
 };
 
 /**
- * A parameter state that was detected by pipeline and need to be sent to subscribers
+ * Dialect web3 notification
  */
 export interface Notification {
   timestamp: Date;
@@ -23,8 +24,11 @@ export interface Notification {
   message: string;
 }
 
-export type SubscriberState = 'added' | 'removed';
-
+/**
+ * An event that is fired when something changes in subscriber state e.g. new subscriber is added
+ */
 export interface SubscriberEvent {
   state: SubscriberState;
 }
+
+export type SubscriberState = 'added' | 'removed';

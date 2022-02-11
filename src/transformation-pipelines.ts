@@ -54,6 +54,9 @@ function createTriggerOperator(trigger: Trigger) {
   throw new Error('Should not happen');
 }
 
+/**
+ * A set of commonly-used pipelines
+ */
 export class Pipelines {
   static threshold(
     trigger: Trigger,
