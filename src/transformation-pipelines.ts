@@ -170,4 +170,8 @@ export class Pipelines {
           ),
         );
   }
+
+  static createNew<T>(pipeline: TransformationPipeline<T>) {
+    return pipeline;
+  }
 }

@@ -81,6 +81,14 @@ export class Operators {
           values.reduce((sum, value) => sum + value, 0) / values.length,
       );
     }
+
+    static max(): OperatorFunction<number[], number> {
+      return map((values) => Math.max(...values));
+    }
+
+    static min(): OperatorFunction<number[], number> {
+      return map((values) => Math.min(...values));
+    }
   };
 
   static Trigger = class {
@@ -159,10 +167,15 @@ export class Operators {
   };
 
   static Utility = class {
-    static log<T>(level: PipeLogLevel): MonoTypeOperatorFunction<T> {
+    static log<T>(
+      level: PipeLogLevel,
+      msg?: string,
+    ): MonoTypeOperatorFunction<T> {
       return tap((value: T) => {
         if (level >= pipeLogLevel) {
-          console.log(value);
+          msg
+            ? console.log(`${msg}: ${JSON.stringify(value)}`)
+            : console.log(JSON.stringify(value));
         }
         return value;
       });
