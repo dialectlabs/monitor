@@ -32,6 +32,10 @@ export function setPipeLogLevel(level: PipeLogLevel) {
 
 export class Operators {
   static Transform = class {
+    static identity<T>(): OperatorFunction<T, T> {
+      return map((data) => data);
+    }
+
     static getRaw<T>(): OperatorFunction<Data<T>, T> {
       return map(({ data }) => data);
     }

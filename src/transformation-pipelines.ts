@@ -1,17 +1,17 @@
-import { Data, Event, SubscriberState } from './data-model';
-import { Operators, PipeLogLevel } from './transformation-pipeline-operators';
+import { SubscriberState } from './data-model';
+import { Operators } from './transformation-pipeline-operators';
 import { TransformationPipeline } from './ports';
 import { Duration } from 'luxon';
 
 export type Window = FixedSizeWindow | FixedSizeSlidingWindow | FixedTimeWindow;
 
 export interface FixedSizeWindow {
-  type: 'fixes-size';
+  type: 'fixed-size';
   size: number;
 }
 
 export interface FixedSizeSlidingWindow {
-  type: 'fixes-size-sliding';
+  type: 'fixed-size-sliding';
   size: number;
 }
 
@@ -24,10 +24,12 @@ export type Trigger = RisingEdgeTrigger | FallingEdgeTrigger;
 
 export interface RisingEdgeTrigger {
   type: 'rising-edge';
+  threshold: number;
 }
 
 export interface FallingEdgeTrigger {
   type: 'falling-edge';
+  threshold: number;
 }
 
 export type RateLimit = ThrottleTimeRateLimit;
@@ -37,85 +39,135 @@ export interface ThrottleTimeRateLimit {
   timeSpan: Duration;
 }
 
-export interface ThresholdProps {
-  trigger: Trigger;
-  window?: Window;
-  rateLimit?: RateLimit;
-}
-
 export interface EventGenerationProps<V> {
-  builder: (data: Data<V>) => Event;
+  title: string;
+  messageBuilder: (value: V) => string;
 }
 
-export function threshold(
-  { window, trigger, rateLimit }: ThresholdProps,
-  eventGenerationProps: EventGenerationProps<number>,
-) {
-  const pipeline: TransformationPipeline<number> = (source) =>
-    source.pipe().pipe(
-      Operators.Event.info(
-        'Dummy numeric TransformationPipeline 1',
-        (v: Data<number>) =>
-          `Hello world for user ${v.resourceId} from p1 ${v}`,
-      ),
-      Operators.Utility.log(PipeLogLevel.INFO),
-    );
+function createTriggerOperator(trigger: Trigger) {
+  switch (trigger.type) {
+    case 'falling-edge':
+      return Operators.Trigger.fallingEdge(trigger.threshold);
+    case 'rising-edge':
+      return Operators.Trigger.risingEdge(trigger.threshold);
+  }
+  throw new Error('Should not happen');
 }
-
-export const dummyNumericPipeline1: TransformationPipeline<number> = (source) =>
-  source.pipe(
-    Operators.Event.info(
-      'Dummy numeric TransformationPipeline 1',
-      (v: Data<number>) => `Hello world for user ${v.resourceId} from p1 ${v}`,
-    ),
-    Operators.Utility.log(PipeLogLevel.INFO),
-  );
-
-export const dummyNumericPipeline2: TransformationPipeline<number> = (source) =>
-  source.pipe(
-    Operators.Event.info(
-      'Dummy numeric TransformationPipeline 2',
-      (v: Data<number>) => `Hello world  for user ${v.resourceId} from p2 ${v}`,
-    ),
-    Operators.Utility.log(PipeLogLevel.INFO),
-  );
-
-export const generateWelcomeMessage: TransformationPipeline<SubscriberState> = (
-  source,
-) =>
-  source.pipe(Operators.Transform.filter(({ data }) => data === 'added')).pipe(
-    Operators.Event.info(
-      'Welcome',
-      (v) => `Thanks for subscribing for notifications (managed by Dialect). 
-You'll receive notifications about xxx.`,
-    ),
-    Operators.Utility.log(PipeLogLevel.INFO),
-  );
-
-export const forward: TransformationPipeline<string> = (source) =>
-  source.pipe(
-    Operators.Event.info(
-      'Dummy forward',
-      (v: Data<string>) =>
-        `Hello world for user ${v.resourceId}  from forward ${v}`,
-    ),
-    Operators.Utility.log(PipeLogLevel.INFO),
-  );
 
 export class Pipelines {
-  static fallingEdge(threshold: number) {
-    return dummyNumericPipeline2;
+  static threshold(
+    trigger: Trigger,
+    eventGenerationProps: EventGenerationProps<number>,
+    rateLimit?: RateLimit,
+  ): TransformationPipeline<number> {
+    const triggerOperator = createTriggerOperator(trigger);
+    return (source) =>
+      source
+        .pipe(Operators.Transform.getRaw())
+        .pipe(...triggerOperator)
+        .pipe(
+          Operators.Event.info(
+            eventGenerationProps.title,
+            eventGenerationProps.messageBuilder,
+          ),
+        )
+        .pipe(
+          rateLimit
+            ? Operators.FlowControl.rateLimit(rateLimit.timeSpan)
+            : Operators.Transform.identity(),
+        );
   }
 
-  static risingEdge(threshold: number) {
-    return dummyNumericPipeline2;
+  static averageInFixedSizeWindowThreshold(
+    window: FixedSizeWindow,
+    trigger: Trigger,
+    eventGenerationProps: EventGenerationProps<number>,
+    rateLimit?: RateLimit,
+  ): TransformationPipeline<number> {
+    const triggerOperator = createTriggerOperator(trigger);
+    return (source) =>
+      source
+        .pipe(Operators.Transform.getRaw())
+        .pipe(Operators.Window.fixedSize(window.size))
+        .pipe(Operators.Aggregate.avg())
+        .pipe(...triggerOperator)
+        .pipe(
+          Operators.Event.info(
+            eventGenerationProps.title,
+            eventGenerationProps.messageBuilder,
+          ),
+        )
+        .pipe(
+          rateLimit
+            ? Operators.FlowControl.rateLimit(rateLimit.timeSpan)
+            : Operators.Transform.identity(),
+        );
   }
 
-  static forward() {
-    return forward;
+  static averageInFixedTimeWindowThreshold(
+    window: FixedTimeWindow,
+    trigger: Trigger,
+    eventGenerationProps: EventGenerationProps<number>,
+    rateLimit?: RateLimit,
+  ): TransformationPipeline<number> {
+    const triggerOperator = createTriggerOperator(trigger);
+    return (source) =>
+      source
+        .pipe(Operators.Transform.getRaw())
+        .pipe(...Operators.Window.fixedTime<number>(window.timeSpan))
+        .pipe(Operators.Aggregate.avg())
+        .pipe(...triggerOperator)
+        .pipe(
+          Operators.Event.info(
+            eventGenerationProps.title,
+            eventGenerationProps.messageBuilder,
+          ),
+        )
+        .pipe(
+          rateLimit
+            ? Operators.FlowControl.rateLimit(rateLimit.timeSpan)
+            : Operators.Transform.identity(),
+        );
   }
 
-  static welcomeMessage(threshold: number) {
-    return dummyNumericPipeline2;
+  static averageInFixedSizeSlidingWindowThreshold(
+    window: FixedSizeSlidingWindow,
+    trigger: Trigger,
+    eventGenerationProps: EventGenerationProps<number>,
+    rateLimit?: RateLimit,
+  ): TransformationPipeline<number> {
+    const triggerOperator = createTriggerOperator(trigger);
+    return (source) =>
+      source
+        .pipe(Operators.Transform.getRaw())
+        .pipe(Operators.Window.fixedSizeSliding<number>(window.size))
+        .pipe(Operators.Aggregate.avg())
+        .pipe(...triggerOperator)
+        .pipe(
+          Operators.Event.info(
+            eventGenerationProps.title,
+            eventGenerationProps.messageBuilder,
+          ),
+        )
+        .pipe(
+          rateLimit
+            ? Operators.FlowControl.rateLimit(rateLimit.timeSpan)
+            : Operators.Transform.identity(),
+        );
+  }
+
+  static sendMessageToNewSubscriber(
+    eventGenerationProps: EventGenerationProps<SubscriberState>,
+  ): TransformationPipeline<SubscriberState> {
+    return (source) =>
+      source
+        .pipe(Operators.Transform.getRaw())
+        .pipe(Operators.Transform.filter((it) => it === 'added'))
+        .pipe(
+          Operators.Event.info(
+            eventGenerationProps.title,
+            eventGenerationProps.messageBuilder,
+          ),
+        );
   }
 }
