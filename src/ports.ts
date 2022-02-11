@@ -1,5 +1,5 @@
 import { Observable } from 'rxjs';
-import { Data, Event, ResourceId } from './data-model';
+import { Data, Notification, ResourceId } from './data-model';
 
 /**
  * An abstraction that represents a source of data, bound to specific type
@@ -23,11 +23,11 @@ export type PushyDataSource<T extends object> = Observable<Data<T>>;
  */
 export type DataSourceTransformationPipeline<T extends Object> = (
   dataSource: PushyDataSource<T>,
-) => Observable<Event>;
+) => Observable<Notification>;
 
 export type TransformationPipeline<V> = (
   upstream: Observable<Data<V>>,
-) => Observable<Event>;
+) => Observable<Notification>;
 
 export type SubscriberEventHandler = (subscriber: ResourceId) => any;
 
@@ -57,6 +57,6 @@ export interface SubscriberRepository {
 /**
  * An interface that abstracts the destination where events are sent/persisted
  */
-export interface EventSink {
-  push(event: Event, recipients: ResourceId[]): Promise<void>;
+export interface NotificationSink {
+  push(notification: Notification, recipients: ResourceId[]): Promise<void>;
 }

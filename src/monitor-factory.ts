@@ -3,7 +3,7 @@ import { Program } from '@project-serum/anchor';
 import { Duration } from 'luxon';
 import {
   DataSourceTransformationPipeline,
-  EventSink,
+  NotificationSink,
   PollableDataSource,
   SubscriberRepository,
 } from './ports';
@@ -13,7 +13,7 @@ import { SubscriberEvent } from './data-model';
 export interface MonitorFactoryProps {
   dialectProgram?: Program;
   monitorKeypair?: Keypair;
-  eventSink?: EventSink;
+  notificationSink?: NotificationSink;
   subscriberRepository?: SubscriberRepository;
 }
 

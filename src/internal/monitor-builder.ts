@@ -7,7 +7,7 @@ import {
   MonitorBuilderProps,
   Transformation,
 } from '../monitor-builder';
-import { Data, Event, SubscriberEvent } from '../data-model';
+import { Data, Notification, SubscriberEvent } from '../data-model';
 import {
   DataSourceTransformationPipeline,
   PollableDataSource,
@@ -93,10 +93,12 @@ class AddTransformationsStepImpl<T extends object>
     const adaptedToDataSourceTypePipelines = keys.flatMap(
       (key: KeysMatching<T, V>) =>
         pipelines.map(
-          (pipeline: (source: Observable<Data<V>>) => Observable<Event>) => {
+          (
+            pipeline: (source: Observable<Data<V>>) => Observable<Notification>,
+          ) => {
             const adaptedToDataSourceType: (
               dataSource: PushyDataSource<T>,
-            ) => Observable<Event> = (dataSource: PushyDataSource<T>) =>
+            ) => Observable<Notification> = (dataSource: PushyDataSource<T>) =>
               pipeline(
                 dataSource.pipe(
                   map(({ data, resourceId }) => ({

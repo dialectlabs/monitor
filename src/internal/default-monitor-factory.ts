@@ -1,4 +1,4 @@
-import { DialectEventSink } from './dialect-event-sink';
+import { DialectNotificationSink } from './dialect-notification-sink';
 import { InMemorySubscriberRepository } from './in-memory-subscriber.repository';
 import { OnChainSubscriberRepository } from './on-chain-subscriber.repository';
 import { Duration } from 'luxon';
@@ -7,7 +7,7 @@ import { concatMap, from, Observable, switchMap, timer } from 'rxjs';
 import { MonitorFactory, MonitorFactoryProps } from '../monitor-factory';
 import {
   DataSourceTransformationPipeline,
-  EventSink,
+  NotificationSink,
   PollableDataSource,
   PushyDataSource,
   SubscriberRepository,
@@ -16,7 +16,7 @@ import { Monitor } from '../monitor-api';
 import { Data, ResourceId, SubscriberEvent } from '../data-model';
 
 export class DefaultMonitorFactory implements MonitorFactory {
-  private readonly eventSink: EventSink;
+  private readonly notificationSink: NotificationSink;
   private readonly subscriberRepository: SubscriberRepository;
 
   private readonly shutdownHooks: (() => Promise<any>)[] = [];
@@ -24,11 +24,14 @@ export class DefaultMonitorFactory implements MonitorFactory {
   constructor({
     dialectProgram,
     monitorKeypair,
-    eventSink,
+    notificationSink,
     subscriberRepository,
   }: MonitorFactoryProps) {
     if (dialectProgram && monitorKeypair) {
-      this.eventSink = new DialectEventSink(dialectProgram, monitorKeypair);
+      this.notificationSink = new DialectNotificationSink(
+        dialectProgram,
+        monitorKeypair,
+      );
       const onChainSubscriberRepository = new OnChainSubscriberRepository(
         dialectProgram,
         monitorKeypair,
@@ -38,14 +41,14 @@ export class DefaultMonitorFactory implements MonitorFactory {
         onChainSubscriberRepository,
       );
     }
-    if (eventSink) {
-      this.eventSink = eventSink;
+    if (notificationSink) {
+      this.notificationSink = notificationSink;
     }
     if (subscriberRepository) {
       this.subscriberRepository = subscriberRepository;
     }
     // @ts-ignore
-    if (!this.eventSink || !this.subscriberRepository) {
+    if (!this.notificationSink || !this.subscriberRepository) {
       throw new Error(
         'Please specify either dialectProgram & monitorKeypair or eventSink & subscriberRepository',
       );
@@ -69,7 +72,7 @@ export class DefaultMonitorFactory implements MonitorFactory {
     const unicastMonitor = new UnicastMonitor<T>(
       pushyDataSource,
       datasourceTransformationPipelines,
-      this.eventSink,
+      this.notificationSink,
     );
     this.shutdownHooks.push(() => unicastMonitor.stop());
     return unicastMonitor;
@@ -88,7 +91,7 @@ export class DefaultMonitorFactory implements MonitorFactory {
   }
 
   createSubscriberEventMonitor(
-    eventDetectionPipelines: DataSourceTransformationPipeline<SubscriberEvent>[],
+    dataSourceTransformationPipelines: DataSourceTransformationPipeline<SubscriberEvent>[],
   ): Monitor<SubscriberEvent> {
     const dataSource: PushyDataSource<SubscriberEvent> = new Observable<
       Data<SubscriberEvent>
@@ -112,8 +115,8 @@ export class DefaultMonitorFactory implements MonitorFactory {
     );
     const unicastMonitor = new UnicastMonitor<SubscriberEvent>(
       dataSource,
-      eventDetectionPipelines,
-      this.eventSink,
+      dataSourceTransformationPipelines,
+      this.notificationSink,
     );
     this.shutdownHooks.push(() => unicastMonitor.stop());
     return unicastMonitor;

@@ -10,7 +10,7 @@ import {
 import { PublicKey } from '@solana/web3.js';
 import {
   DataSourceTransformationPipeline,
-  EventSink,
+  NotificationSink,
   PushyDataSource,
 } from '../ports';
 import { Monitor } from '../monitor-api';
@@ -25,7 +25,7 @@ export class UnicastMonitor<T extends Object> implements Monitor<T> {
   constructor(
     private readonly dataSource: PushyDataSource<T>,
     private readonly dataSourceTransformationPipelines: DataSourceTransformationPipeline<T>[],
-    private readonly eventSink: EventSink,
+    private readonly notificationSink: NotificationSink,
   ) {}
 
   async start() {
@@ -41,7 +41,7 @@ export class UnicastMonitor<T extends Object> implements Monitor<T> {
     const monitorPipelineSubscription = this.dataSource
       .pipe(
         groupBy<Data<T>, string, Data<T>>(
-          ({ resourceId, data }) => resourceId.toString(),
+          ({ resourceId }) => resourceId.toString(),
           {
             element: (it) => it,
           },
@@ -51,7 +51,7 @@ export class UnicastMonitor<T extends Object> implements Monitor<T> {
           return this.dataSourceTransformationPipelines.map((pipeline) => {
             return pipeline(data).pipe(
               exhaustMap((event) =>
-                from(this.eventSink.push(event, [resourceId])),
+                from(this.notificationSink.push(event, [resourceId])),
               ),
             );
           });

@@ -1,6 +1,6 @@
 import { Duration } from 'luxon';
 import {
-  EventSink,
+  NotificationSink,
   PollableDataSource,
   SubscriberRepository,
   TransformationPipeline,
@@ -13,7 +13,7 @@ import { SubscriberEvent } from './data-model';
 export interface MonitorBuilderProps {
   dialectProgram?: Program;
   monitorKeypair?: Keypair;
-  eventSink?: EventSink;
+  notificationSink?: NotificationSink;
   subscriberRepository?: SubscriberRepository;
 }
 

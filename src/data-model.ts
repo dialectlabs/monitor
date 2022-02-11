@@ -16,7 +16,7 @@ export type Data<T extends Object> = {
 /**
  * A parameter state that was detected by pipeline and need to be sent to subscribers
  */
-export interface Event {
+export interface Notification {
   timestamp: Date;
   type: 'warning' | 'info';
   title: string;

@@ -66,7 +66,7 @@ export class Pipelines {
         .pipe(Operators.Transform.getRaw())
         .pipe(...triggerOperator)
         .pipe(
-          Operators.Event.info(
+          Operators.Notification.info(
             eventGenerationProps.title,
             eventGenerationProps.messageBuilder,
           ),
@@ -92,7 +92,7 @@ export class Pipelines {
         .pipe(Operators.Aggregate.avg())
         .pipe(...triggerOperator)
         .pipe(
-          Operators.Event.info(
+          Operators.Notification.info(
             eventGenerationProps.title,
             eventGenerationProps.messageBuilder,
           ),
@@ -118,7 +118,7 @@ export class Pipelines {
         .pipe(Operators.Aggregate.avg())
         .pipe(...triggerOperator)
         .pipe(
-          Operators.Event.info(
+          Operators.Notification.info(
             eventGenerationProps.title,
             eventGenerationProps.messageBuilder,
           ),
@@ -144,7 +144,7 @@ export class Pipelines {
         .pipe(Operators.Aggregate.avg())
         .pipe(...triggerOperator)
         .pipe(
-          Operators.Event.info(
+          Operators.Notification.info(
             eventGenerationProps.title,
             eventGenerationProps.messageBuilder,
           ),
@@ -164,7 +164,7 @@ export class Pipelines {
         .pipe(Operators.Transform.getRaw())
         .pipe(Operators.Transform.filter((it) => it === 'added'))
         .pipe(
-          Operators.Event.info(
+          Operators.Notification.info(
             eventGenerationProps.title,
             eventGenerationProps.messageBuilder,
           ),

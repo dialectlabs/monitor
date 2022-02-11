@@ -1,18 +1,18 @@
 import { Program } from '@project-serum/anchor';
-import { Event, ResourceId } from '../data-model';
+import { Notification, ResourceId } from '../data-model';
 import { Keypair } from '@solana/web3.js';
 import { sendMessage } from '@dialectlabs/web3';
 import { getDialectAccount } from './dialect-extensions';
-import { EventSink } from '../ports';
+import { NotificationSink } from '../ports';
 
-export class DialectEventSink implements EventSink {
+export class DialectNotificationSink implements NotificationSink {
   constructor(
     private readonly dialectProgram: Program,
     private readonly monitorKeypair: Keypair,
   ) {}
 
-  push(event: Event, recipients: ResourceId[]) {
-    const notificationText = `${event.message}`;
+  push(notification: Notification, recipients: ResourceId[]) {
+    const notificationText = `${notification.message}`;
     return Promise.all(
       recipients
         .map((it) =>

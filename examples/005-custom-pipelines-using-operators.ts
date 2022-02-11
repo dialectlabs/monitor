@@ -8,7 +8,7 @@ import {
   ResourceId,
   setPipeLogLevel,
 } from '../src';
-import { ConsoleEventSink } from './004-custom-event-sink';
+import { ConsoleNotificationSink } from './004-custom-notification-sink';
 import { DummySubscriberRepository } from './003-custom-subscriber-repository';
 import { Duration } from 'luxon';
 
@@ -21,7 +21,7 @@ setPipeLogLevel(PipeLogLevel.INFO);
 
 const monitor: Monitor<DataType> = Monitors.builder({
   subscriberRepository: new DummySubscriberRepository(),
-  eventSink: new ConsoleEventSink(),
+  notificationSink: new ConsoleNotificationSink(),
 })
   .defineDataSource<DataType>()
   .poll((subscribers: ResourceId[]) => {
@@ -66,7 +66,7 @@ const monitor: Monitor<DataType> = Monitors.builder({
           .pipe(...Operators.Trigger.risingEdge(0.6))
           .pipe(Operators.Utility.log(PipeLogLevel.INFO, '      rising edge'))
           .pipe(
-            Operators.Event.info(
+            Operators.Notification.info(
               'Example',
               (value) => `here's value exceeded 0.5: ${value}`,
             ),
