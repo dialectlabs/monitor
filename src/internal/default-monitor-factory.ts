@@ -3,7 +3,7 @@ import { InMemorySubscriberRepository } from './in-memory-subscriber.repository'
 import { OnChainSubscriberRepository } from './on-chain-subscriber.repository';
 import { Duration } from 'luxon';
 import { UnicastMonitor } from './unicast-monitor';
-import { concatMap, from, Observable, switchMap, timer } from 'rxjs';
+import { concatMap, exhaustMap, from, Observable, timer } from 'rxjs';
 import { MonitorFactory, MonitorFactoryProps } from '../monitor-factory';
 import {
   DataSourceTransformationPipeline,
@@ -84,8 +84,8 @@ export class DefaultMonitorFactory implements MonitorFactory {
     subscriberRepository: SubscriberRepository,
   ): PushyDataSource<T> {
     return timer(0, pollInterval.toMillis()).pipe(
-      switchMap(() => subscriberRepository.findAll()),
-      switchMap((resources: ResourceId[]) => from(dataSource(resources))),
+      exhaustMap(() => subscriberRepository.findAll()),
+      exhaustMap((resources: ResourceId[]) => from(dataSource(resources))),
       concatMap((it) => it),
     );
   }
