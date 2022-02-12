@@ -1,6 +1,6 @@
 {
   "name": "@dialectlabs/monitor",
-  "version": "0.1.11",
+  "version": "0.1.12",
   "repository": "git@github.com:dialectlabs/monitor.git",
   "author": "dialectlabs",
   "license": "MIT",
@@ -8,7 +8,8 @@
   "main": "./lib/cjs/index.js",
   "types": "./lib/cjs/index.d.ts",
   "scripts": {
-    "build": "rm -rf lib && tsc"
+    "build": "rm -rf lib && tsc",
+    "publish": "npm run build && npm publish"
   },
   "dependencies": {
     "@dialectlabs/web3": "^0.1.3",
