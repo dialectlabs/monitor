@@ -100,7 +100,7 @@ export class Operators {
       OperatorFunction<number[], number>,
     ] {
       return [
-        Operators.Window.fixedSize(2),
+        Operators.Window.fixedSizeSliding(2),
         filter(([fst, snd]) => fst <= threshold && threshold < snd),
         map(([_, snd]) => snd),
       ];
@@ -114,7 +114,7 @@ export class Operators {
       OperatorFunction<number[], number>,
     ] {
       return [
-        Operators.Window.fixedSize(2),
+        Operators.Window.fixedSizeSliding(2),
         filter(([fst, snd]) => fst >= threshold && threshold > snd),
         map(([_, snd]) => snd),
       ];

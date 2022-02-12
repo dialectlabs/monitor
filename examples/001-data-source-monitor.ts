@@ -11,7 +11,7 @@ type DataType = {
 const THRESHOLD = 0.5;
 
 const monitor: Monitor<DataType> = Monitors.builder({
-  subscriberRepository: new DummySubscriberRepository(),
+  subscriberRepository: new DummySubscriberRepository(1),
   notificationSink: new ConsoleNotificationSink(),
 })
   .defineDataSource<DataType>()
@@ -24,7 +24,7 @@ const monitor: Monitor<DataType> = Monitors.builder({
       resourceId,
     }));
     return Promise.resolve(data);
-  }, Duration.fromObject({ seconds: 3 }))
+  }, Duration.fromObject({ seconds: 1 }))
   .transform<number>({
     keys: ['cratio'],
     pipelines: [
@@ -37,25 +37,15 @@ const monitor: Monitor<DataType> = Monitors.builder({
           messageBuilder: (value) =>
             `Your cratio = ${value} below warning threshold`,
         },
-        {
-          type: 'throttle-time',
-          timeSpan: Duration.fromObject({ minutes: 5 }),
-        },
       ),
-    ],
-  })
-  .transform<number>({
-    keys: ['cratio'],
-    pipelines: [
-      Pipelines.averageInFixedSizeWindowThreshold(
-        { size: 2 },
+      Pipelines.threshold(
         {
           type: 'rising-edge',
           threshold: 0.5,
         },
         {
           messageBuilder: (value) =>
-            `Your cratio = ${value} below warning threshold`,
+            `Your cratio = ${value} above warning threshold`,
         },
       ),
     ],

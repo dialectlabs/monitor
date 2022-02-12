@@ -58,7 +58,6 @@ export class UnicastMonitor<T extends Object> implements Monitor<T> {
         }),
         mergeMap((it) => it),
       )
-      .pipe()
       .pipe(...Operators.FlowControl.onErrorRetry())
       .subscribe();
     this.subscriptions.push(monitorPipelineSubscription);
