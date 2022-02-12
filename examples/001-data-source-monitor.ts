@@ -8,6 +8,8 @@ type DataType = {
   healthRatio: number;
 };
 
+const THRESHOLD = 0.5;
+
 const monitor: Monitor<DataType> = Monitors.builder({
   subscriberRepository: new DummySubscriberRepository(),
   notificationSink: new ConsoleNotificationSink(),

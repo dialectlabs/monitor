@@ -39,7 +39,7 @@ MONITORING_SERVICE_PRIVATE_KEY=$(cat ${your_path}/monitoring-service-dev-local-k
 ```bash
 cd examples
 export your_path=~/projects/dialect
-MONITORING_SERVICE_PUBLIC_KEY=$(cat ${your_path}/monitoring-service-dev-local-key.pub) ts-node ./000.1-real-monoring-service-client.ts
+MONITORING_SERVICE_PUBLIC_KEY=$(solana address --keypair ${your_path}/monitoring-service-dev-local-key.json) ts-node ./000.1-real-monoring-service-client.ts
 ```
 
 ### Step 4. Look at client logs for notifications
