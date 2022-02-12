@@ -3,6 +3,7 @@ import { idl, Wallet_ } from '@dialectlabs/web3';
 import { Idl, Program, Provider } from '@project-serum/anchor';
 import { Data, Monitor, Monitors, Pipelines, ResourceId } from '../src';
 import { Duration } from 'luxon';
+import { programs } from '@dialectlabs/web3/lib/es';
 
 const SOLANA_ENDPOINT = process.env.RPC_URL || 'http://localhost:8899';
 const MONITORING_SERVICE_PRIVATE_KEY = process.env
@@ -12,10 +13,10 @@ const MONITORING_SERVICE_KEYPAIR: Keypair = Keypair.fromSecretKey(
   new Uint8Array(JSON.parse(MONITORING_SERVICE_PRIVATE_KEY as string)),
 );
 
-const DIALECT_PROGRAM_ADDRESS = new PublicKey(
-  'BTHDR8UjttR3mX3PwT8MuEKDDzDYwqENYgPHH7QjaJ3y',
-);
-// const DIALECT_PROGRAM_ADDRESS = programs[NETWORK_NAME].programAddress;
+// const DIALECT_PROGRAM_ADDRESS = new PublicKey(
+//   'BTHDR8UjttR3mX3PwT8MuEKDDzDYwqENYgPHH7QjaJ3y',
+// );
+const DIALECT_PROGRAM_ADDRESS = programs['localnet'].programAddress;
 
 const wallet = Wallet_.embedded(MONITORING_SERVICE_KEYPAIR.secretKey);
 

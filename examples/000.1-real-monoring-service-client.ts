@@ -11,15 +11,16 @@ import {
   sleep,
   Wallet_,
 } from '@dialectlabs/web3';
+import { programs } from '@dialectlabs/web3/lib/es';
 
 const SOLANA_ENDPOINT = process.env.RPC_URL || 'http://localhost:8899';
 const MONITORING_SERVICE_PUBLIC_KEY = process.env
   .MONITORING_SERVICE_PUBLIC_KEY as string;
 
-const DIALECT_PROGRAM_ADDRESS = new PublicKey(
-  'BTHDR8UjttR3mX3PwT8MuEKDDzDYwqENYgPHH7QjaJ3y',
-);
-// const DIALECT_PROGRAM_ADDRESS = programs[NETWORK_NAME].programAddress;
+// const DIALECT_PROGRAM_ADDRESS = new PublicKey(
+//   'BTHDR8UjttR3mX3PwT8MuEKDDzDYwqENYgPHH7QjaJ3y',
+// );
+const DIALECT_PROGRAM_ADDRESS = programs['localnet'].programAddress;
 
 const connection = new web3.Connection(SOLANA_ENDPOINT, 'recent');
 
