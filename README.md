@@ -1,7 +1,17 @@
 # Monitor
 
-Framework to monitor on-chain resources like accounts for a set of your dApp subscribers, extract data, run analytics
-and send Dialect's web3 notifications notifications.
+A framework that simplifies implementation of dialect notification center integrations. The goal is to provide high-level developer API to extract on-chain data, transform it and generate notifications.
+
+Monitor provides the following built-in features to implement a new notification center integration:
+
+1. Tracks dApp subscribers
+2. Continuously monitors on-chain resources like accounts for a set of your dApp subscribers
+3. Provides rich high-level API for data stream processing to analyze the data, extracted from on-chain resources
+
+- Windowing: fixed size, fixed time, fixed size sliding
+- Aggregation: average, min, max
+- Thresholding: rising edge, falling edge
+- Rate limiting
 
 ## Installation
 
@@ -25,17 +35,22 @@ yarn add @dialectlabs/monitor
 - Yarn (<2)
 - Nodejs (>=15.10 <17)
 
-### Get Started
+### Getting started with monitor development in this repo
 
-To get started, launch an example
+#### Install dependencies
+
+**npm:**
 
 ```shell
-yarn 
-ts-node examples/001-data-source-monitor.ts
+npm install
 ```
 
-## Publishing
+**yarn:**
 
-TBD
+```shell
+yarn
+```
 
-## Know-hows
+#### Take a look at examples in ./examples directory ad corresponding readme file
+
+After getting familiar with examples you'll be ready to implement a new monitoring service.
