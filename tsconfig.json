@@ -23,6 +23,7 @@
     "**/*.ts",
   ],
   "exclude": [
+    "jest.config.ts",
     "node_modules",
     "lib",
     "examples"

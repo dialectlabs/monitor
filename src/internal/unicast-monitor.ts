@@ -1,36 +1,31 @@
 import {
   exhaustMap,
-  filter,
   from,
   groupBy,
   GroupedObservable,
   mergeMap,
-  Observable,
   Subscription as RxJsSubscription,
 } from 'rxjs';
-import {
-  EventDetectionPipeline,
-  EventSink,
-  Monitor,
-  ParameterId,
-  ResourceId,
-  ResourceParameterData,
-} from '../monitor';
-import { Operators } from '../monitor-pipeline-operators';
-import { PublicKey } from '@solana/web3.js';
 
-export class UnicastMonitor<T> implements Monitor<T> {
+import { PublicKey } from '@solana/web3.js';
+import {
+  DataSourceTransformationPipeline,
+  NotificationSink,
+  PushyDataSource,
+} from '../ports';
+import { Monitor } from '../monitor-api';
+import { Data } from '../data-model';
+import { Operators } from '../transformation-pipeline-operators';
+
+export class UnicastMonitor<T extends Object> implements Monitor<T> {
   private started = false;
 
   private subscriptions: RxJsSubscription[] = [];
 
   constructor(
-    private readonly dataSource: Observable<ResourceParameterData<T>>,
-    private readonly eventDetectionPipelines: Record<
-      ParameterId,
-      EventDetectionPipeline<T>[]
-    >,
-    private readonly eventSink: EventSink,
+    private readonly dataSource: PushyDataSource<T>,
+    private readonly dataSourceTransformationPipelines: DataSourceTransformationPipeline<T>[],
+    private readonly notificationSink: NotificationSink,
   ) {}
 
   async start() {
@@ -45,44 +40,24 @@ export class UnicastMonitor<T> implements Monitor<T> {
   private async startMonitorPipeline() {
     const monitorPipelineSubscription = this.dataSource
       .pipe(
-        filter(
-          ({ parameterData: { parameterId } }) =>
-            this.eventDetectionPipelines[parameterId] !== undefined,
-        ),
-      )
-      .pipe(
-        groupBy<ResourceParameterData<T>, string, ResourceParameterData<T>>(
-          ({ resourceId, parameterData: { parameterId } }) =>
-            UnicastMonitor.stringifyGroupingKey({
-              resourceId,
-              parameterId,
-            }),
+        groupBy<Data<T>, string, Data<T>>(
+          ({ resourceId }) => resourceId.toString(),
           {
             element: (it) => it,
           },
         ),
-        mergeMap(
-          (
-            resourceParameterData: GroupedObservable<
-              string,
-              ResourceParameterData<T>
-            >,
-          ) => {
-            const { resourceId, parameterId } =
-              UnicastMonitor.deStringifyGroupingKey(resourceParameterData.key);
-            const pipelines = this.eventDetectionPipelines[parameterId] ?? [];
-            return pipelines.map((pipeline) => {
-              return pipeline(resourceParameterData).pipe(
-                exhaustMap((event) =>
-                  from(this.eventSink.push(event, [resourceId])),
-                ),
-              );
-            });
-          },
-        ),
+        mergeMap((data: GroupedObservable<string, Data<T>>) => {
+          const resourceId = new PublicKey(data.key);
+          return this.dataSourceTransformationPipelines.map((pipeline) => {
+            return pipeline(data).pipe(
+              exhaustMap((event) =>
+                from(this.notificationSink.push(event, [resourceId])),
+              ),
+            );
+          });
+        }),
         mergeMap((it) => it),
       )
-      .pipe()
       .pipe(...Operators.FlowControl.onErrorRetry())
       .subscribe();
     this.subscriptions.push(monitorPipelineSubscription);
@@ -97,31 +72,4 @@ export class UnicastMonitor<T> implements Monitor<T> {
     this.started = false;
     return Promise.resolve();
   }
-
-  // NB: rxjs cannot group by arbitrary type => need to concat using separator
-  private static GROUPING_KEY_SEPARATOR = `¿`;
-
-  private static stringifyGroupingKey({
-    resourceId,
-    parameterId,
-  }: GroupingKey) {
-    return `${resourceId.toString()}${
-      UnicastMonitor.GROUPING_KEY_SEPARATOR
-    }${parameterId}`;
-  }
-
-  private static deStringifyGroupingKey(groupingKey: string): GroupingKey {
-    const [resourceId, parameterId] = groupingKey.split(
-      UnicastMonitor.GROUPING_KEY_SEPARATOR,
-    );
-    return {
-      parameterId,
-      resourceId: new PublicKey(resourceId),
-    };
-  }
-}
-
-interface GroupingKey {
-  resourceId: ResourceId;
-  parameterId: string;
 }

@@ -1,26 +1,22 @@
-import { DialectEventSink } from './dialect-event-sink';
+import { DialectNotificationSink } from './dialect-notification-sink';
 import { InMemorySubscriberRepository } from './in-memory-subscriber.repository';
 import { OnChainSubscriberRepository } from './on-chain-subscriber.repository';
 import { Duration } from 'luxon';
 import { UnicastMonitor } from './unicast-monitor';
-import { concatMap, from, interval, Observable, switchMap } from 'rxjs';
+import { concatMap, exhaustMap, from, Observable, timer } from 'rxjs';
+import { MonitorFactory, MonitorFactoryProps } from '../monitor-factory';
 import {
-  DataPackage,
-  EventDetectionPipeline,
-  EventSink,
-  Monitor,
-  MonitorFactory,
-  MonitorFactoryProps,
-  ParameterId,
+  DataSourceTransformationPipeline,
+  NotificationSink,
   PollableDataSource,
-  ResourceId,
-  ResourceParameterData,
-  SubscriberEvent,
+  PushyDataSource,
   SubscriberRepository,
-} from '../monitor';
+} from '../ports';
+import { Monitor } from '../monitor-api';
+import { Data, ResourceId, SubscriberEvent } from '../data-model';
 
 export class DefaultMonitorFactory implements MonitorFactory {
-  private readonly eventSink: EventSink;
+  private readonly notificationSink: NotificationSink;
   private readonly subscriberRepository: SubscriberRepository;
 
   private readonly shutdownHooks: (() => Promise<any>)[] = [];
@@ -28,11 +24,14 @@ export class DefaultMonitorFactory implements MonitorFactory {
   constructor({
     dialectProgram,
     monitorKeypair,
-    eventSink,
+    notificationSink,
     subscriberRepository,
   }: MonitorFactoryProps) {
     if (dialectProgram && monitorKeypair) {
-      this.eventSink = new DialectEventSink(dialectProgram, monitorKeypair);
+      this.notificationSink = new DialectNotificationSink(
+        dialectProgram,
+        monitorKeypair,
+      );
       const onChainSubscriberRepository = new OnChainSubscriberRepository(
         dialectProgram,
         monitorKeypair,
@@ -42,14 +41,14 @@ export class DefaultMonitorFactory implements MonitorFactory {
         onChainSubscriberRepository,
       );
     }
-    if (eventSink) {
-      this.eventSink = eventSink;
+    if (notificationSink) {
+      this.notificationSink = notificationSink;
     }
     if (subscriberRepository) {
       this.subscriberRepository = subscriberRepository;
     }
     // @ts-ignore
-    if (!this.eventSink || !this.subscriberRepository) {
+    if (!this.notificationSink || !this.subscriberRepository) {
       throw new Error(
         'Please specify either dialectProgram & monitorKeypair or eventSink & subscriberRepository',
       );
@@ -60,75 +59,64 @@ export class DefaultMonitorFactory implements MonitorFactory {
     return Promise.all(this.shutdownHooks.map((it) => it()));
   }
 
-  createUnicastMonitor<T>(
+  createUnicastMonitor<T extends object>(
     dataSource: PollableDataSource<T>,
-    eventDetectionPipelines: Record<ParameterId, EventDetectionPipeline<T>[]>,
+    datasourceTransformationPipelines: DataSourceTransformationPipeline<T>[],
     pollInterval: Duration = Duration.fromObject({ seconds: 10 }),
   ): Monitor<T> {
-    const observableDataSource = this.toObservable(
+    const pushyDataSource = this.toPushyDataSource(
       dataSource,
       pollInterval,
       this.subscriberRepository,
     );
     const unicastMonitor = new UnicastMonitor<T>(
-      observableDataSource,
-      eventDetectionPipelines,
-      this.eventSink,
+      pushyDataSource,
+      datasourceTransformationPipelines,
+      this.notificationSink,
     );
     this.shutdownHooks.push(() => unicastMonitor.stop());
     return unicastMonitor;
   }
 
-  private toObservable<T>(
+  private toPushyDataSource<T extends object>(
     dataSource: PollableDataSource<T>,
     pollInterval: Duration,
     subscriberRepository: SubscriberRepository,
-  ) {
-    const observableDataSource: Observable<ResourceParameterData<T>> = interval(
-      pollInterval.toMillis(),
-    ).pipe(
-      switchMap(() => subscriberRepository.findAll()),
-      switchMap((resources: ResourceId[]) =>
-        from(dataSource.extract(resources)),
-      ),
-      concatMap((dataPackage: DataPackage<T>) => dataPackage),
+  ): PushyDataSource<T> {
+    return timer(0, pollInterval.toMillis()).pipe(
+      exhaustMap(() => subscriberRepository.findAll()),
+      exhaustMap((resources: ResourceId[]) => from(dataSource(resources))),
+      concatMap((it) => it),
     );
-    return observableDataSource;
   }
 
   createSubscriberEventMonitor(
-    eventDetectionPipelines: EventDetectionPipeline<SubscriberEvent>[],
+    dataSourceTransformationPipelines: DataSourceTransformationPipeline<SubscriberEvent>[],
   ): Monitor<SubscriberEvent> {
-    const parameterId = 'subscriber-state';
-    const observableDataSource: Observable<
-      ResourceParameterData<SubscriberEvent>
-    > = new Observable<ResourceParameterData<SubscriberEvent>>((subscriber) =>
+    const dataSource: PushyDataSource<SubscriberEvent> = new Observable<
+      Data<SubscriberEvent>
+    >((subscriber) =>
       this.subscriberRepository.subscribe(
         (resourceId) =>
           subscriber.next({
             resourceId,
-            parameterData: {
-              parameterId: 'subscriber-state',
-              data: 'added',
+            data: {
+              state: 'added',
             },
           }),
         (resourceId) =>
           subscriber.next({
             resourceId,
-            parameterData: {
-              parameterId: 'subscriber-state',
-              data: 'removed',
+            data: {
+              state: 'removed',
             },
           }),
       ),
     );
-    const eventDetectionPipelinesRecord = Object.fromEntries([
-      [parameterId, eventDetectionPipelines],
-    ]);
     const unicastMonitor = new UnicastMonitor<SubscriberEvent>(
-      observableDataSource,
-      eventDetectionPipelinesRecord,
-      this.eventSink,
+      dataSource,
+      dataSourceTransformationPipelines,
+      this.notificationSink,
     );
     this.shutdownHooks.push(() => unicastMonitor.stop());
     return unicastMonitor;

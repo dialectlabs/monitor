@@ -15,7 +15,7 @@ import {
 } from 'rxjs';
 import { map, tap } from 'rxjs/operators';
 import { Duration } from 'luxon';
-import { Event, ResourceParameterData } from './monitor';
+import { Data, Notification, NotificationBuilder } from './data-model';
 
 export enum PipeLogLevel {
   TRACE,
@@ -32,8 +32,12 @@ export function setPipeLogLevel(level: PipeLogLevel) {
 
 export class Operators {
   static Transform = class {
-    static getRaw<T>(): OperatorFunction<ResourceParameterData<T>, T> {
-      return map(({ parameterData: { data } }) => data);
+    static identity<T>(): OperatorFunction<T, T> {
+      return map((data) => data);
+    }
+
+    static getRaw<T>(): OperatorFunction<Data<T>, T> {
+      return map(({ data }) => data);
     }
 
     static filter<T>(predicate: (data: T) => boolean): OperatorFunction<T, T> {
@@ -77,6 +81,14 @@ export class Operators {
           values.reduce((sum, value) => sum + value, 0) / values.length,
       );
     }
+
+    static max(): OperatorFunction<number[], number> {
+      return map((values) => Math.max(...values));
+    }
+
+    static min(): OperatorFunction<number[], number> {
+      return map((values) => Math.min(...values));
+    }
   };
 
   static Trigger = class {
@@ -88,7 +100,7 @@ export class Operators {
       OperatorFunction<number[], number>,
     ] {
       return [
-        Operators.Window.fixedSize(2),
+        Operators.Window.fixedSizeSliding(2),
         filter(([fst, snd]) => fst <= threshold && threshold < snd),
         map(([_, snd]) => snd),
       ];
@@ -102,35 +114,19 @@ export class Operators {
       OperatorFunction<number[], number>,
     ] {
       return [
-        Operators.Window.fixedSize(2),
+        Operators.Window.fixedSizeSliding(2),
         filter(([fst, snd]) => fst >= threshold && threshold > snd),
         map(([_, snd]) => snd),
       ];
     }
   };
 
-  static Event = class {
-    static warning<T>(
-      title: string,
-      messageBuilder: (value: T) => string,
-    ): OperatorFunction<T, Event> {
+  static Notification = class {
+    static create<T>({
+      messageBuilder,
+    }: NotificationBuilder<T>): OperatorFunction<T, Notification> {
       return map((value: T) => ({
-        timestamp: new Date(),
-        title,
         message: messageBuilder(value),
-        type: 'warning',
-      }));
-    }
-
-    static info<T>(
-      title: string,
-      messageBuilder: (value: T) => string,
-    ): OperatorFunction<T, Event> {
-      return map((value: T) => ({
-        timestamp: new Date(),
-        title,
-        message: messageBuilder(value),
-        type: 'info',
       }));
     }
   };
@@ -155,10 +151,15 @@ export class Operators {
   };
 
   static Utility = class {
-    static log<T>(level: PipeLogLevel): MonoTypeOperatorFunction<T> {
+    static log<T>(
+      level: PipeLogLevel,
+      msg?: string,
+    ): MonoTypeOperatorFunction<T> {
       return tap((value: T) => {
         if (level >= pipeLogLevel) {
-          console.log(value);
+          msg
+            ? console.log(`${msg}: ${JSON.stringify(value)}`)
+            : console.log(JSON.stringify(value));
         }
         return value;
       });
