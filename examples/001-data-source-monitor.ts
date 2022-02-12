@@ -32,7 +32,6 @@ const monitor: Monitor<DataType> = Monitors.builder({
           threshold: 0.5,
         },
         {
-          title: 'Warning!',
           messageBuilder: (value) =>
             `Your cratio = ${value} below warning threshold`,
         },
@@ -47,15 +46,14 @@ const monitor: Monitor<DataType> = Monitors.builder({
     keys: ['cratio'],
     pipelines: [
       Pipelines.averageInFixedSizeWindowThreshold(
-        { type: 'fixed-size', size: 2 },
+        { size: 2 },
         {
           type: 'rising-edge',
           threshold: 0.5,
         },
         {
-          title: 'Warning!',
           messageBuilder: (value) =>
-            `Your cratio = ${value} above warning threshold`,
+            `Your cratio = ${value} below warning threshold`,
         },
       ),
     ],

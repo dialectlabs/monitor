@@ -66,10 +66,9 @@ const monitor: Monitor<DataType> = Monitors.builder({
           .pipe(...Operators.Trigger.risingEdge(0.6))
           .pipe(Operators.Utility.log(PipeLogLevel.INFO, '      rising edge'))
           .pipe(
-            Operators.Notification.info(
-              'Example',
-              (value) => `here's value exceeded 0.5: ${value}`,
-            ),
+            Operators.Notification.create({
+              messageBuilder: (value) => `here's value exceeded 0.5: ${value}`,
+            }),
           ),
       ),
     ],

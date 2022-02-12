@@ -12,8 +12,7 @@ const monitor = Monitors.builder({
   .transform<SubscriberState>({
     keys: ['state'],
     pipelines: [
-      Pipelines.sendMessageToNewSubscriber({
-        title: 'Welcome title',
+      Pipelines.notifyNewSubscribers({
         messageBuilder: () => `Hi! Welcome onboard :)`,
       }),
     ],

@@ -18,10 +18,11 @@ export type Data<T extends Object> = {
  * Dialect web3 notification
  */
 export interface Notification {
-  timestamp: Date;
-  type: 'warning' | 'info';
-  title: string;
   message: string;
+}
+
+export interface NotificationBuilder<V> {
+  messageBuilder: (value: V) => string;
 }
 
 /**

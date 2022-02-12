@@ -1,7 +1,7 @@
 # Monitor
 
-Framework to monitor any data in on-chain resources, run analytics towards the data and send Dialect's web3
-notifications.
+Framework to monitor on-chain resources like accounts for a set of your dApp subscribers, extract data, run analytics
+and send Dialect's web3 notifications notifications.
 
 ## Installation
 
@@ -27,10 +27,10 @@ yarn add @dialectlabs/monitor
 
 ### Get Started
 
-To get started, launch an example:
+To get started, launch an example
 
 ```shell
-yarn # in root dir
+yarn 
 ts-node examples/001-data-source-monitor.ts
 ```
 
