@@ -51,6 +51,6 @@ npm install
 yarn
 ```
 
-#### Take a look at examples in ./examples directory ad corresponding readme file
+#### Take a look at examples and corresponding readme file
 
-After getting familiar with examples you'll be ready to implement a new monitoring service.
+After getting familiar with https://github.com/dialectlabs/monitor/blob/main/examples/README.md and examples you'll be ready to implement a new monitoring service.

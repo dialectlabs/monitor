@@ -13,9 +13,8 @@ This example emulates e2e scenario for monitoring some on chain resources for a 
 
 ### Step 1. Run a solana validator node with dialect program
 
-#### Option A. Run docker container
+Please follow the instructions in https://github.com/dialectlabs/protocol#local-development
 
-#### Option b. Clone https://github.com/dialectlabs/protocol and follow local development instructions to deploy program
 
 ### Step 2. generate a new keypair for monitoring service and fund it
 
