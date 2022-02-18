@@ -119,6 +119,34 @@ export class Operators {
         map(([_, snd]) => snd),
       ];
     }
+
+    static increase(
+      delta: number,
+    ): [
+      OperatorFunction<number, number[]>,
+      OperatorFunction<number[], number[]>,
+      OperatorFunction<number[], number>,
+    ] {
+      return [
+        Operators.Window.fixedSizeSliding(2),
+        filter(([fst, snd]) => snd - fst >= delta),
+        map(([_, snd]) => snd),
+      ];
+    }
+
+    static decrease(
+      delta: number,
+    ): [
+      OperatorFunction<number, number[]>,
+      OperatorFunction<number[], number[]>,
+      OperatorFunction<number[], number>,
+    ] {
+      return [
+        Operators.Window.fixedSizeSliding(2),
+        filter(([fst, snd]) => fst - snd >= delta),
+        map(([_, snd]) => snd),
+      ];
+    }
   };
 
   static Notification = class {
