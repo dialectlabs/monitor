@@ -19,7 +19,11 @@ export interface FixedTimeWindow {
   timeSpan: Duration;
 }
 
-export type Trigger = RisingEdgeTrigger | FallingEdgeTrigger;
+export type Trigger =
+  | RisingEdgeTrigger
+  | FallingEdgeTrigger
+  | IncreaseTrigger
+  | DecreaseTrigger;
 
 export interface RisingEdgeTrigger {
   type: 'rising-edge';
@@ -28,6 +32,16 @@ export interface RisingEdgeTrigger {
 
 export interface FallingEdgeTrigger {
   type: 'falling-edge';
+  threshold: number;
+}
+
+export interface IncreaseTrigger {
+  type: 'increase';
+  threshold: number;
+}
+
+export interface DecreaseTrigger {
+  type: 'decrease';
   threshold: number;
 }
 
@@ -43,7 +57,11 @@ function createTriggerOperator<T extends object>(trigger: Trigger) {
     case 'falling-edge':
       return Operators.Trigger.fallingEdge<T>(trigger.threshold);
     case 'rising-edge':
-      return Operators.Trigger.risingEdge(trigger.threshold);
+      return Operators.Trigger.risingEdge<T>(trigger.threshold);
+    case 'increase':
+      return Operators.Trigger.increase<T>(trigger.threshold);
+    case 'decrease':
+      return Operators.Trigger.decrease<T>(trigger.threshold);
   }
   throw new Error('Should not happen');
 }
