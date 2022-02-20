@@ -81,7 +81,7 @@ export interface Transformation<T extends object, V> {
    * Streaming transformations that produce dialect web3 notifications ot be executed for each key
    *  @typeParam V data type of specified keys from T
    */
-  pipelines: TransformationPipeline<V>[];
+  pipelines: TransformationPipeline<V, T>[];
 }
 
 /**

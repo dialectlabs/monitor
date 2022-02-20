@@ -36,7 +36,7 @@ export class Monitors<T extends object> {
    * })
    * .subscriberEvents()
    * .transform<SubscriberState>({
-   *   keys: ['state'],
+   *   keys: ["state"],
    *   pipelines: [
    *     Pipelines.sendMessageToNewSubscriber({
    *       title: 'Welcome title',

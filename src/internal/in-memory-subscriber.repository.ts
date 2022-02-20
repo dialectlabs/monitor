@@ -15,6 +15,21 @@ export class InMemorySubscriberRepository implements SubscriberRepository {
     return repository;
   }
 
+  async findAll(): Promise<ResourceId[]> {
+    return Array(...this.subscribers.values());
+  }
+
+  findByResourceId(resourceId: ResourceId): Promise<ResourceId | null> {
+    return Promise.resolve(this.subscribers.get(resourceId.toString()) ?? null);
+  }
+
+  async subscribe(
+    onSubscriberAdded?: SubscriberEventHandler,
+    onSubscriberRemoved?: SubscriberEventHandler,
+  ) {
+    return this.delegate.subscribe(onSubscriberAdded, onSubscriberRemoved);
+  }
+
   private async initialize() {
     return Promise.all([
       this.subscribeToSubscriberEvents(),
@@ -38,20 +53,5 @@ export class InMemorySubscriberRepository implements SubscriberRepository {
     const subscribers = await this.delegate.findAll();
     subscribers.forEach((it) => this.subscribers.set(it.toString(), it));
     return subscribers;
-  }
-
-  async findAll(): Promise<ResourceId[]> {
-    return Array(...this.subscribers.values());
-  }
-
-  findByResourceId(resourceId: ResourceId): Promise<ResourceId | null> {
-    return Promise.resolve(this.subscribers.get(resourceId.toString()) ?? null);
-  }
-
-  async subscribe(
-    onSubscriberAdded?: SubscriberEventHandler,
-    onSubscriberRemoved?: SubscriberEventHandler,
-  ) {
-    return this.delegate.subscribe(onSubscriberAdded, onSubscriberRemoved);
   }
 }

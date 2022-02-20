@@ -1,7 +1,7 @@
 import { Connection, Keypair, PublicKey } from '@solana/web3.js';
 import { idl, Wallet_ } from '@dialectlabs/web3';
 import { Idl, Program, Provider } from '@project-serum/anchor';
-import { Data, Monitor, Monitors, Pipelines, ResourceId } from '../src';
+import { Monitor, Monitors, Pipelines, ResourceId, SourceData } from '../src';
 import { Duration } from 'luxon';
 import { programs } from '@dialectlabs/web3/lib/es';
 
@@ -45,14 +45,16 @@ const dataSourceMonitor: Monitor<DataType> = Monitors.builder({
 })
   .defineDataSource<DataType>()
   .poll((subscribers: ResourceId[]) => {
-    const data: Data<DataType>[] = subscribers.map((resourceId) => ({
-      data: {
-        cratio: Math.random(),
-        healthRatio: Math.random(),
-      },
-      resourceId,
-    }));
-    return Promise.resolve(data);
+    const sourceData: SourceData<DataType>[] = subscribers.map(
+      (resourceId) => ({
+        data: {
+          cratio: Math.random(),
+          healthRatio: Math.random(),
+        },
+        resourceId,
+      }),
+    );
+    return Promise.resolve(sourceData);
   }, Duration.fromObject({ seconds: 3 }))
   .transform<number>({
     keys: ['cratio'],

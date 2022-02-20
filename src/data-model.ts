@@ -9,10 +9,42 @@ export type ResourceId = PublicKey;
  * Any data bound to a specific on chain resource that may be stored in account
  *  @typeParam T data type provided by data source
  */
-export type Data<T extends Object> = {
-  resourceId: ResourceId;
+export interface SourceData<T> {
   data: T;
-};
+  resourceId: ResourceId;
+}
+
+/**
+ * Any data bound to a specific on chain resource that may be stored in account
+ *  @typeParam T data type provided by data source
+ */
+export interface Data<V, T extends object> {
+  value: V;
+  context: Context<T>;
+}
+
+/**
+ * A holder for any context data that need to be preserved through all pipeline transformations
+ */
+export interface Context<T extends object> {
+  resourceId: ResourceId;
+  origin: T;
+  trace: Trace[];
+}
+
+/**
+ * A holder for recording any context information about execution of transformations steps
+ */
+export type Trace = TriggerTrace;
+
+/**
+ * A holder for trigger transformation context i.e. trigger input and output
+ */
+export interface TriggerTrace {
+  type: 'trigger';
+  input: number[];
+  output: number;
+}
 
 /**
  * Dialect web3 notification
@@ -21,8 +53,8 @@ export interface Notification {
   message: string;
 }
 
-export interface NotificationBuilder<V> {
-  messageBuilder: (value: V) => string;
+export interface NotificationBuilder<V, T extends object> {
+  messageBuilder: (data: Data<V, T>) => string;
 }
 
 /**

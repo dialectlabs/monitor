@@ -1,4 +1,4 @@
-import { Data, Monitor, Monitors, Pipelines, ResourceId } from '../src';
+import { Monitor, Monitors, Pipelines, ResourceId, SourceData } from '../src';
 import { Duration } from 'luxon';
 import { DummySubscriberRepository } from './003-custom-subscriber-repository';
 import { ConsoleNotificationSink } from './004-custom-notification-sink';
@@ -8,7 +8,7 @@ type DataType = {
   healthRatio: number;
 };
 
-const THRESHOLD = 0.5;
+const threshold = 0.5;
 
 const monitor: Monitor<DataType> = Monitors.builder({
   subscriberRepository: new DummySubscriberRepository(1),
@@ -16,14 +16,16 @@ const monitor: Monitor<DataType> = Monitors.builder({
 })
   .defineDataSource<DataType>()
   .poll((subscribers: ResourceId[]) => {
-    const data: Data<DataType>[] = subscribers.map((resourceId) => ({
-      data: {
-        cratio: Math.random(),
-        healthRatio: Math.random() * 10,
-      },
-      resourceId,
-    }));
-    return Promise.resolve(data);
+    const sourceData: SourceData<DataType>[] = subscribers.map(
+      (resourceId) => ({
+        data: {
+          cratio: Math.random(),
+          healthRatio: Math.random() * 10,
+        },
+        resourceId,
+      }),
+    );
+    return Promise.resolve(sourceData);
   }, Duration.fromObject({ seconds: 1 }))
   .transform<number>({
     keys: ['cratio'],
@@ -31,20 +33,20 @@ const monitor: Monitor<DataType> = Monitors.builder({
       Pipelines.threshold(
         {
           type: 'falling-edge',
-          threshold: 0.5,
+          threshold,
         },
         {
-          messageBuilder: (value) =>
+          messageBuilder: ({ value, context: { origin } }) =>
             `Your cratio = ${value} below warning threshold`,
         },
       ),
       Pipelines.threshold(
         {
           type: 'rising-edge',
-          threshold: 0.5,
+          threshold,
         },
         {
-          messageBuilder: (value) =>
+          messageBuilder: ({ value, context }) =>
             `Your cratio = ${value} above warning threshold`,
         },
       ),

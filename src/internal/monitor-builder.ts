@@ -22,11 +22,11 @@ import { Monitor, Monitors } from '../monitor-api';
  * A set of factory methods to create monitors
  */
 export class MonitorsBuilderState<T extends Object> {
-  constructor(readonly builderProps: MonitorBuilderProps) {}
-
   chooseDataSourceStep?: ChooseDataSourceStepImpl;
   defineDataSourceStep?: DefineDataSourceStepImpl<T>;
   addTransformationsStep?: AddTransformationsStepImpl<T>;
+
+  constructor(readonly builderProps: MonitorBuilderProps) {}
 }
 
 type DataSourceType = 'user-defined' | 'subscriber-events';
@@ -94,16 +94,24 @@ class AddTransformationsStepImpl<T extends object>
       (key: KeysMatching<T, V>) =>
         pipelines.map(
           (
-            pipeline: (source: Observable<Data<V>>) => Observable<Notification>,
+            pipeline: (
+              source: Observable<Data<V, T>>,
+            ) => Observable<Data<Notification, T>>,
           ) => {
             const adaptedToDataSourceType: (
               dataSource: PushyDataSource<T>,
-            ) => Observable<Notification> = (dataSource: PushyDataSource<T>) =>
+            ) => Observable<Data<Notification, T>> = (
+              dataSource: PushyDataSource<T>,
+            ) =>
               pipeline(
                 dataSource.pipe(
-                  map(({ data, resourceId }) => ({
-                    resourceId,
-                    data: data[key] as unknown as V,
+                  map(({ data: origin, resourceId }) => ({
+                    context: {
+                      origin,
+                      resourceId,
+                      trace: [],
+                    },
+                    value: origin[key] as unknown as V,
                   })),
                 ),
               );
@@ -177,7 +185,7 @@ class BuildStepImpl<T extends object> implements BuildStep<T> {
       );
     }
     return Monitors.factory(builderProps).createSubscriberEventMonitor(
-      dataSourceTransformationPipelines as DataSourceTransformationPipeline<SubscriberEvent>[],
+      dataSourceTransformationPipelines as unknown as DataSourceTransformationPipeline<SubscriberEvent>[], // TODO: ???
     );
   }
 

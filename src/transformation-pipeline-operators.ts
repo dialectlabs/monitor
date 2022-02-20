@@ -17,6 +17,21 @@ import { map, tap } from 'rxjs/operators';
 import { Duration } from 'luxon';
 import { Data, Notification, NotificationBuilder } from './data-model';
 
+// Support access to the 'original data type' (all fields of the analyzed object)
+// Option 1. a new transform w/ full context w/o values just a whole object
+// + full control
+// + cheap
+// - transformation pipeline type is still hardcoded
+// - cannot use arbitrary type sinks
+// Option 2. a wrapper for output values providing access to the trigger event
+// (what? trigger event is a last received event that have caused the pipeline to trigger)
+// - cost
+// - no idea how to do it
+// + can split mapping to sink data type from  transformation to later support any type in sinks
+// + clear separation of concerns
+
+// Support access all events
+// Option 1. a table transformation
 export enum PipeLogLevel {
   TRACE,
   DEBUG,
@@ -32,12 +47,11 @@ export function setPipeLogLevel(level: PipeLogLevel) {
 
 export class Operators {
   static Transform = class {
-    static identity<T>(): OperatorFunction<T, T> {
+    static identity<V, T extends object>(): OperatorFunction<
+      Data<V, T>,
+      Data<V, T>
+    > {
       return map((data) => data);
-    }
-
-    static getRaw<T>(): OperatorFunction<Data<T>, T> {
-      return map(({ data }) => data);
     }
 
     static filter<T>(predicate: (data: T) => boolean): OperatorFunction<T, T> {
@@ -50,111 +64,169 @@ export class Operators {
   };
 
   static Window = class {
-    static fixedSize<T>(size: number): OperatorFunction<T, T[]> {
+    static fixedSize<V, T extends object>(
+      size: number,
+    ): OperatorFunction<Data<V, T>, Data<V, T>[]> {
       return bufferCount(size);
     }
 
-    static fixedSizeSliding<T>(size: number): OperatorFunction<T, T[]> {
-      return scan<T, T[]>(
+    static fixedSizeSliding<V, T extends object>(
+      size: number,
+    ): OperatorFunction<Data<V, T>, Data<V, T>[]> {
+      return scan<Data<V, T>, Data<V, T>[]>(
         (values, value) => values.slice(1 - size).concat(value),
         [],
       );
     }
 
-    static fixedTime<T>(
+    static fixedTime<V, T extends object>(
       timeSpan: Duration,
     ): [
-      OperatorFunction<T, Observable<T>>,
-      OperatorFunction<Observable<T>, T[]>,
+      OperatorFunction<Data<V, T>, Observable<Data<V, T>>>,
+      OperatorFunction<Observable<Data<V, T>>, Data<V, T>[]>,
     ] {
       return [
-        windowTime<T>(timeSpan.toMillis()),
+        windowTime<Data<V, T>>(timeSpan.toMillis()),
         concatMap((value) => value.pipe(toArray())),
       ];
     }
   };
 
   static Aggregate = class {
-    static avg(): OperatorFunction<number[], number> {
-      return map(
-        (values) =>
-          values.reduce((sum, value) => sum + value, 0) / values.length,
+    static avg<T extends object>(): OperatorFunction<
+      Data<number, T>[],
+      Data<number, T>
+    > {
+      return map((values) => {
+        const acc = values.reduce((acc, next) => ({
+          value: acc.value + next.value,
+          context: next.context,
+        }));
+        return {
+          ...acc,
+          value: acc.value / values.length,
+        };
+      });
+    }
+
+    static max<T extends object>(): OperatorFunction<
+      Data<number, T>[],
+      Data<number, T>
+    > {
+      return map((values) =>
+        values.reduce((acc, next) => (acc.value > next.value ? acc : next)),
       );
     }
 
-    static max(): OperatorFunction<number[], number> {
-      return map((values) => Math.max(...values));
-    }
-
-    static min(): OperatorFunction<number[], number> {
-      return map((values) => Math.min(...values));
+    static min<T extends object>(): OperatorFunction<
+      Data<number, T>[],
+      Data<number, T>
+    > {
+      return map((values) =>
+        values.reduce((acc, next) => (acc.value < next.value ? acc : next)),
+      );
     }
   };
 
   static Trigger = class {
-    static risingEdge(
+    static risingEdge<T extends object>(
       threshold: number,
     ): [
-      OperatorFunction<number, number[]>,
-      OperatorFunction<number[], number[]>,
-      OperatorFunction<number[], number>,
+      OperatorFunction<Data<number, T>, Data<number, T>[]>,
+      OperatorFunction<Data<number, T>[], Data<number, T>[]>,
+      OperatorFunction<Data<number, T>[], Data<number, T>>,
     ] {
       return [
         Operators.Window.fixedSizeSliding(2),
-        filter(([fst, snd]) => fst <= threshold && threshold < snd),
+        filter(
+          (it) =>
+            it.length == 2 &&
+            it[0].value <= threshold &&
+            threshold < it[1].value,
+        ),
         map(([_, snd]) => snd),
       ];
     }
 
-    static fallingEdge(
+    static fallingEdge<T extends object>(
       threshold: number,
     ): [
-      OperatorFunction<number, number[]>,
-      OperatorFunction<number[], number[]>,
-      OperatorFunction<number[], number>,
+      OperatorFunction<Data<number, T>, Data<number, T>[]>,
+      OperatorFunction<Data<number, T>[], Data<number, T>[]>,
+      OperatorFunction<Data<number, T>[], Data<number, T>>,
     ] {
       return [
         Operators.Window.fixedSizeSliding(2),
-        filter(([fst, snd]) => fst >= threshold && threshold > snd),
+        filter(
+          (data) =>
+            data.length == 2 &&
+            data[0].value >= threshold &&
+            threshold > data[1].value,
+        ),
         map(([_, snd]) => snd),
       ];
     }
 
-    static increase(
-      delta: number,
+    static increase<T extends object>(
+      threshold: number,
     ): [
-      OperatorFunction<number, number[]>,
-      OperatorFunction<number[], number[]>,
-      OperatorFunction<number[], number>,
+      OperatorFunction<Data<number, T>, Data<number, T>[]>,
+      OperatorFunction<Data<number, T>[], Data<number, T>[]>,
+      OperatorFunction<Data<number, T>[], Data<number, T>>,
     ] {
       return [
         Operators.Window.fixedSizeSliding(2),
-        filter(([fst, snd]) => snd - fst >= delta),
-        map(([_, snd]) => snd),
+        filter(
+          (data) =>
+            data.length == 2 && data[1].value - data[0].value >= threshold,
+        ),
+        map(([fst, snd]) => ({
+          ...snd,
+          context: {
+            ...snd.context,
+            trace: [
+              ...snd.context.trace,
+              {
+                type: 'trigger',
+                input: [fst.value, snd.value],
+                output: snd.value - fst.value,
+              },
+            ],
+          },
+        })),
       ];
     }
 
-    static decrease(
-      delta: number,
+    static decrease<T extends object>(
+      threshold: number,
     ): [
-      OperatorFunction<number, number[]>,
-      OperatorFunction<number[], number[]>,
-      OperatorFunction<number[], number>,
+      OperatorFunction<Data<number, T>, Data<number, T>[]>,
+      OperatorFunction<Data<number, T>[], Data<number, T>[]>,
+      OperatorFunction<Data<number, T>[], Data<number, T>>,
     ] {
       return [
         Operators.Window.fixedSizeSliding(2),
-        filter(([fst, snd]) => fst - snd >= delta),
+        filter(
+          (data) =>
+            data.length == 2 && data[0].value - data[1].value >= threshold,
+        ),
         map(([_, snd]) => snd),
       ];
     }
   };
 
   static Notification = class {
-    static create<T>({
+    static create<V, T extends object>({
       messageBuilder,
-    }: NotificationBuilder<T>): OperatorFunction<T, Notification> {
-      return map((value: T) => ({
-        message: messageBuilder(value),
+    }: NotificationBuilder<V, T>): OperatorFunction<
+      Data<V, T>,
+      Data<Notification, T>
+    > {
+      return map((it) => ({
+        ...it,
+        value: {
+          message: messageBuilder(it),
+        },
       }));
     }
   };
