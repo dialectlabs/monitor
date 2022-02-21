@@ -17,21 +17,6 @@ import { map, tap } from 'rxjs/operators';
 import { Duration } from 'luxon';
 import { Data, Notification, NotificationBuilder } from './data-model';
 
-// Support access to the 'original data type' (all fields of the analyzed object)
-// Option 1. a new transform w/ full context w/o values just a whole object
-// + full control
-// + cheap
-// - transformation pipeline type is still hardcoded
-// - cannot use arbitrary type sinks
-// Option 2. a wrapper for output values providing access to the trigger event
-// (what? trigger event is a last received event that have caused the pipeline to trigger)
-// - cost
-// - no idea how to do it
-// + can split mapping to sink data type from  transformation to later support any type in sinks
-// + clear separation of concerns
-
-// Support access all events
-// Option 1. a table transformation
 export enum PipeLogLevel {
   TRACE,
   DEBUG,
