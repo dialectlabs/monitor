@@ -185,7 +185,7 @@ class BuildStepImpl<T extends object> implements BuildStep<T> {
       );
     }
     return Monitors.factory(builderProps).createSubscriberEventMonitor(
-      dataSourceTransformationPipelines as unknown as DataSourceTransformationPipeline<SubscriberEvent>[], // TODO: ???
+      dataSourceTransformationPipelines as unknown as DataSourceTransformationPipeline<SubscriberEvent>[],
     );
   }
 
