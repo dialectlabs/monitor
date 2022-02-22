@@ -13,7 +13,7 @@ import {
   SubscriberRepository,
 } from '../ports';
 import { Monitor } from '../monitor-api';
-import { Data, ResourceId, SubscriberEvent } from '../data-model';
+import { ResourceId, SourceData, SubscriberEvent } from '../data-model';
 
 export class DefaultMonitorFactory implements MonitorFactory {
   private readonly notificationSink: NotificationSink;
@@ -78,23 +78,11 @@ export class DefaultMonitorFactory implements MonitorFactory {
     return unicastMonitor;
   }
 
-  private toPushyDataSource<T extends object>(
-    dataSource: PollableDataSource<T>,
-    pollInterval: Duration,
-    subscriberRepository: SubscriberRepository,
-  ): PushyDataSource<T> {
-    return timer(0, pollInterval.toMillis()).pipe(
-      exhaustMap(() => subscriberRepository.findAll()),
-      exhaustMap((resources: ResourceId[]) => from(dataSource(resources))),
-      concatMap((it) => it),
-    );
-  }
-
   createSubscriberEventMonitor(
     dataSourceTransformationPipelines: DataSourceTransformationPipeline<SubscriberEvent>[],
   ): Monitor<SubscriberEvent> {
     const dataSource: PushyDataSource<SubscriberEvent> = new Observable<
-      Data<SubscriberEvent>
+      SourceData<SubscriberEvent>
     >((subscriber) =>
       this.subscriberRepository.subscribe(
         (resourceId) =>
@@ -120,5 +108,17 @@ export class DefaultMonitorFactory implements MonitorFactory {
     );
     this.shutdownHooks.push(() => unicastMonitor.stop());
     return unicastMonitor;
+  }
+
+  private toPushyDataSource<T extends object>(
+    dataSource: PollableDataSource<T>,
+    pollInterval: Duration,
+    subscriberRepository: SubscriberRepository,
+  ): PushyDataSource<T> {
+    return timer(0, pollInterval.toMillis()).pipe(
+      exhaustMap(() => subscriberRepository.findAll()),
+      exhaustMap((resources: ResourceId[]) => from(dataSource(resources))),
+      concatMap((it) => it),
+    );
   }
 }

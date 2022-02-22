@@ -14,7 +14,7 @@ import {
   PushyDataSource,
 } from '../ports';
 import { Monitor } from '../monitor-api';
-import { Data } from '../data-model';
+import { SourceData } from '../data-model';
 import { Operators } from '../transformation-pipeline-operators';
 
 export class UnicastMonitor<T extends Object> implements Monitor<T> {
@@ -37,21 +37,31 @@ export class UnicastMonitor<T extends Object> implements Monitor<T> {
     this.started = true;
   }
 
+  stop(): Promise<void> {
+    if (!this.started) {
+      return Promise.resolve();
+    }
+    this.subscriptions.forEach((it) => it.unsubscribe());
+    this.subscriptions = [];
+    this.started = false;
+    return Promise.resolve();
+  }
+
   private async startMonitorPipeline() {
     const monitorPipelineSubscription = this.dataSource
       .pipe(
-        groupBy<Data<T>, string, Data<T>>(
+        groupBy<SourceData<T>, string, SourceData<T>>(
           ({ resourceId }) => resourceId.toString(),
           {
             element: (it) => it,
           },
         ),
-        mergeMap((data: GroupedObservable<string, Data<T>>) => {
+        mergeMap((data: GroupedObservable<string, SourceData<T>>) => {
           const resourceId = new PublicKey(data.key);
           return this.dataSourceTransformationPipelines.map((pipeline) => {
             return pipeline(data).pipe(
               exhaustMap((event) =>
-                from(this.notificationSink.push(event, [resourceId])),
+                from(this.notificationSink.push(event.value, [resourceId])),
               ),
             );
           });
@@ -61,15 +71,5 @@ export class UnicastMonitor<T extends Object> implements Monitor<T> {
       .pipe(...Operators.FlowControl.onErrorRetry())
       .subscribe();
     this.subscriptions.push(monitorPipelineSubscription);
-  }
-
-  stop(): Promise<void> {
-    if (!this.started) {
-      return Promise.resolve();
-    }
-    this.subscriptions.forEach((it) => it.unsubscribe());
-    this.subscriptions = [];
-    this.started = false;
-    return Promise.resolve();
   }
 }

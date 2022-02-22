@@ -15,7 +15,6 @@ This example emulates e2e scenario for monitoring some on chain resources for a 
 
 Please follow the instructions in https://github.com/dialectlabs/protocol#local-development
 
-
 ### Step 2. generate a new keypair for monitoring service and fund it
 
 ```bash

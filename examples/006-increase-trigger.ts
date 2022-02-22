@@ -1,53 +1,57 @@
-import { Monitor, Monitors, Pipelines, ResourceId, SourceData } from '../src';
+import {
+  Context,
+  Monitor,
+  Monitors,
+  Pipelines,
+  ResourceId,
+  SourceData,
+} from '../src';
 import { Duration } from 'luxon';
 import { DummySubscriberRepository } from './003-custom-subscriber-repository';
 import { ConsoleNotificationSink } from './004-custom-notification-sink';
 
-type DataType = {
-  cratio: number;
-  healthRatio: number;
+type DataPool = {
+  share: number;
 };
 
-const threshold = 0.5;
+let counter = 0;
 
-const monitor: Monitor<DataType> = Monitors.builder({
+const threshold = 5;
+
+function getTriggerOutput(context: Context<DataPool>) {
+  return context.trace.find((it) => it.type === 'trigger')?.output;
+}
+
+const monitor: Monitor<DataPool> = Monitors.builder({
   subscriberRepository: new DummySubscriberRepository(1),
   notificationSink: new ConsoleNotificationSink(),
 })
-  .defineDataSource<DataType>()
+  .defineDataSource<DataPool>()
   .poll((subscribers: ResourceId[]) => {
-    const sourceData: SourceData<DataType>[] = subscribers.map(
+    const sourceData: SourceData<DataPool>[] = subscribers.map(
       (resourceId) => ({
         data: {
-          cratio: Math.random(),
-          healthRatio: Math.random() * 10,
+          share: counter * counter,
         },
         resourceId,
       }),
     );
+    counter++;
     return Promise.resolve(sourceData);
   }, Duration.fromObject({ seconds: 1 }))
   .transform<number>({
-    keys: ['cratio'],
+    keys: ['share'],
     pipelines: [
       Pipelines.threshold(
         {
-          type: 'falling-edge',
-          threshold,
-        },
-        {
-          messageBuilder: ({ value, context: { origin } }) =>
-            `Your cratio = ${value} below warning threshold`,
-        },
-      ),
-      Pipelines.threshold(
-        {
-          type: 'rising-edge',
+          type: 'increase',
           threshold,
         },
         {
           messageBuilder: ({ value, context }) =>
-            `Your cratio = ${value} above warning threshold`,
+            `Your share = ${value} increased by ${getTriggerOutput(
+              context,
+            )}, which is above the threshold ${threshold}`,
         },
       ),
     ],
