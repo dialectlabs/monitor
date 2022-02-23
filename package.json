@@ -3,7 +3,7 @@
   "version": "0.1.22",
   "repository": "git@github.com:dialectlabs/monitor.git",
   "author": "dialectlabs",
-  "license": "MIT",
+  "license": "Apache-2.0",
   "module": "./lib/cjs/index.js",
   "main": "./lib/cjs/index.js",
   "types": "./lib/cjs/index.d.ts",
