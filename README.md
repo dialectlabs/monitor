@@ -53,26 +53,29 @@ type DataType = {
 };
 
 const monitor: Monitor<DataType> = Monitors.builder({
-  dialectProgram: // ... initialize a dialect program,
-  monitorKeypair: // ... set a monitor keyypair used to send notifications,
+  dialectProgram: // ... й a dialect program,
+  monitorKeypair: // ... set a keypair used to send notifications,
 })
   .defineDataSource<DataType>()
   .poll((subscribers: ResourceId[]) => {
-    const sourceData: SourceData<DataType>[] = // ... extract data for set of subscribers
+    const sourceData: SourceData<DataType>[] = // ... extract data from chain for set of subscribers
     return Promise.resolve(sourceData);
   }, Duration.fromObject({ seconds: 3 }))
   .transform<number>({
-    keys: ['cratio'],
+    keys: ['cratio'],  // select a subset of attrributes from DataType
     pipelines: [
+      // Send notification each time when value falling below the threshold 
       Pipelines.threshold(
         {
           type: 'falling-edge',
           threshold: 0.5,
         },
         {
+          //  Define mesasge when trigger fired
           messageBuilder: (value) =>
             `Your cratio = ${value} below warning threshold`,
         },
+        // ... Optionally you can limit rate of the messages
         {
           type: 'throttle-time',
           timeSpan: Duration.fromObject({ minutes: 5 }),
@@ -86,6 +89,8 @@ const monitor: Monitor<DataType> = Monitors.builder({
 monitor.start();
 // ...
 ```
+
+Please follow the instructions below to run the example
 
 #### Step 1. Run a solana validator node with dialect program
 
