@@ -71,7 +71,7 @@ const monitor: Monitor<DataType> = Monitors.builder({
           threshold: 0.5,
         },
         {
-          //  Define mesasge when trigger fired
+          //  Define message when trigger fired
           messageBuilder: (value) =>
             `Your cratio = ${value} below warning threshold`,
         },
