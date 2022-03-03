@@ -53,7 +53,7 @@ type DataType = {
 };
 
 const monitor: Monitor<DataType> = Monitors.builder({
-  dialectProgram: // ... й a dialect program,
+  dialectProgram: // ... set a dialect program,
   monitorKeypair: // ... set a keypair used to send notifications,
 })
   .defineDataSource<DataType>()
