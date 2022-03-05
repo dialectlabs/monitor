@@ -4,12 +4,14 @@ import { Data, ResourceId, SourceData } from './data-model';
 /**
  * An abstraction that represents a source of data, bound to specific type
  */
-export interface DataSource<T extends object> {}
+export type DataSource<T extends object> =
+  | PushyDataSource<T>
+  | PollableDataSource<T>;
 
 /**
  * Pollable data source is polled by framework to get new data
  */
-export interface PollableDataSource<T extends object> extends DataSource<T> {
+export interface PollableDataSource<T extends object> {
   (subscribers: ResourceId[]): Promise<SourceData<T>[]>;
 }
 
