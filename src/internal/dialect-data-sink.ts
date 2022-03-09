@@ -3,16 +3,15 @@ import { Notification, ResourceId } from '../data-model';
 import { Keypair } from '@solana/web3.js';
 import { sendMessage } from '@dialectlabs/web3';
 import { getDialectAccount } from './dialect-extensions';
-import { NotificationSink } from '../ports';
+import { DataSink } from '../ports';
 
-export class DialectNotificationSink implements NotificationSink {
+export class DialectDataSink implements DataSink<Notification> {
   constructor(
     private readonly dialectProgram: Program,
     private readonly monitorKeypair: Keypair,
   ) {}
 
-  push(notification: Notification, recipients: ResourceId[]) {
-    const notificationText = `${notification.message}`;
+  push({ message }: Notification, recipients: ResourceId[]) {
     return Promise.all(
       recipients
         .map((it) =>
@@ -27,7 +26,7 @@ export class DialectNotificationSink implements NotificationSink {
               this.dialectProgram,
               dialectAccount,
               this.monitorKeypair,
-              notificationText,
+              message,
             ),
           ),
         ),

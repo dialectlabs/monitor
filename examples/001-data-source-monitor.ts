@@ -1,7 +1,7 @@
 import { Monitor, Monitors, Pipelines, ResourceId, SourceData } from '../src';
 import { Duration } from 'luxon';
 import { DummySubscriberRepository } from './003-custom-subscriber-repository';
-import { ConsoleNotificationSink } from './004-custom-notification-sink';
+import { ConsoleDataSink } from './004-custom-notification-sink';
 
 type DataType = {
   cratio: number;
@@ -12,7 +12,7 @@ const threshold = 0.5;
 
 const monitor: Monitor<DataType> = Monitors.builder({
   subscriberRepository: new DummySubscriberRepository(1),
-  notificationSink: new ConsoleNotificationSink(),
+  notificationSink: new ConsoleDataSink(),
 })
   .defineDataSource<DataType>()
   .poll((subscribers: ResourceId[]) => {

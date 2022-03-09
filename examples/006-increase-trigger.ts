@@ -8,7 +8,7 @@ import {
 } from '../src';
 import { Duration } from 'luxon';
 import { DummySubscriberRepository } from './003-custom-subscriber-repository';
-import { ConsoleNotificationSink } from './004-custom-notification-sink';
+import { ConsoleDataSink } from './004-custom-notification-sink';
 
 type DataPool = {
   share: number;
@@ -24,7 +24,7 @@ function getTriggerOutput(context: Context<DataPool>) {
 
 const monitor: Monitor<DataPool> = Monitors.builder({
   subscriberRepository: new DummySubscriberRepository(1),
-  notificationSink: new ConsoleNotificationSink(),
+  notificationSink: new ConsoleDataSink(),
 })
   .defineDataSource<DataPool>()
   .poll((subscribers: ResourceId[]) => {

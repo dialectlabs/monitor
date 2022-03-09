@@ -9,8 +9,8 @@ import {
 
 import { PublicKey } from '@solana/web3.js';
 import {
+  DataSink,
   DataSourceTransformationPipeline,
-  NotificationSink,
   PushyDataSource,
 } from '../ports';
 import { Monitor } from '../monitor-api';
@@ -25,7 +25,7 @@ export class UnicastMonitor<T extends Object> implements Monitor<T> {
   constructor(
     private readonly dataSource: PushyDataSource<T>,
     private readonly dataSourceTransformationPipelines: DataSourceTransformationPipeline<T>[],
-    private readonly notificationSink: NotificationSink,
+    private readonly notificationSink: DataSink,
   ) {}
 
   async start() {

@@ -62,6 +62,6 @@ export interface SubscriberRepository {
 /**
  * An interface that abstracts the destination where events are sent/persisted
  */
-export interface NotificationSink {
-  push(notification: Notification, recipients: ResourceId[]): Promise<void>;
+export interface DataSink<R> {
+  push(data: R, recipients: ResourceId[]): Promise<void>;
 }

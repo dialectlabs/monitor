@@ -1,12 +1,12 @@
 import { Monitors, Pipelines, SubscriberState } from '../src';
 import { Keypair } from '@solana/web3.js';
-import { ConsoleNotificationSink } from './004-custom-notification-sink';
+import { ConsoleDataSink } from './004-custom-notification-sink';
 import { DummySubscriberRepository } from './003-custom-subscriber-repository';
 
 const dummySubscriberRepository = new DummySubscriberRepository();
 const monitor = Monitors.builder({
   subscriberRepository: dummySubscriberRepository,
-  notificationSink: new ConsoleNotificationSink(),
+  notificationSink: new ConsoleDataSink(),
 })
   .subscriberEvents()
   .transform<SubscriberState>({

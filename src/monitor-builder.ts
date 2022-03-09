@@ -1,6 +1,6 @@
 import { Duration } from 'luxon';
 import {
-  NotificationSink,
+  DataSink,
   PollableDataSource,
   SubscriberRepository,
   TransformationPipeline,
@@ -27,7 +27,7 @@ export interface MonitorBuilderProps {
   /**
    * Allows to set custom notification sink
    */
-  notificationSink?: NotificationSink;
+  notificationSink?: DataSink;
   /**
    * Allows to set custom subscriber repository
    */

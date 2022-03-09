@@ -2,8 +2,8 @@ import { Keypair } from '@solana/web3.js';
 import { Program } from '@project-serum/anchor';
 import { Duration } from 'luxon';
 import {
+  DataSink,
   DataSourceTransformationPipeline,
-  NotificationSink,
   PollableDataSource,
   SubscriberRepository,
 } from './ports';
@@ -13,7 +13,7 @@ import { SubscriberEvent } from './data-model';
 export interface MonitorFactoryProps {
   dialectProgram?: Program;
   monitorKeypair?: Keypair;
-  notificationSink?: NotificationSink;
+  notificationSink?: DataSink;
   subscriberRepository?: SubscriberRepository;
 }
 

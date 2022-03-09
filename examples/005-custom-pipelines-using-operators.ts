@@ -8,7 +8,7 @@ import {
   setPipeLogLevel,
   SourceData,
 } from '../src';
-import { ConsoleNotificationSink } from './004-custom-notification-sink';
+import { ConsoleDataSink } from './004-custom-notification-sink';
 import { DummySubscriberRepository } from './003-custom-subscriber-repository';
 import { Duration } from 'luxon';
 
@@ -21,7 +21,7 @@ setPipeLogLevel(PipeLogLevel.INFO);
 
 const monitor: Monitor<DataType> = Monitors.builder({
   subscriberRepository: new DummySubscriberRepository(),
-  notificationSink: new ConsoleNotificationSink(),
+  notificationSink: new ConsoleDataSink(),
 })
   .defineDataSource<DataType>()
   .poll((subscribers: ResourceId[]) => {

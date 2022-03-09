@@ -1,4 +1,4 @@
-import { DialectNotificationSink } from './dialect-notification-sink';
+import { DialectDataSink } from './dialect-data-sink';
 import { InMemorySubscriberRepository } from './in-memory-subscriber.repository';
 import { OnChainSubscriberRepository } from './on-chain-subscriber.repository';
 import { Duration } from 'luxon';
@@ -6,8 +6,8 @@ import { UnicastMonitor } from './unicast-monitor';
 import { concatMap, exhaustMap, from, Observable, timer } from 'rxjs';
 import { MonitorFactory, MonitorFactoryProps } from '../monitor-factory';
 import {
+  DataSink,
   DataSourceTransformationPipeline,
-  NotificationSink,
   PollableDataSource,
   PushyDataSource,
   SubscriberRepository,
@@ -16,7 +16,7 @@ import { Monitor } from '../monitor-api';
 import { ResourceId, SourceData, SubscriberEvent } from '../data-model';
 
 export class DefaultMonitorFactory implements MonitorFactory {
-  private readonly notificationSink: NotificationSink;
+  private readonly notificationSink: DataSink;
   private readonly subscriberRepository: SubscriberRepository;
 
   private readonly shutdownHooks: (() => Promise<any>)[] = [];
@@ -28,7 +28,7 @@ export class DefaultMonitorFactory implements MonitorFactory {
     subscriberRepository,
   }: MonitorFactoryProps) {
     if (dialectProgram && monitorKeypair) {
-      this.notificationSink = new DialectNotificationSink(
+      this.notificationSink = new DialectDataSink(
         dialectProgram,
         monitorKeypair,
       );
