@@ -1,5 +1,5 @@
 import { Observable } from 'rxjs';
-import { Data, Notification, ResourceId, SourceData } from './data-model';
+import { Data, ResourceId, SourceData } from './data-model';
 
 /**
  * An abstraction that represents a source of data, bound to specific type
@@ -22,17 +22,17 @@ export type PushyDataSource<T extends object> = Observable<SourceData<T>>;
  * A set of transformations that are executed on-top of unbound pushy data source
  * to generate a new notification
  */
-export type DataSourceTransformationPipeline<T extends Object> = (
+export type DataSourceTransformationPipeline<T extends Object, R> = (
   dataSource: PushyDataSource<T>,
-) => Observable<Data<Notification, T>>;
+) => Observable<Data<R, T>>;
 
 /**
  * A set of transformations that are executed on-top of a specific key from unbound pushy data source
  * to generate notification but bound to a
  */
-export type TransformationPipeline<V, T extends object> = (
+export type TransformationPipeline<V, T extends object, R> = (
   upstream: Observable<Data<V, T>>,
-) => Observable<Data<Notification, T>>;
+) => Observable<Data<R, T>>;
 
 export type SubscriberEventHandler = (subscriber: ResourceId) => any;
 

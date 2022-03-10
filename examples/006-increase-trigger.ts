@@ -1,5 +1,6 @@
 import {
   Context,
+  DialectNotification,
   Monitor,
   Monitors,
   Pipelines,
@@ -22,9 +23,10 @@ function getTriggerOutput(context: Context<DataPool>) {
   return context.trace.find((it) => it.type === 'trigger')?.output;
 }
 
+const consoleDataSink = new ConsoleDataSink<DialectNotification>();
 const monitor: Monitor<DataPool> = Monitors.builder({
   subscriberRepository: new DummySubscriberRepository(1),
-  notificationSink: new ConsoleDataSink(),
+  notificationSink: consoleDataSink,
 })
   .defineDataSource<DataPool>()
   .poll((subscribers: ResourceId[]) => {
@@ -39,23 +41,22 @@ const monitor: Monitor<DataPool> = Monitors.builder({
     counter++;
     return Promise.resolve(sourceData);
   }, Duration.fromObject({ seconds: 1 }))
-  .transform<number>({
+  .transform<number, number>({
     keys: ['share'],
     pipelines: [
-      Pipelines.threshold(
-        {
-          type: 'increase',
-          threshold,
-        },
-        {
-          messageBuilder: ({ value, context }) =>
-            `Your share = ${value} increased by ${getTriggerOutput(
-              context,
-            )}, which is above the threshold ${threshold}`,
-        },
-      ),
+      Pipelines.threshold({
+        type: 'increase',
+        threshold,
+      }),
+      Pipelines.threshold({
+        type: 'increase',
+        threshold,
+      }),
     ],
   })
+  .sendDialectMessage((m) => ({ message: '11' }))
+  .sendEmail((m) => ({ message: '22' }))
+  .done()
   .dispatch('unicast')
   .build();
 monitor.start();

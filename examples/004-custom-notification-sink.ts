@@ -1,7 +1,7 @@
 import { DataSink, ResourceId } from '../src';
 
-export class ConsoleDataSink implements DataSink<any> {
-  push(data: any, recipients: ResourceId[]): Promise<void> {
+export class ConsoleDataSink<R> implements DataSink<R> {
+  push(data: R, recipients: ResourceId[]): Promise<void> {
     console.log(
       `Got new notification ${JSON.stringify(
         data,

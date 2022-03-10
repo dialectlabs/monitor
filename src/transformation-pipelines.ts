@@ -72,14 +72,12 @@ function createTriggerOperator<T extends object>(trigger: Trigger) {
 export class Pipelines {
   static threshold<T extends object>(
     trigger: Trigger,
-    notificationBuilder: NotificationBuilder<number, T>,
     rateLimit?: RateLimit,
-  ): TransformationPipeline<number, T> {
+  ): TransformationPipeline<number, T, number> {
     const triggerOperator = createTriggerOperator<T>(trigger);
-    return Pipelines.createNew<number, T>((upstream) =>
+    return Pipelines.createNew<number, T, number>((upstream) =>
       upstream
         .pipe(...triggerOperator)
-        .pipe(Operators.Notification.create(notificationBuilder))
         .pipe(
           rateLimit
             ? Operators.FlowControl.rateLimit(rateLimit.timeSpan)
@@ -93,9 +91,9 @@ export class Pipelines {
     trigger: Trigger,
     notificationBuilder: NotificationBuilder<number, T>,
     rateLimit?: RateLimit,
-  ): TransformationPipeline<number, T> {
+  ): TransformationPipeline<number, T, number> {
     const triggerOperator = createTriggerOperator<T>(trigger);
-    return Pipelines.createNew<number, T>((upstream) =>
+    return Pipelines.createNew<number, T, number>((upstream) =>
       upstream
         .pipe(Operators.Window.fixedSize(window.size))
         .pipe(Operators.Aggregate.avg())
@@ -160,8 +158,8 @@ export class Pipelines {
         .pipe(Operators.Notification.create(notificationBuilder));
   }
 
-  static createNew<V, T extends object>(
-    pipeline: TransformationPipeline<V, T>,
+  static createNew<V, T extends object, R>(
+    pipeline: TransformationPipeline<V, T, R>,
   ) {
     return pipeline;
   }
