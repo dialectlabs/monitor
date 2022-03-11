@@ -1,4 +1,5 @@
 import {
+  AddSinksStep,
   AddTransformationsStep,
   AddTransformationStep,
   BuildStep,
@@ -9,11 +10,7 @@ import {
   Transformation,
 } from '../monitor-builder';
 import { Data, DialectNotification, SubscriberEvent } from '../data-model';
-import {
-  DataSourceTransformationPipeline,
-  PollableDataSource,
-  PushyDataSource,
-} from '../ports';
+import { DataSourceTransformationPipeline, PollableDataSource, PushyDataSource } from '../ports';
 import { Duration } from 'luxon';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
@@ -27,7 +24,8 @@ export class MonitorsBuilderState<T extends Object> {
   defineDataSourceStep?: DefineDataSourceStepImpl<T>;
   addTransformationsStep?: AddTransformationsStepImpl<T>;
 
-  constructor(readonly builderProps: MonitorBuilderProps) {}
+  constructor(readonly builderProps: MonitorBuilderProps) {
+  }
 }
 
 type DataSourceType = 'user-defined' | 'subscriber-events';
@@ -35,7 +33,8 @@ type DataSourceType = 'user-defined' | 'subscriber-events';
 export class ChooseDataSourceStepImpl implements ChooseDataSourceStep {
   dataSourceType?: DataSourceType;
 
-  constructor(readonly builderProps: MonitorBuilderProps) {}
+  constructor(readonly builderProps: MonitorBuilderProps) {
+  }
 
   subscriberEvents(): AddTransformationsStep<SubscriberEvent> {
     this.dataSourceType = 'subscriber-events';
@@ -57,13 +56,11 @@ export class ChooseDataSourceStepImpl implements ChooseDataSourceStep {
 }
 
 export class DefineDataSourceStepImpl<T extends object>
-  implements DefineDataSourceStep<T>
-{
+  implements DefineDataSourceStep<T> {
   pollableDataSource?: PollableDataSource<T>;
   pollInterval?: Duration;
 
   constructor(private readonly monitorBuilderState: MonitorsBuilderState<T>) {
-    monitorBuilderState.defineDataSourceStep = this;
   }
 
   poll(
@@ -77,74 +74,37 @@ export class DefineDataSourceStepImpl<T extends object>
 }
 
 class AddTransformationsStepImpl<T extends object>
-  implements AddTransformationsStep<T>
-{
-  transformations: Transformation<T, unknown, R>[] = [];
-  dataSourceTransformationPipelines: DataSourceTransformationPipeline<T, R>[] =
-    [];
-  dispatchStrategy?: 'unicast';
-
-  transform<V>(
-    transformation: Transformation<T, V>,
-  ): AddTransformationsStep<T> {
-    const { keys, pipelines } = transformation;
-    const adaptedToDataSourceTypePipelines = keys.flatMap(
-      (key: KeysMatching<T, V>) =>
-        pipelines.map(
-          (
-            pipeline: (
-              source: Observable<Data<V, T>>,
-            ) => Observable<Data<DialectNotification, T>>,
-          ) => {
-            const adaptedToDataSourceType: (
-              dataSource: PushyDataSource<T>,
-            ) => Observable<Data<DialectNotification, T>> = (
-              dataSource: PushyDataSource<T>,
-            ) =>
-              pipeline(
-                dataSource.pipe(
-                  map(({ data: origin, resourceId }) => ({
-                    context: {
-                      origin,
-                      resourceId,
-                      trace: [],
-                    },
-                    value: origin[key] as unknown as V,
-                  })),
-                ),
-              );
-            return adaptedToDataSourceType;
-          },
-        ),
-    );
-    this.dataSourceTransformationPipelines.push(
-      ...adaptedToDataSourceTypePipelines,
-    );
-    this.transformations.push(transformation as Transformation<T, unknown>);
-    return this;
-  }
-
-  dispatch(strategy: 'unicast' = 'unicast'): BuildStep<T> {
-    this.dispatchStrategy = strategy;
-    return new BuildStepImpl(this.monitorBuilderState);
-  }
-}
-
-class AddTransformationStepImpl<T extends object, R>
-  implements AddTransformationStep<T, R>
-{
-  transformations: Transformation<T, unknown, R>[] = [];
-  dataSourceTransformationPipelines: DataSourceTransformationPipeline<T, R>[] =
-    [];
+  implements AddTransformationsStep<T> {
   dispatchStrategy?: 'unicast';
 
   constructor(private readonly monitorBuilderState: MonitorsBuilderState<T>) {
     monitorBuilderState.addTransformationsStep = this;
   }
 
+  dispatch(strategy: 'unicast' = 'unicast'): BuildStep<T> {
+    this.dispatchStrategy = strategy;
+    return new BuildStepImpl(this.monitorBuilderState!);
+  }
+
+  transform<V, R>(transformation: Transformation<T, V, R>): AddTransformationStep<T, R> {
+    return new AddTransformationStepImpl<T, R>(this.monitorBuilderState, this)
+      .transform<V>(transformation);
+  }
+}
+
+class AddTransformationStepImpl<T extends object, R>
+  implements AddTransformationStep<T, R> {
+  transformations: Transformation<T, unknown, R>[] = [];
+  dataSourceTransformationPipelines: DataSourceTransformationPipeline<T, R>[] =
+    [];
+
+  constructor(private readonly monitorBuilderState: MonitorsBuilderState<T>,
+              private readonly addTransformationsStep: AddTransformationsStep<T>) {
+  }
+
   transform<V>(
-    transformation: Transformation<T, V>,
-  ): AddTransformationsStep<T> {
+    transformation: Transformation<T, V, R>,
+  ): AddTransformationStep<T, R> {
     const { keys, pipelines } = transformation;
     const adaptedToDataSourceTypePipelines = keys.flatMap(
       (key: KeysMatching<T, V>) =>
@@ -152,11 +112,11 @@ class AddTransformationStepImpl<T extends object, R>
           (
             pipeline: (
               source: Observable<Data<V, T>>,
-            ) => Observable<Data<DialectNotification, T>>,
+            ) => Observable<Data<R, T>>,
           ) => {
             const adaptedToDataSourceType: (
               dataSource: PushyDataSource<T>,
-            ) => Observable<Data<DialectNotification, T>> = (
+            ) => Observable<Data<R, T>> = (
               dataSource: PushyDataSource<T>,
             ) =>
               pipeline(
@@ -178,18 +138,34 @@ class AddTransformationStepImpl<T extends object, R>
     this.dataSourceTransformationPipelines.push(
       ...adaptedToDataSourceTypePipelines,
     );
-    this.transformations.push(transformation as Transformation<T, unknown>);
+    this.transformations.push(transformation as Transformation<T, unknown, R>);
     return this;
   }
 
-  dispatch(strategy: 'unicast' = 'unicast'): BuildStep<T> {
-    this.dispatchStrategy = strategy;
-    return new BuildStepImpl(this.monitorBuilderState);
+  notify(): AddSinksStep<T, R> {
+    return new AddSinksStepImpl(this.addTransformationsStep);
+  }
+
+
+}
+
+class AddSinksStepImpl<T extends object, R> implements AddSinksStep<T, R> {
+
+  constructor(private readonly addTransformationsStep: AddTransformationsStep<T>) {
+  }
+
+  and(): AddTransformationsStep<T> {
+    return this.addTransformationsStep!;
+  }
+
+  dialectThread(adaptFn: (data: Data<R, T>) => DialectNotification): AddSinksStep<T, R> {
+    return this;
   }
 }
 
 class BuildStepImpl<T extends object> implements BuildStep<T> {
-  constructor(private readonly monitorBuilderState: MonitorsBuilderState<T>) {}
+  constructor(private readonly monitorBuilderState: MonitorsBuilderState<T>) {
+  }
 
   build(): Monitor<T> {
     const {

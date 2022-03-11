@@ -46,17 +46,23 @@ export interface TriggerTrace {
   output: number;
 }
 
-/**
- * Dialect web3 notification
- */
-export interface DialectNotification {
-  message: string;
+
+export interface Notification {
+
 }
 
 /**
  * Dialect web3 notification
  */
-export interface Email {
+export interface DialectNotification extends Notification {
+  message: string;
+}
+
+/**
+ * Email notification
+ */
+export interface EmailNotification extends Notification {
+  title: string;
   message: string;
 }
 

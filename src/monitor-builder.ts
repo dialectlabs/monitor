@@ -1,19 +1,9 @@
 import { Duration } from 'luxon';
-import {
-  DataSink,
-  PollableDataSource,
-  SubscriberRepository,
-  TransformationPipeline,
-} from './ports';
+import { DataSink, PollableDataSource, SubscriberRepository, TransformationPipeline } from './ports';
 import { Program } from '@project-serum/anchor';
 import { Keypair } from '@solana/web3.js';
 import { Monitor } from './monitor-api';
-import {
-  Data,
-  DialectNotification,
-  Email,
-  SubscriberEvent,
-} from './data-model';
+import { Data, DialectNotification, EmailNotification, SubscriberEvent } from './data-model';
 
 /**
  * Please specify either
@@ -111,19 +101,23 @@ export interface AddTransformationStep<T extends object, R> {
   transform<V>(
     transformation: Transformation<T, V, R>,
   ): AddTransformationStep<T, R>;
+
   /**
    * Finish adding transformations and configure how to dispatch notifications
    * @param strategy see {@linkcode DispatchStrategy}
    * @param sink see {@linkcode DataSink}
    */
 
-  sendEmail(f: (m: Data<R, T>) => Email): AddTransformationStep<T, R>;
+  notify(): AddSinksStep<T, R>;
+}
 
-  sendDialectMessage(
-    f: (m: Data<R, T>) => DialectNotification,
-  ): AddTransformationStep<T, R>;
+export interface AddSinksStep<T extends object, R> {
 
-  done(): AddTransformationsStep<T>;
+  dialectThread(
+    adaptFn: (data: Data<R, T>) => DialectNotification,
+  ): AddSinksStep<T, R>;
+
+  and(): AddTransformationsStep<T>;
 }
 
 export interface BuildStep<T extends object> {

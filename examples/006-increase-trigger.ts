@@ -1,12 +1,4 @@
-import {
-  Context,
-  DialectNotification,
-  Monitor,
-  Monitors,
-  Pipelines,
-  ResourceId,
-  SourceData,
-} from '../src';
+import { Context, DialectNotification, Monitor, Monitors, Pipelines, ResourceId, SourceData } from '../src';
 import { Duration } from 'luxon';
 import { DummySubscriberRepository } from './003-custom-subscriber-repository';
 import { ConsoleDataSink } from './004-custom-notification-sink';
@@ -54,9 +46,10 @@ const monitor: Monitor<DataPool> = Monitors.builder({
       }),
     ],
   })
-  .sendDialectMessage((m) => ({ message: '11' }))
-  .sendEmail((m) => ({ message: '22' }))
-  .done()
+  .notify()
+  .dialectThread((m) => ({ message: '11' }))
+  .email((m) => ({ title: 'fas', message: '22' }))
+  .and()
   .dispatch('unicast')
   .build();
 monitor.start();
