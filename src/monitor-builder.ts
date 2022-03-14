@@ -1,9 +1,14 @@
 import { Duration } from 'luxon';
-import { DataSink, PollableDataSource, SubscriberRepository, TransformationPipeline } from './ports';
+import {
+  NotificationSink,
+  PollableDataSource,
+  SubscriberRepository,
+  TransformationPipeline,
+} from './ports';
 import { Program } from '@project-serum/anchor';
 import { Keypair } from '@solana/web3.js';
 import { Monitor } from './monitor-api';
-import { Data, DialectNotification, EmailNotification, SubscriberEvent } from './data-model';
+import { Data, DialectNotification, SubscriberEvent } from './data-model';
 
 /**
  * Please specify either
@@ -19,10 +24,6 @@ export interface MonitorBuilderProps {
    * Monitoring service keypair used to sign transactions to send messages and discover subscribers
    */
   monitorKeypair?: Keypair;
-  /**
-   * Allows to set custom notification sink
-   */
-  notificationSink?: DataSink<DialectNotification>;
   /**
    * Allows to set custom subscriber repository
    */
@@ -86,35 +87,34 @@ export interface Transformation<T extends object, V, R> {
 export type DispatchStrategy = 'unicast';
 
 export interface AddTransformationsStep<T extends object> {
-  transform<V, R>(
-    transformation: Transformation<T, V, R>,
-  ): AddTransformationStep<T, R>;
+  addTransformations<V, R>(): AddTransformationStep<T, V, R>;
 
   dispatch(strategy: DispatchStrategy): BuildStep<T>;
 }
 
-export interface AddTransformationStep<T extends object, R> {
+export interface AddTransformationStep<T extends object, V, R> {
   /**
    * Adds new transformation, all transformations are executed independently from each other
    * @param transformation see {@linkcode Transformation}
    */
-  transform<V>(
-    transformation: Transformation<T, V, R>,
-  ): AddTransformationStep<T, R>;
+  transform(transformation: Transformation<T, V, R>): NotifyStep<T, R>;
+}
 
+export interface NotifyStep<T extends object, R> {
   /**
    * Finish adding transformations and configure how to dispatch notifications
-   * @param strategy see {@linkcode DispatchStrategy}
-   * @param sink see {@linkcode DataSink}
    */
-
   notify(): AddSinksStep<T, R>;
 }
 
 export interface AddSinksStep<T extends object, R> {
-
   dialectThread(
     adaptFn: (data: Data<R, T>) => DialectNotification,
+  ): AddSinksStep<T, R>;
+
+  custom<M>(
+    adaptFn: (data: Data<R, T>) => M,
+    sink: NotificationSink<M>,
   ): AddSinksStep<T, R>;
 
   and(): AddTransformationsStep<T>;

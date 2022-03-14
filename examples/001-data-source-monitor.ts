@@ -1,7 +1,14 @@
-import { Monitor, Monitors, Pipelines, ResourceId, SourceData } from '../src';
+import {
+  DialectNotification,
+  Monitor,
+  Monitors,
+  Pipelines,
+  ResourceId,
+  SourceData,
+} from '../src';
 import { Duration } from 'luxon';
 import { DummySubscriberRepository } from './003-custom-subscriber-repository';
-import { ConsoleDataSink } from './004-custom-notification-sink';
+import { ConsoleNotificationSink } from './004-custom-notification-sink';
 
 type DataType = {
   cratio: number;
@@ -10,9 +17,10 @@ type DataType = {
 
 const threshold = 0.5;
 
+const consoleNotificationSink =
+  new ConsoleNotificationSink<DialectNotification>();
 const monitor: Monitor<DataType> = Monitors.builder({
   subscriberRepository: new DummySubscriberRepository(1),
-  notificationSink: new ConsoleDataSink(),
 })
   .defineDataSource<DataType>()
   .poll((subscribers: ResourceId[]) => {
@@ -27,31 +35,42 @@ const monitor: Monitor<DataType> = Monitors.builder({
     );
     return Promise.resolve(sourceData);
   }, Duration.fromObject({ seconds: 1 }))
-  .transform<number>({
+  .addTransformations<number, number>()
+  .transform({
     keys: ['cratio'],
     pipelines: [
-      Pipelines.threshold(
-        {
-          type: 'falling-edge',
-          threshold,
-        },
-        {
-          messageBuilder: ({ value, context: { origin } }) =>
-            `Your cratio = ${value} below warning threshold`,
-        },
-      ),
-      Pipelines.threshold(
-        {
-          type: 'rising-edge',
-          threshold,
-        },
-        {
-          messageBuilder: ({ value, context }) =>
-            `Your cratio = ${value} above warning threshold`,
-        },
-      ),
+      Pipelines.threshold({
+        type: 'falling-edge',
+        threshold,
+      }),
     ],
   })
+  .notify()
+  .custom<DialectNotification>(
+    ({ value }) => ({
+      message: `Your cratio = ${value} below warning threshold`,
+    }),
+    consoleNotificationSink,
+  )
+  .and()
+  .addTransformations<number, number>()
+  .transform({
+    keys: ['cratio'],
+    pipelines: [
+      Pipelines.threshold({
+        type: 'rising-edge',
+        threshold,
+      }),
+    ],
+  })
+  .notify()
+  .custom<DialectNotification>(
+    ({ value }) => ({
+      message: `Your cratio = ${value} above warning threshold`,
+    }),
+    consoleNotificationSink,
+  )
+  .and()
   .dispatch('unicast')
   .build();
 monitor.start();

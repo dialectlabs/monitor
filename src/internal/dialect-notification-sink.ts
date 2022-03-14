@@ -3,9 +3,11 @@ import { DialectNotification, ResourceId } from '../data-model';
 import { Keypair } from '@solana/web3.js';
 import { sendMessage } from '@dialectlabs/web3';
 import { getDialectAccount } from './dialect-extensions';
-import { DataSink } from '../ports';
+import { NotificationSink } from '../ports';
 
-export class DialectDataSink implements DataSink<DialectNotification> {
+export class DialectNotificationSink
+  implements NotificationSink<DialectNotification>
+{
   constructor(
     private readonly dialectProgram: Program,
     private readonly monitorKeypair: Keypair,

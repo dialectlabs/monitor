@@ -16,16 +16,16 @@ export interface MonitorFactoryProps {
 }
 
 export interface MonitorFactory {
-  createUnicastMonitor<T extends object, R>(
+  createUnicastMonitor<T extends object>(
     dataSource: PollableDataSource<T>,
-    transformationPipelines: DataSourceTransformationPipeline<T, R>[],
+    transformationPipelines: DataSourceTransformationPipeline<T, void[]>[],
     pollInterval: Duration,
   ): Monitor<T>;
 
-  createSubscriberEventMonitor<R>(
+  createSubscriberEventMonitor(
     eventDetectionPipelines: DataSourceTransformationPipeline<
       SubscriberEvent,
-      R
+      void[]
     >[],
   ): Monitor<SubscriberEvent>;
 }

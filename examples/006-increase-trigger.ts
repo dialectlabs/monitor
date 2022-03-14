@@ -1,7 +1,15 @@
-import { Context, DialectNotification, Monitor, Monitors, Pipelines, ResourceId, SourceData } from '../src';
+import {
+  Context,
+  DialectNotification,
+  Monitor,
+  Monitors,
+  Pipelines,
+  ResourceId,
+  SourceData,
+} from '../src';
 import { Duration } from 'luxon';
 import { DummySubscriberRepository } from './003-custom-subscriber-repository';
-import { ConsoleDataSink } from './004-custom-notification-sink';
+import { ConsoleNotificationSink } from './004-custom-notification-sink';
 
 type DataPool = {
   share: number;
@@ -15,10 +23,9 @@ function getTriggerOutput(context: Context<DataPool>) {
   return context.trace.find((it) => it.type === 'trigger')?.output;
 }
 
-const consoleDataSink = new ConsoleDataSink<DialectNotification>();
+const consoleDataSink = new ConsoleNotificationSink<DialectNotification>();
 const monitor: Monitor<DataPool> = Monitors.builder({
   subscriberRepository: new DummySubscriberRepository(1),
-  notificationSink: consoleDataSink,
 })
   .defineDataSource<DataPool>()
   .poll((subscribers: ResourceId[]) => {
@@ -33,13 +40,10 @@ const monitor: Monitor<DataPool> = Monitors.builder({
     counter++;
     return Promise.resolve(sourceData);
   }, Duration.fromObject({ seconds: 1 }))
-  .transform<number, number>({
+  .addTransformations<number, number>()
+  .transform({
     keys: ['share'],
     pipelines: [
-      Pipelines.threshold({
-        type: 'increase',
-        threshold,
-      }),
       Pipelines.threshold({
         type: 'increase',
         threshold,
@@ -47,8 +51,12 @@ const monitor: Monitor<DataPool> = Monitors.builder({
     ],
   })
   .notify()
-  .dialectThread((m) => ({ message: '11' }))
-  .email((m) => ({ title: 'fas', message: '22' }))
+  .custom<DialectNotification>(
+    ({ value, context }) => ({
+      message: `Value: ${value} increase by ${getTriggerOutput(context)} `,
+    }),
+    consoleDataSink,
+  )
   .and()
   .dispatch('unicast')
   .build();

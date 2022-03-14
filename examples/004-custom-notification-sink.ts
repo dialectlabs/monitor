@@ -1,6 +1,6 @@
-import { DataSink, ResourceId } from '../src';
+import { NotificationSink, ResourceId } from '../src';
 
-export class ConsoleDataSink<R> implements DataSink<R> {
+export class ConsoleNotificationSink<R> implements NotificationSink<R> {
   push(data: R, recipients: ResourceId[]): Promise<void> {
     console.log(
       `Got new notification ${JSON.stringify(

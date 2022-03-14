@@ -24,7 +24,8 @@ export type PushyDataSource<T extends object> = Observable<SourceData<T>>;
  */
 export type DataSourceTransformationPipeline<T extends Object, R> = (
   dataSource: PushyDataSource<T>,
-) => Observable<Data<R, T>>;
+  targets: ResourceId[],
+) => Observable<R>;
 
 /**
  * A set of transformations that are executed on-top of a specific key from unbound pushy data source
@@ -62,6 +63,6 @@ export interface SubscriberRepository {
 /**
  * An interface that abstracts the destination where events are sent/persisted
  */
-export interface DataSink<R> {
+export interface NotificationSink<R> {
   push(data: R, recipients: ResourceId[]): Promise<void>;
 }

@@ -1,6 +1,4 @@
 import {
-  exhaustMap,
-  from,
   groupBy,
   GroupedObservable,
   mergeMap,
@@ -8,11 +6,7 @@ import {
 } from 'rxjs';
 
 import { PublicKey } from '@solana/web3.js';
-import {
-  DataSink,
-  DataSourceTransformationPipeline,
-  PushyDataSource,
-} from '../ports';
+import { DataSourceTransformationPipeline, PushyDataSource } from '../ports';
 import { Monitor } from '../monitor-api';
 import { SourceData } from '../data-model';
 import { Operators } from '../transformation-pipeline-operators';
@@ -24,8 +18,10 @@ export class UnicastMonitor<T extends Object> implements Monitor<T> {
 
   constructor(
     private readonly dataSource: PushyDataSource<T>,
-    private readonly dataSourceTransformationPipelines: DataSourceTransformationPipeline<T>[],
-    private readonly notificationSink: DataSink,
+    private readonly dataSourceTransformationPipelines: DataSourceTransformationPipeline<
+      T,
+      void[]
+    >[],
   ) {}
 
   async start() {
@@ -59,11 +55,7 @@ export class UnicastMonitor<T extends Object> implements Monitor<T> {
         mergeMap((data: GroupedObservable<string, SourceData<T>>) => {
           const resourceId = new PublicKey(data.key);
           return this.dataSourceTransformationPipelines.map((pipeline) => {
-            return pipeline(data).pipe(
-              exhaustMap((event) =>
-                from(this.notificationSink.push(event.value, [resourceId])),
-              ),
-            );
+            return pipeline(data, [resourceId]);
           });
         }),
         mergeMap((it) => it),

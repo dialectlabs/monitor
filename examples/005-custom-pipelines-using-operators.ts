@@ -1,4 +1,5 @@
 import {
+  DialectNotification,
   Monitor,
   Monitors,
   Operators,
@@ -8,7 +9,7 @@ import {
   setPipeLogLevel,
   SourceData,
 } from '../src';
-import { ConsoleDataSink } from './004-custom-notification-sink';
+import { ConsoleNotificationSink } from './004-custom-notification-sink';
 import { DummySubscriberRepository } from './003-custom-subscriber-repository';
 import { Duration } from 'luxon';
 
@@ -19,9 +20,10 @@ type DataType = {
 
 setPipeLogLevel(PipeLogLevel.INFO);
 
+const consoleNotificationSink =
+  new ConsoleNotificationSink<DialectNotification>();
 const monitor: Monitor<DataType> = Monitors.builder({
   subscriberRepository: new DummySubscriberRepository(),
-  notificationSink: new ConsoleDataSink(),
 })
   .defineDataSource<DataType>()
   .poll((subscribers: ResourceId[]) => {
@@ -36,10 +38,11 @@ const monitor: Monitor<DataType> = Monitors.builder({
     );
     return Promise.resolve(sourceData);
   }, Duration.fromObject({ seconds: 1 }))
-  .transform<number>({
+  .addTransformations<number, number>()
+  .transform({
     keys: ['cratio'],
     pipelines: [
-      Pipelines.createNew<number, DataType>((upstream) =>
+      Pipelines.createNew<number, DataType, number>((upstream) =>
         upstream
           .pipe(Operators.Utility.log(PipeLogLevel.INFO, 'upstream'))
           .pipe(
@@ -64,15 +67,18 @@ const monitor: Monitor<DataType> = Monitors.builder({
             ),
           )
           .pipe(...Operators.Trigger.risingEdge<DataType>(0.6))
-          .pipe(Operators.Utility.log(PipeLogLevel.INFO, '      rising edge'))
-          .pipe(
-            Operators.Notification.create<number, DataType>({
-              messageBuilder: ({ value }) => `${value}`,
-            }),
-          ),
+          .pipe(Operators.Utility.log(PipeLogLevel.INFO, '      rising edge')),
       ),
     ],
   })
+  .notify()
+  .custom<DialectNotification>(
+    ({ value }) => ({
+      message: `        notification ${value}`,
+    }),
+    consoleNotificationSink,
+  )
+  .and()
   .dispatch('unicast')
   .build();
 monitor.start();
