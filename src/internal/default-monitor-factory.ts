@@ -6,6 +6,7 @@ import { UnicastMonitor } from './unicast-monitor';
 import { concatMap, exhaustMap, from, Observable, timer } from 'rxjs';
 import { MonitorFactory, MonitorFactoryProps } from '../monitor-factory';
 import {
+  DataSource,
   DataSourceTransformationPipeline,
   PollableDataSource,
   PushyDataSource,
@@ -13,7 +14,6 @@ import {
 } from '../ports';
 import { Monitor } from '../monitor-api';
 import { ResourceId, SourceData, SubscriberEvent } from '../data-model';
-import { BroadcastMonitor } from './broadcast-monitor';
 
 export class DefaultMonitorFactory implements MonitorFactory {
   private readonly dialectNotificationSink?: DialectNotificationSink;
@@ -56,17 +56,15 @@ export class DefaultMonitorFactory implements MonitorFactory {
   }
 
   createUnicastMonitor<T extends object>(
-    dataSource: PollableDataSource<T>,
+    dataSource: DataSource<T>,
     datasourceTransformationPipelines: DataSourceTransformationPipeline<
       T,
       void[]
-    >[],
-    pollInterval: Duration = Duration.fromObject({ seconds: 10 }),
+      >[],    pollInterval: Duration = Duration.fromObject({ seconds: 10 }),
   ): Monitor<T> {
-    const pushyDataSource = this.toPushyDataSource(
+    const pushyDataSource = this.decorateWithPushyDataSource(
       dataSource,
       pollInterval,
-      this.subscriberRepository,
     );
     const unicastMonitor = new UnicastMonitor<T>(
       pushyDataSource,
@@ -76,24 +74,18 @@ export class DefaultMonitorFactory implements MonitorFactory {
     return unicastMonitor;
   }
 
-  createBroadcastMonitor<T extends object>(
-    dataSource: PollableDataSource<T>,
-    datasourceTransformationPipelines: DataSourceTransformationPipeline<T>[],
-    pollInterval: Duration = Duration.fromObject({ seconds: 10 }),
-  ): Monitor<T> {
-    const pushyDataSource = this.toPushyDataSource(
-      dataSource,
+  private decorateWithPushyDataSource<T extends object>(
+    dataSource: DataSource<T>,
+    pollInterval: Duration,
+  ): PushyDataSource<T> {
+    if ('subscribe' in dataSource) {
+      return dataSource as PushyDataSource<T>;
+    }
+    return this.toPushyDataSource(
+      dataSource as PollableDataSource<T>,
       pollInterval,
       this.subscriberRepository,
     );
-    const broadcastMonitor = new BroadcastMonitor<T>(
-      pushyDataSource,
-      datasourceTransformationPipelines,
-      this.notificationSink,
-      this.subscriberRepository,
-    );
-    this.shutdownHooks.push(() => broadcastMonitor.stop());
-    return broadcastMonitor;
   }
 
   createSubscriberEventMonitor(

@@ -65,9 +65,13 @@ export class ChooseDataSourceStepImpl implements ChooseDataSourceStep {
   }
 }
 
+type DataSourceStrategy = 'push' | 'poll';
+
 export class DefineDataSourceStepImpl<T extends object>
   implements DefineDataSourceStep<T>
 {
+  dataSourceStrategy?: DataSourceStrategy;
+  pushyDataSource?: PushyDataSource<T>;
   pollableDataSource?: PollableDataSource<T>;
   pollInterval?: Duration;
 
@@ -81,6 +85,13 @@ export class DefineDataSourceStepImpl<T extends object>
   ): AddTransformationsStep<T> {
     this.pollableDataSource = dataSource;
     this.pollInterval = pollInterval;
+    this.dataSourceStrategy = 'poll';
+    return new AddTransformationsStepImpl(this.monitorBuilderState);
+  }
+
+  push(dataSource: PushyDataSource<T>): AddTransformationsStep<T> {
+    this.pushyDataSource = dataSource;
+    this.dataSourceStrategy = 'push';
     return new AddTransformationsStepImpl(this.monitorBuilderState);
   }
 }
@@ -313,6 +324,30 @@ class BuildStepImpl<T extends object> implements BuildStep<T> {
     addTransformationsStep: AddTransformationsStepImpl<T>,
     builderProps: MonitorBuilderProps,
   ) {
+    const { dataSourceStrategy } = defineDataSourceStep;
+    switch (dataSourceStrategy) {
+      case 'poll':
+        return this.createForPollable(
+          defineDataSourceStep,
+          addTransformationsStep,
+          builderProps,
+        );
+      case 'push':
+        return this.createForPushy(
+          defineDataSourceStep,
+          addTransformationsStep,
+          builderProps,
+        );
+      default:
+        throw new Error('Expected data source strategy to be defined');
+    }
+  }
+
+  private createForPollable(
+    defineDataSourceStep: DefineDataSourceStepImpl<T>,
+    addTransformationsStep: AddTransformationsStepImpl<T>,
+    builderProps: MonitorBuilderProps,
+  ) {
     const { pollableDataSource, pollInterval } = defineDataSourceStep;
     const { dataSourceTransformationPipelines, dispatchStrategy } =
       addTransformationsStep;
@@ -330,6 +365,30 @@ class BuildStepImpl<T extends object> implements BuildStep<T> {
       pollableDataSource,
       dataSourceTransformationPipelines,
       pollInterval,
+    );
+  }
+
+  private createForPushy(
+    defineDataSourceStep: DefineDataSourceStepImpl<T>,
+    addTransformationsStep: AddTransformationsStepImpl<T>,
+    builderProps: MonitorBuilderProps,
+  ) {
+    const { pushyDataSource } = defineDataSourceStep;
+    const { dataSourceTransformationPipelines, dispatchStrategy } =
+      addTransformationsStep;
+    if (
+      !pushyDataSource ||
+      !dataSourceTransformationPipelines ||
+      !dispatchStrategy
+    ) {
+      throw new Error(
+        'Expected [pushyDataSource, dataSourceTransformationPipelines, dispatchStrategy] to be defined',
+      );
+    }
+    return Monitors.factory(builderProps).createUnicastMonitor<T>(
+      pushyDataSource,
+      dataSourceTransformationPipelines,
+      Duration.fromObject({ seconds: 1 }), // TODO: make optional
     );
   }
 }
