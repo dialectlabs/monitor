@@ -2,8 +2,8 @@ import { Keypair } from '@solana/web3.js';
 import { Program } from '@project-serum/anchor';
 import { Duration } from 'luxon';
 import {
+  DataSource,
   DataSourceTransformationPipeline,
-  PollableDataSource,
   SubscriberRepository,
 } from './ports';
 import { Monitor } from './monitor-api';
@@ -17,7 +17,7 @@ export interface MonitorFactoryProps {
 
 export interface MonitorFactory {
   createUnicastMonitor<T extends object>(
-    dataSource: PollableDataSource<T>,
+    dataSource: DataSource<T>,
     transformationPipelines: DataSourceTransformationPipeline<T, void[]>[],
     pollInterval: Duration,
   ): Monitor<T>;

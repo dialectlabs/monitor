@@ -2,6 +2,7 @@ import { Duration } from 'luxon';
 import {
   NotificationSink,
   PollableDataSource,
+  PushyDataSource,
   SubscriberRepository,
   TransformationPipeline,
 } from './ports';
@@ -56,6 +57,8 @@ export interface DefineDataSourceStep<T extends object> {
     dataSource: PollableDataSource<T>,
     pollInterval: Duration,
   ): AddTransformationsStep<T>;
+
+  push(dataSource: PushyDataSource<T>): AddTransformationsStep<T>;
 }
 
 export type KeysMatching<T extends object, V> = {
