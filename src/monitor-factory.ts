@@ -3,7 +3,6 @@ import { Program } from '@project-serum/anchor';
 import { Duration } from 'luxon';
 import {
   DataSourceTransformationPipeline,
-  NotificationSink,
   PollableDataSource,
   SubscriberRepository,
 } from './ports';
@@ -13,18 +12,20 @@ import { SubscriberEvent } from './data-model';
 export interface MonitorFactoryProps {
   dialectProgram?: Program;
   monitorKeypair?: Keypair;
-  notificationSink?: NotificationSink;
   subscriberRepository?: SubscriberRepository;
 }
 
 export interface MonitorFactory {
   createUnicastMonitor<T extends object>(
     dataSource: PollableDataSource<T>,
-    transformationPipelines: DataSourceTransformationPipeline<T>[],
+    transformationPipelines: DataSourceTransformationPipeline<T, void[]>[],
     pollInterval: Duration,
   ): Monitor<T>;
 
   createSubscriberEventMonitor(
-    eventDetectionPipelines: DataSourceTransformationPipeline<SubscriberEvent>[],
+    eventDetectionPipelines: DataSourceTransformationPipeline<
+      SubscriberEvent,
+      void[]
+    >[],
   ): Monitor<SubscriberEvent>;
 }
