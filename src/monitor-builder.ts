@@ -8,7 +8,7 @@ import {
 import { Program } from '@project-serum/anchor';
 import { Keypair } from '@solana/web3.js';
 import { Monitor } from './monitor-api';
-import { SubscriberEvent } from './data-model';
+import { Data, DialectNotification, SubscriberEvent } from './data-model';
 
 /**
  * Please specify either
@@ -24,10 +24,6 @@ export interface MonitorBuilderProps {
    * Monitoring service keypair used to sign transactions to send messages and discover subscribers
    */
   monitorKeypair?: Keypair;
-  /**
-   * Allows to set custom notification sink
-   */
-  notificationSink?: NotificationSink;
   /**
    * Allows to set custom subscriber repository
    */
@@ -71,7 +67,7 @@ export type KeysMatching<T extends object, V> = {
  * @typeParam T data source type from {@linkcode DefineDataSourceStep}
  * @typeParam V data type of specified keys from T
  */
-export interface Transformation<T extends object, V> {
+export interface Transformation<T extends object, V, R> {
   /**
    * A set of keys from data source type to be transformed
    *  @typeParam V data type of specified keys from T
@@ -81,7 +77,7 @@ export interface Transformation<T extends object, V> {
    * Streaming transformations that produce dialect web3 notifications ot be executed for each key
    *  @typeParam V data type of specified keys from T
    */
-  pipelines: TransformationPipeline<V, T>[];
+  pipelines: TransformationPipeline<V, T, R>[];
 }
 
 /**
@@ -91,17 +87,37 @@ export interface Transformation<T extends object, V> {
 export type DispatchStrategy = 'unicast' | 'broadcast';
 
 export interface AddTransformationsStep<T extends object> {
+  addTransformations<V, R>(): AddTransformationStep<T, V, R>;
+
+  dispatch(strategy: DispatchStrategy): BuildStep<T>;
+}
+
+export interface AddTransformationStep<T extends object, V, R> {
   /**
    * Adds new transformation, all transformations are executed independently from each other
    * @param transformation see {@linkcode Transformation}
    */
-  transform<V>(transformation: Transformation<T, V>): AddTransformationsStep<T>;
+  transform(transformation: Transformation<T, V, R>): NotifyStep<T, R>;
+}
 
+export interface NotifyStep<T extends object, R> {
   /**
    * Finish adding transformations and configure how to dispatch notifications
-   * @param strategy see {@linkcode DispatchStrategy}
    */
-  dispatch(strategy: DispatchStrategy): BuildStep<T>;
+  notify(): AddSinksStep<T, R>;
+}
+
+export interface AddSinksStep<T extends object, R> {
+  dialectThread(
+    adaptFn: (data: Data<R, T>) => DialectNotification,
+  ): AddSinksStep<T, R>;
+
+  custom<M>(
+    adaptFn: (data: Data<R, T>) => M,
+    sink: NotificationSink<M>,
+  ): AddSinksStep<T, R>;
+
+  and(): AddTransformationsStep<T>;
 }
 
 export interface BuildStep<T extends object> {

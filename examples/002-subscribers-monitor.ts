@@ -1,22 +1,33 @@
-import { Monitors, Pipelines, SubscriberState } from '../src';
+import {
+  DialectNotification,
+  Monitors,
+  Pipelines,
+  SubscriberState,
+} from '../src';
 import { Keypair } from '@solana/web3.js';
-import { ConsoleNotificationSink } from './004-custom-notification-sink';
 import { DummySubscriberRepository } from './003-custom-subscriber-repository';
+import { ConsoleNotificationSink } from './004-custom-notification-sink';
 
 const dummySubscriberRepository = new DummySubscriberRepository();
+const consoleNotificationSink =
+  new ConsoleNotificationSink<DialectNotification>();
 const monitor = Monitors.builder({
   subscriberRepository: dummySubscriberRepository,
-  notificationSink: new ConsoleNotificationSink(),
 })
   .subscriberEvents()
-  .transform<SubscriberState>({
+  .addTransformations<SubscriberState, SubscriberState>()
+  .transform({
     keys: ['state'],
-    pipelines: [
-      Pipelines.notifyNewSubscribers({
-        messageBuilder: () => `Hi! Welcome onboard :)`,
-      }),
-    ],
+    pipelines: [Pipelines.notifyNewSubscribers()],
   })
+  .notify()
+  .custom<DialectNotification>(
+    ({ context }) => ({
+      message: `Hey ${context.resourceId}, welcome!`,
+    }),
+    consoleNotificationSink,
+  )
+  .and()
   .dispatch('unicast')
   .build();
 

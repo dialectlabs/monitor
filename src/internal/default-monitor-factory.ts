@@ -7,7 +7,6 @@ import { concatMap, exhaustMap, from, Observable, timer } from 'rxjs';
 import { MonitorFactory, MonitorFactoryProps } from '../monitor-factory';
 import {
   DataSourceTransformationPipeline,
-  NotificationSink,
   PollableDataSource,
   PushyDataSource,
   SubscriberRepository,
@@ -17,7 +16,7 @@ import { ResourceId, SourceData, SubscriberEvent } from '../data-model';
 import { BroadcastMonitor } from './broadcast-monitor';
 
 export class DefaultMonitorFactory implements MonitorFactory {
-  private readonly notificationSink: NotificationSink;
+  private readonly dialectNotificationSink?: DialectNotificationSink;
   private readonly subscriberRepository: SubscriberRepository;
 
   private readonly shutdownHooks: (() => Promise<any>)[] = [];
@@ -25,11 +24,10 @@ export class DefaultMonitorFactory implements MonitorFactory {
   constructor({
     dialectProgram,
     monitorKeypair,
-    notificationSink,
     subscriberRepository,
   }: MonitorFactoryProps) {
     if (dialectProgram && monitorKeypair) {
-      this.notificationSink = new DialectNotificationSink(
+      this.dialectNotificationSink = new DialectNotificationSink(
         dialectProgram,
         monitorKeypair,
       );
@@ -42,16 +40,13 @@ export class DefaultMonitorFactory implements MonitorFactory {
         onChainSubscriberRepository,
       );
     }
-    if (notificationSink) {
-      this.notificationSink = notificationSink;
-    }
     if (subscriberRepository) {
       this.subscriberRepository = subscriberRepository;
     }
     // @ts-ignore
-    if (!this.notificationSink || !this.subscriberRepository) {
+    if (!this.subscriberRepository) {
       throw new Error(
-        'Please specify either dialectProgram & monitorKeypair or eventSink & subscriberRepository',
+        'Please specify either dialectProgram & monitorKeypair or subscriberRepository',
       );
     }
   }
@@ -62,7 +57,10 @@ export class DefaultMonitorFactory implements MonitorFactory {
 
   createUnicastMonitor<T extends object>(
     dataSource: PollableDataSource<T>,
-    datasourceTransformationPipelines: DataSourceTransformationPipeline<T>[],
+    datasourceTransformationPipelines: DataSourceTransformationPipeline<
+      T,
+      void[]
+    >[],
     pollInterval: Duration = Duration.fromObject({ seconds: 10 }),
   ): Monitor<T> {
     const pushyDataSource = this.toPushyDataSource(
@@ -73,7 +71,6 @@ export class DefaultMonitorFactory implements MonitorFactory {
     const unicastMonitor = new UnicastMonitor<T>(
       pushyDataSource,
       datasourceTransformationPipelines,
-      this.notificationSink,
     );
     this.shutdownHooks.push(() => unicastMonitor.stop());
     return unicastMonitor;
@@ -100,7 +97,10 @@ export class DefaultMonitorFactory implements MonitorFactory {
   }
 
   createSubscriberEventMonitor(
-    dataSourceTransformationPipelines: DataSourceTransformationPipeline<SubscriberEvent>[],
+    dataSourceTransformationPipelines: DataSourceTransformationPipeline<
+      SubscriberEvent,
+      void[]
+    >[],
   ): Monitor<SubscriberEvent> {
     const dataSource: PushyDataSource<SubscriberEvent> = new Observable<
       SourceData<SubscriberEvent>
@@ -125,7 +125,6 @@ export class DefaultMonitorFactory implements MonitorFactory {
     const unicastMonitor = new UnicastMonitor<SubscriberEvent>(
       dataSource,
       dataSourceTransformationPipelines,
-      this.notificationSink,
     );
     this.shutdownHooks.push(() => unicastMonitor.stop());
     return unicastMonitor;
