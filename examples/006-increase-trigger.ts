@@ -23,7 +23,7 @@ function getTriggerOutput(context: Context<DataPool>) {
 }
 
 const monitor: Monitor<DataPool> = Monitors.builder({
-  subscriberRepository: new DummySubscriberRepository(1),
+  subscriberRepository: new DummySubscriberRepository(2),
   notificationSink: new ConsoleNotificationSink(),
 })
   .defineDataSource<DataPool>()
