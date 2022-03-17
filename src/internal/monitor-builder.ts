@@ -3,6 +3,7 @@ import {
   BuildStep,
   ChooseDataSourceStep,
   DefineDataSourceStep,
+  DispatchStrategy,
   KeysMatching,
   MonitorBuilderProps,
   Transformation,
@@ -80,7 +81,7 @@ class AddTransformationsStepImpl<T extends object>
 {
   transformations: Transformation<T, unknown>[] = [];
   dataSourceTransformationPipelines: DataSourceTransformationPipeline<T>[] = [];
-  dispatchStrategy?: 'unicast';
+  dispatchStrategy?: DispatchStrategy;
 
   constructor(private readonly monitorBuilderState: MonitorsBuilderState<T>) {
     monitorBuilderState.addTransformationsStep = this;
@@ -126,7 +127,7 @@ class AddTransformationsStepImpl<T extends object>
     return this;
   }
 
-  dispatch(strategy: 'unicast' = 'unicast'): BuildStep<T> {
+  dispatch(strategy: DispatchStrategy): BuildStep<T> {
     this.dispatchStrategy = strategy;
     return new BuildStepImpl(this.monitorBuilderState);
   }
@@ -207,10 +208,25 @@ class BuildStepImpl<T extends object> implements BuildStep<T> {
         'Expected [pollableDataSource, pollInterval, dataSourceTransformationPipelines, dispatchStrategy] to be defined',
       );
     }
-    return Monitors.factory(builderProps).createUnicastMonitor<T>(
-      pollableDataSource,
-      dataSourceTransformationPipelines,
-      pollInterval,
-    );
+
+    switch (addTransformationsStep.dispatchStrategy) {
+      case 'broadcast':
+        return Monitors.factory(builderProps).createBroadcastMonitor<T>(
+          pollableDataSource,
+          dataSourceTransformationPipelines,
+          pollInterval,
+        );
+      case 'unicast':
+        return Monitors.factory(builderProps).createUnicastMonitor<T>(
+          pollableDataSource,
+          dataSourceTransformationPipelines,
+          pollInterval,
+        );
+      default:
+        throw new Error(
+          'Unknown dispatchStrategy: ' +
+            addTransformationsStep.dispatchStrategy,
+        );
+    }
   }
 }

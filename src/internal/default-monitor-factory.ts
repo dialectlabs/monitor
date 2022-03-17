@@ -14,6 +14,7 @@ import {
 } from '../ports';
 import { Monitor } from '../monitor-api';
 import { ResourceId, SourceData, SubscriberEvent } from '../data-model';
+import { BroadcastMonitor } from './broadcast-monitor';
 
 export class DefaultMonitorFactory implements MonitorFactory {
   private readonly notificationSink: NotificationSink;
@@ -76,6 +77,26 @@ export class DefaultMonitorFactory implements MonitorFactory {
     );
     this.shutdownHooks.push(() => unicastMonitor.stop());
     return unicastMonitor;
+  }
+
+  createBroadcastMonitor<T extends object>(
+    dataSource: PollableDataSource<T>,
+    datasourceTransformationPipelines: DataSourceTransformationPipeline<T>[],
+    pollInterval: Duration = Duration.fromObject({ seconds: 10 }),
+  ): Monitor<T> {
+    const pushyDataSource = this.toPushyDataSource(
+      dataSource,
+      pollInterval,
+      this.subscriberRepository,
+    );
+    const broadcastMonitor = new BroadcastMonitor<T>(
+      pushyDataSource,
+      datasourceTransformationPipelines,
+      this.notificationSink,
+      this.subscriberRepository,
+    );
+    this.shutdownHooks.push(() => broadcastMonitor.stop());
+    return broadcastMonitor;
   }
 
   createSubscriberEventMonitor(

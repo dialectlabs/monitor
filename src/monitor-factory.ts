@@ -24,6 +24,12 @@ export interface MonitorFactory {
     pollInterval: Duration,
   ): Monitor<T>;
 
+  createBroadcastMonitor<T extends object>(
+    dataSource: PollableDataSource<T>,
+    transformationPipelines: DataSourceTransformationPipeline<T>[],
+    pollInterval: Duration,
+  ): Monitor<T>;
+
   createSubscriberEventMonitor(
     eventDetectionPipelines: DataSourceTransformationPipeline<SubscriberEvent>[],
   ): Monitor<SubscriberEvent>;
