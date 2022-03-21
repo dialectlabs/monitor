@@ -54,9 +54,9 @@ export class UnicastMonitor<T extends Object> implements Monitor<T> {
         ),
         mergeMap((data: GroupedObservable<string, SourceData<T>>) => {
           const resourceId = new PublicKey(data.key);
-          return this.dataSourceTransformationPipelines.map((pipeline) => {
-            return pipeline(data, [resourceId]);
-          });
+          return this.dataSourceTransformationPipelines.map((pipeline) =>
+            pipeline(data, [resourceId]),
+          );
         }),
         mergeMap((it) => it),
       )

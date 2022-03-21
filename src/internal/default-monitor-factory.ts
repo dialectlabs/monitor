@@ -14,6 +14,7 @@ import {
 } from '../ports';
 import { Monitor } from '../monitor-api';
 import { ResourceId, SourceData, SubscriberEvent } from '../data-model';
+import { BroadcastMonitor } from './broadcast-monitor';
 
 export class DefaultMonitorFactory implements MonitorFactory {
   private readonly dialectNotificationSink?: DialectNotificationSink;
@@ -60,7 +61,8 @@ export class DefaultMonitorFactory implements MonitorFactory {
     datasourceTransformationPipelines: DataSourceTransformationPipeline<
       T,
       void[]
-      >[],    pollInterval: Duration = Duration.fromObject({ seconds: 10 }),
+    >[],
+    pollInterval: Duration = Duration.fromObject({ seconds: 10 }),
   ): Monitor<T> {
     const pushyDataSource = this.decorateWithPushyDataSource(
       dataSource,
@@ -86,6 +88,28 @@ export class DefaultMonitorFactory implements MonitorFactory {
       pollInterval,
       this.subscriberRepository,
     );
+  }
+
+  createBroadcastMonitor<T extends object>(
+    dataSource: PollableDataSource<T>,
+    datasourceTransformationPipelines: DataSourceTransformationPipeline<
+      T,
+      void[]
+    >[],
+    pollInterval: Duration = Duration.fromObject({ seconds: 10 }),
+  ): Monitor<T> {
+    const pushyDataSource = this.toPushyDataSource(
+      dataSource,
+      pollInterval,
+      this.subscriberRepository,
+    );
+    const broadcastMonitor = new BroadcastMonitor<T>(
+      pushyDataSource,
+      datasourceTransformationPipelines,
+      this.subscriberRepository,
+    );
+    this.shutdownHooks.push(() => broadcastMonitor.stop());
+    return broadcastMonitor;
   }
 
   createSubscriberEventMonitor(
