@@ -15,8 +15,7 @@ const monitor = Monitors.builder({
   subscriberRepository: dummySubscriberRepository,
 })
   .subscriberEvents()
-  .addTransformations<SubscriberState, SubscriberState>()
-  .transform({
+  .transform<SubscriberState, SubscriberState>({
     keys: ['state'],
     pipelines: [Pipelines.notifyNewSubscribers()],
   })

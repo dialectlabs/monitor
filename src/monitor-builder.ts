@@ -90,17 +90,9 @@ export interface Transformation<T extends object, V, R> {
 export type DispatchStrategy = 'unicast' | 'broadcast';
 
 export interface AddTransformationsStep<T extends object> {
-  addTransformations<V, R>(): AddTransformationStep<T, V, R>;
+  transform<V, R>(transformation: Transformation<T, V, R>): NotifyStep<T, R>;
 
   dispatch(strategy: DispatchStrategy): BuildStep<T>;
-}
-
-export interface AddTransformationStep<T extends object, V, R> {
-  /**
-   * Adds new transformation, all transformations are executed independently from each other
-   * @param transformation see {@linkcode Transformation}
-   */
-  transform(transformation: Transformation<T, V, R>): NotifyStep<T, R>;
 }
 
 export interface NotifyStep<T extends object, R> {

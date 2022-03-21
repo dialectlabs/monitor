@@ -39,8 +39,7 @@ const monitor: Monitor<DataType> = Monitors.builder({
       subscriber.next(d2);
     }),
   )
-  .addTransformations<number, number>()
-  .transform({
+  .transform<number, number>({
     keys: ['cratio'],
     pipelines: [
       Pipelines.threshold({

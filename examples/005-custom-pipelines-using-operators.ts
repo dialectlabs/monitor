@@ -38,8 +38,7 @@ const monitor: Monitor<DataType> = Monitors.builder({
     );
     return Promise.resolve(sourceData);
   }, Duration.fromObject({ seconds: 1 }))
-  .addTransformations<number, number>()
-  .transform({
+  .transform<number, number>({
     keys: ['cratio'],
     pipelines: [
       Pipelines.createNew<number, DataType, number>((upstream) =>

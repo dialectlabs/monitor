@@ -1,7 +1,6 @@
 import {
   AddSinksStep,
   AddTransformationsStep,
-  AddTransformationStep,
   BuildStep,
   ChooseDataSourceStep,
   DefineDataSourceStep,
@@ -116,28 +115,12 @@ class AddTransformationsStepImpl<T extends object>
     return new BuildStepImpl(this.monitorBuilderState!);
   }
 
-  addTransformations<V, R>(): AddTransformationStep<T, V, R> {
-    return new AddTransformationStepImpl<T, V, R>(
-      this.monitorBuilderState,
-      this,
-    );
-  }
-}
+  transform<V, R>(transformation: Transformation<T, V, R>): NotifyStep<T, R> {
+    const dataSourceTransformationPipelines: DataSourceTransformationPipeline<
+      T,
+      Data<R, T>
+    >[] = [];
 
-class AddTransformationStepImpl<T extends object, V, R>
-  implements AddTransformationStep<T, V, R>
-{
-  dataSourceTransformationPipelines: DataSourceTransformationPipeline<
-    T,
-    Data<R, T>
-  >[] = [];
-
-  constructor(
-    private readonly monitorBuilderState: MonitorsBuilderState<T>,
-    private readonly addTransformationsStep: AddTransformationsStepImpl<T>,
-  ) {}
-
-  transform(transformation: Transformation<T, V, R>): NotifyStep<T, R> {
     const { keys, pipelines } = transformation;
     const adaptedToDataSourceTypePipelines: ((
       dataSource: PushyDataSource<T>,
@@ -165,13 +148,8 @@ class AddTransformationStepImpl<T extends object, V, R>
         },
       ),
     );
-    this.dataSourceTransformationPipelines.push(
-      ...adaptedToDataSourceTypePipelines,
-    );
-    return new NotifyStepImpl(
-      this.addTransformationsStep,
-      this.dataSourceTransformationPipelines,
-    );
+    dataSourceTransformationPipelines.push(...adaptedToDataSourceTypePipelines);
+    return new NotifyStepImpl(this, dataSourceTransformationPipelines);
   }
 }
 
@@ -197,6 +175,7 @@ class AddSinksStepImpl<T extends object, R> implements AddSinksStep<T, R> {
     data: Data<R, T>,
     resources: ResourceId[],
   ) => Promise<void>)[] = [];
+
   constructor(
     private readonly addTransformationsStep: AddTransformationsStepImpl<T>,
     private readonly dataSourceTransformationPipelines: DataSourceTransformationPipeline<
