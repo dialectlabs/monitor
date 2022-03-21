@@ -25,7 +25,7 @@ function getTriggerOutput(context: Context<DataPool>) {
 
 const consoleDataSink = new ConsoleNotificationSink<DialectNotification>();
 const monitor: Monitor<DataPool> = Monitors.builder({
-  subscriberRepository: new DummySubscriberRepository(1),
+  subscriberRepository: new DummySubscriberRepository(2),
 })
   .defineDataSource<DataPool>()
   .poll((subscribers: ResourceId[]) => {
@@ -58,6 +58,6 @@ const monitor: Monitor<DataPool> = Monitors.builder({
     consoleDataSink,
   )
   .and()
-  .dispatch('unicast')
+  .dispatch('broadcast')
   .build();
 monitor.start();

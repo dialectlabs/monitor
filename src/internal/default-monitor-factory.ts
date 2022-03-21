@@ -61,7 +61,8 @@ export class DefaultMonitorFactory implements MonitorFactory {
     datasourceTransformationPipelines: DataSourceTransformationPipeline<
       T,
       void[]
-      >[],    pollInterval: Duration = Duration.fromObject({ seconds: 10 }),
+    >[],
+    pollInterval: Duration = Duration.fromObject({ seconds: 10 }),
   ): Monitor<T> {
     const pushyDataSource = this.decorateWithPushyDataSource(
       dataSource,
@@ -91,7 +92,10 @@ export class DefaultMonitorFactory implements MonitorFactory {
 
   createBroadcastMonitor<T extends object>(
     dataSource: PollableDataSource<T>,
-    datasourceTransformationPipelines: DataSourceTransformationPipeline<T>[],
+    datasourceTransformationPipelines: DataSourceTransformationPipeline<
+      T,
+      void[]
+    >[],
     pollInterval: Duration = Duration.fromObject({ seconds: 10 }),
   ): Monitor<T> {
     const pushyDataSource = this.toPushyDataSource(
@@ -102,7 +106,6 @@ export class DefaultMonitorFactory implements MonitorFactory {
     const broadcastMonitor = new BroadcastMonitor<T>(
       pushyDataSource,
       datasourceTransformationPipelines,
-      this.notificationSink,
       this.subscriberRepository,
     );
     this.shutdownHooks.push(() => broadcastMonitor.stop());

@@ -105,13 +105,13 @@ class AddTransformationsStepImpl<T extends object>
     void[]
   >[] = [];
 
-  dispatchStrategy?: 'unicast';
+  dispatchStrategy?: DispatchStrategy;
 
   constructor(private readonly monitorBuilderState: MonitorsBuilderState<T>) {
     monitorBuilderState.addTransformationsStep = this;
   }
 
-  dispatch(strategy: 'unicast' = 'unicast'): BuildStep<T> {
+  dispatch(strategy: DispatchStrategy): BuildStep<T> {
     this.dispatchStrategy = strategy;
     return new BuildStepImpl(this.monitorBuilderState!);
   }
