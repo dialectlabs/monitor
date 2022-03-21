@@ -87,7 +87,7 @@ export interface Transformation<T extends object, V, R> {
  * Defines to which subscribers the notifications are send.
  * 1. Unicast sends notification to a single subscriber who owned the original data, provided in {@linkcode DefineDataSourceStep}
  */
-export type DispatchStrategy = 'unicast';
+export type DispatchStrategy = 'unicast' | 'broadcast';
 
 export interface AddTransformationsStep<T extends object> {
   addTransformations<V, R>(): AddTransformationStep<T, V, R>;

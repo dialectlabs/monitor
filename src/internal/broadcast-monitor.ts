@@ -1,17 +1,21 @@
 import {
+  from,
   groupBy,
   GroupedObservable,
   mergeMap,
   Subscription as RxJsSubscription,
 } from 'rxjs';
-
-import { PublicKey } from '@solana/web3.js';
-import { DataSourceTransformationPipeline, PushyDataSource } from '../ports';
+import {
+  DataSourceTransformationPipeline,
+  PushyDataSource,
+  SubscriberRepository,
+} from '../ports';
 import { Monitor } from '../monitor-api';
 import { SourceData } from '../data-model';
 import { Operators } from '../transformation-pipeline-operators';
+import { map } from 'rxjs/operators';
 
-export class UnicastMonitor<T extends Object> implements Monitor<T> {
+export class BroadcastMonitor<T extends Object> implements Monitor<T> {
   private started = false;
 
   private subscriptions: RxJsSubscription[] = [];
@@ -22,6 +26,7 @@ export class UnicastMonitor<T extends Object> implements Monitor<T> {
       T,
       void[]
     >[],
+    private readonly subscriberRepository: SubscriberRepository,
   ) {}
 
   async start() {
@@ -52,12 +57,16 @@ export class UnicastMonitor<T extends Object> implements Monitor<T> {
             element: (it) => it,
           },
         ),
-        mergeMap((data: GroupedObservable<string, SourceData<T>>) => {
-          const resourceId = new PublicKey(data.key);
-          return this.dataSourceTransformationPipelines.map((pipeline) =>
-            pipeline(data, [resourceId]),
-          );
-        }),
+        mergeMap((data: GroupedObservable<string, SourceData<T>>) =>
+          from(this.subscriberRepository.findAll()).pipe(
+            map((it) =>
+              this.dataSourceTransformationPipelines.map((pipeline) =>
+                pipeline(data, it),
+              ),
+            ),
+            mergeMap((it) => it),
+          ),
+        ),
         mergeMap((it) => it),
       )
       .pipe(...Operators.FlowControl.onErrorRetry())
