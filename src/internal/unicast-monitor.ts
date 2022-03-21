@@ -20,7 +20,7 @@ export class UnicastMonitor<T extends Object> implements Monitor<T> {
     private readonly dataSource: PushyDataSource<T>,
     private readonly dataSourceTransformationPipelines: DataSourceTransformationPipeline<
       T,
-      void[]
+      any
     >[],
   ) {}
 

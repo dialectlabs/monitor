@@ -101,7 +101,7 @@ class AddTransformationsStepImpl<T extends object>
 {
   dataSourceTransformationPipelines: DataSourceTransformationPipeline<
     T,
-    void[]
+    any
   >[] = [];
 
   dispatchStrategy?: DispatchStrategy;
@@ -171,10 +171,10 @@ class NotifyStepImpl<T extends object, R> implements NotifyStep<T, R> {
 }
 
 class AddSinksStepImpl<T extends object, R> implements AddSinksStep<T, R> {
-  private fns: ((
+  private sinkWriters: ((
     data: Data<R, T>,
     resources: ResourceId[],
-  ) => Promise<void>)[] = [];
+  ) => Promise<any>)[] = [];
 
   constructor(
     private readonly addTransformationsStep: AddTransformationsStepImpl<T>,
@@ -186,55 +186,58 @@ class AddSinksStepImpl<T extends object, R> implements AddSinksStep<T, R> {
   ) {}
 
   and(): AddTransformationsStep<T> {
-    const mapped: DataSourceTransformationPipeline<T, void[]>[] =
-      this.dataSourceTransformationPipelines.map(
-        (
-          dataSourceTransformationPipeline: DataSourceTransformationPipeline<
-            T,
-            Data<R, T>
-          >,
-        ) => {
-          const ss: DataSourceTransformationPipeline<T, void[]> = (
-            dataSource,
-            targets,
-          ) => {
-            return dataSourceTransformationPipeline(dataSource, targets).pipe(
-              exhaustMap((event) => {
-                const values = this.fns.map((it) => it(event, targets));
-                let input = Promise.all(values);
-                return from(input);
-              }),
-            );
-          };
-          return ss;
-        },
-      );
+    const transformAndLoadPipelines: DataSourceTransformationPipeline<
+      T,
+      any
+    >[] = this.dataSourceTransformationPipelines.map(
+      (
+        dataSourceTransformationPipeline: DataSourceTransformationPipeline<
+          T,
+          Data<R, T>
+        >,
+      ) => {
+        const transformAndLoadPipeline: DataSourceTransformationPipeline<
+          T,
+          any
+        > = (dataSource, targets) =>
+          dataSourceTransformationPipeline(dataSource, targets).pipe(
+            exhaustMap((event) =>
+              from(
+                Promise.all(this.sinkWriters.map((it) => it(event, targets))),
+              ),
+            ),
+          );
+        return transformAndLoadPipeline;
+      },
+    );
     this.addTransformationsStep.dataSourceTransformationPipelines.push(
-      ...mapped,
+      ...transformAndLoadPipelines,
     );
     return this.addTransformationsStep!;
   }
 
   dialectThread(
-    adaptFn: (data: Data<R, T>) => DialectNotification,
+    adapter: (data: Data<R, T>) => DialectNotification,
   ): AddSinksStep<T, R> {
     if (!this.dialectNotificationSink) {
       throw new Error('Dialect notification sink undefined');
     }
-    const f: (data: Data<R, T>, resources: ResourceId[]) => Promise<void> = (
-      data,
-      resources,
-    ) => this.dialectNotificationSink!.push(adaptFn(data), resources);
-    this.fns.push(f);
+    const sinkWriter: (
+      data: Data<R, T>,
+      resources: ResourceId[],
+    ) => Promise<void> = (data, resources) =>
+      this.dialectNotificationSink!.push(adapter(data), resources);
+    this.sinkWriters.push(sinkWriter);
     return this;
   }
 
-  custom<M>(adaptFn: (data: Data<R, T>) => M, sink: NotificationSink<M>) {
-    const f: (data: Data<R, T>, resources: ResourceId[]) => Promise<void> = (
-      data,
-      resources,
-    ) => sink.push(adaptFn(data), resources);
-    this.fns.push(f);
+  custom<M>(adapter: (data: Data<R, T>) => M, sink: NotificationSink<M>) {
+    const sinkWriter: (
+      data: Data<R, T>,
+      resources: ResourceId[],
+    ) => Promise<void> = (data, resources) =>
+      sink.push(adapter(data), resources);
+    this.sinkWriters.push(sinkWriter);
     return this;
   }
 }
@@ -294,7 +297,7 @@ class BuildStepImpl<T extends object> implements BuildStep<T> {
     return Monitors.factory(builderProps).createSubscriberEventMonitor(
       dataSourceTransformationPipelines as unknown as DataSourceTransformationPipeline<
         SubscriberEvent,
-        void[]
+        any
       >[],
     );
   }

@@ -60,7 +60,7 @@ export class DefaultMonitorFactory implements MonitorFactory {
     dataSource: DataSource<T>,
     datasourceTransformationPipelines: DataSourceTransformationPipeline<
       T,
-      void[]
+      any
     >[],
     pollInterval: Duration = Duration.fromObject({ seconds: 10 }),
   ): Monitor<T> {
@@ -94,7 +94,7 @@ export class DefaultMonitorFactory implements MonitorFactory {
     dataSource: PollableDataSource<T>,
     datasourceTransformationPipelines: DataSourceTransformationPipeline<
       T,
-      void[]
+      any
     >[],
     pollInterval: Duration = Duration.fromObject({ seconds: 10 }),
   ): Monitor<T> {
@@ -115,7 +115,7 @@ export class DefaultMonitorFactory implements MonitorFactory {
   createSubscriberEventMonitor(
     dataSourceTransformationPipelines: DataSourceTransformationPipeline<
       SubscriberEvent,
-      void[]
+      any
     >[],
   ): Monitor<SubscriberEvent> {
     const dataSource: PushyDataSource<SubscriberEvent> = new Observable<
