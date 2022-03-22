@@ -3,33 +3,12 @@ import {
   NotificationSink,
   PollableDataSource,
   PushyDataSource,
-  SubscriberRepository,
   TransformationPipeline,
 } from './ports';
-import { Program } from '@project-serum/anchor';
-import { Keypair } from '@solana/web3.js';
 import { Monitor } from './monitor-api';
-import { Data, DialectNotification, SubscriberEvent } from './data-model';
-
-/**
- * Please specify either
- * 1. dialectProgram + monitorKeypair to use on-chain bindings of internal components
- * 2. notificationSink + subscriberRepository to run w/o chain dependency
- */
-export interface MonitorBuilderProps {
-  /**
-   * Dialect program that will be used to interact with chain
-   */
-  dialectProgram?: Program;
-  /**
-   * Monitoring service keypair used to sign transactions to send messages and discover subscribers
-   */
-  monitorKeypair?: Keypair;
-  /**
-   * Allows to set custom subscriber repository
-   */
-  subscriberRepository?: SubscriberRepository;
-}
+import { Data, SubscriberEvent } from './data-model';
+import { DialectNotification } from './dialect-notification-sink';
+import { EmailNotification } from './sengrid-email-notification-sink';
 
 export interface ChooseDataSourceStep {
   /**
@@ -104,12 +83,14 @@ export interface NotifyStep<T extends object, R> {
 
 export interface AddSinksStep<T extends object, R> {
   dialectThread(
-    adaptFn: (data: Data<R, T>) => DialectNotification,
+    adapter: (data: Data<R, T>) => DialectNotification,
   ): AddSinksStep<T, R>;
 
-  custom<M>(
-    adaptFn: (data: Data<R, T>) => M,
-    sink: NotificationSink<M>,
+  email(adapter: (data: Data<R, T>) => EmailNotification): AddSinksStep<T, R>;
+
+  custom<N>(
+    adapter: (data: Data<R, T>) => N,
+    sink: NotificationSink<N>,
   ): AddSinksStep<T, R>;
 
   and(): AddTransformationsStep<T>;
