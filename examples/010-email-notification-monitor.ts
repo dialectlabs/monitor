@@ -28,7 +28,7 @@ class DummyResourceEmailRepository implements ResourceEmailRepository {
     return Promise.resolve([
       {
         resourceId: resourceIds[0],
-        email: 'tsymbal.aleksey@gmail.com',
+        email: process.env.RECEIVER_EMAIL!,
       },
     ]);
   }
