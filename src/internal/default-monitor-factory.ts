@@ -1,10 +1,9 @@
-import { DialectNotificationSink } from './dialect-notification-sink';
 import { InMemorySubscriberRepository } from './in-memory-subscriber.repository';
 import { OnChainSubscriberRepository } from './on-chain-subscriber.repository';
 import { Duration } from 'luxon';
 import { UnicastMonitor } from './unicast-monitor';
 import { concatMap, exhaustMap, from, Observable, timer } from 'rxjs';
-import { MonitorFactory, MonitorFactoryProps } from '../monitor-factory';
+import { MonitorFactory } from '../monitor-factory';
 import {
   DataSource,
   DataSourceTransformationPipeline,
@@ -12,12 +11,11 @@ import {
   PushyDataSource,
   SubscriberRepository,
 } from '../ports';
-import { Monitor } from '../monitor-api';
+import { Monitor, MonitorProps } from '../monitor-api';
 import { ResourceId, SourceData, SubscriberEvent } from '../data-model';
 import { BroadcastMonitor } from './broadcast-monitor';
 
 export class DefaultMonitorFactory implements MonitorFactory {
-  private readonly dialectNotificationSink?: DialectNotificationSink;
   private readonly subscriberRepository: SubscriberRepository;
 
   private readonly shutdownHooks: (() => Promise<any>)[] = [];
@@ -26,12 +24,8 @@ export class DefaultMonitorFactory implements MonitorFactory {
     dialectProgram,
     monitorKeypair,
     subscriberRepository,
-  }: MonitorFactoryProps) {
+  }: MonitorProps) {
     if (dialectProgram && monitorKeypair) {
-      this.dialectNotificationSink = new DialectNotificationSink(
-        dialectProgram,
-        monitorKeypair,
-      );
       const onChainSubscriberRepository = new OnChainSubscriberRepository(
         dialectProgram,
         monitorKeypair,
@@ -60,7 +54,7 @@ export class DefaultMonitorFactory implements MonitorFactory {
     dataSource: DataSource<T>,
     datasourceTransformationPipelines: DataSourceTransformationPipeline<
       T,
-      void[]
+      any
     >[],
     pollInterval: Duration = Duration.fromObject({ seconds: 10 }),
   ): Monitor<T> {
@@ -94,7 +88,7 @@ export class DefaultMonitorFactory implements MonitorFactory {
     dataSource: PollableDataSource<T>,
     datasourceTransformationPipelines: DataSourceTransformationPipeline<
       T,
-      void[]
+      any
     >[],
     pollInterval: Duration = Duration.fromObject({ seconds: 10 }),
   ): Monitor<T> {
@@ -115,7 +109,7 @@ export class DefaultMonitorFactory implements MonitorFactory {
   createSubscriberEventMonitor(
     dataSourceTransformationPipelines: DataSourceTransformationPipeline<
       SubscriberEvent,
-      void[]
+      any
     >[],
   ): Monitor<SubscriberEvent> {
     const dataSource: PushyDataSource<SubscriberEvent> = new Observable<

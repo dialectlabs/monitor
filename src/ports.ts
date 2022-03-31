@@ -1,5 +1,5 @@
 import { Observable } from 'rxjs';
-import { Data, ResourceId, SourceData } from './data-model';
+import { Data, ResourceId, SourceData, Notification } from './data-model';
 
 /**
  * An abstraction that represents a source of data, bound to specific type
@@ -65,6 +65,6 @@ export interface SubscriberRepository {
 /**
  * An interface that abstracts the destination where events are sent/persisted
  */
-export interface NotificationSink<R> {
-  push(data: R, recipients: ResourceId[]): Promise<void>;
+export interface NotificationSink<N extends Notification> {
+  push(notification: N, recipients: ResourceId[]): Promise<any>;
 }

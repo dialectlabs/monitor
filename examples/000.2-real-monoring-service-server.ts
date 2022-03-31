@@ -56,8 +56,7 @@ const dataSourceMonitor: Monitor<DataType> = Monitors.builder({
     );
     return Promise.resolve(sourceData);
   }, Duration.fromObject({ seconds: 3 }))
-  .addTransformations<number, number>()
-  .transform({
+  .transform<number, number>({
     keys: ['cratio'],
     pipelines: [
       Pipelines.threshold(

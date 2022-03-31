@@ -15,7 +15,7 @@ import {
 } from 'rxjs';
 import { map, tap } from 'rxjs/operators';
 import { Duration } from 'luxon';
-import { Data, DialectNotification, NotificationBuilder } from './data-model';
+import { Data } from './data-model';
 
 export enum PipeLogLevel {
   TRACE,
@@ -197,22 +197,6 @@ export class Operators {
         ),
         map(([_, snd]) => snd),
       ];
-    }
-  };
-
-  static Notification = class {
-    static create<V, T extends object>({
-      messageBuilder,
-    }: NotificationBuilder<V, T>): OperatorFunction<
-      Data<V, T>,
-      Data<DialectNotification, T>
-    > {
-      return map((it) => ({
-        ...it,
-        value: {
-          message: messageBuilder(it),
-        },
-      }));
     }
   };
 

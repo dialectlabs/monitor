@@ -24,7 +24,7 @@ export class BroadcastMonitor<T extends Object> implements Monitor<T> {
     private readonly dataSource: PushyDataSource<T>,
     private readonly dataSourceTransformationPipelines: DataSourceTransformationPipeline<
       T,
-      void[]
+      any
     >[],
     private readonly subscriberRepository: SubscriberRepository,
   ) {}

@@ -49,17 +49,6 @@ export interface TriggerTrace {
 export interface Notification {}
 
 /**
- * Dialect web3 notification
- */
-export interface DialectNotification extends Notification {
-  message: string;
-}
-
-export interface NotificationBuilder<V, T extends object> {
-  messageBuilder: (data: Data<V, T>) => string;
-}
-
-/**
  * An event that is fired when something changes in subscriber state e.g. new subscriber is added
  */
 export interface SubscriberEvent {

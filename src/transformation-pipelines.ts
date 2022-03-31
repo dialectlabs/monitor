@@ -1,8 +1,4 @@
-import {
-  NotificationBuilder,
-  SubscriberEvent,
-  SubscriberState,
-} from './data-model';
+import { SubscriberEvent, SubscriberState } from './data-model';
 import { Operators } from './transformation-pipeline-operators';
 import { TransformationPipeline } from './ports';
 import { Duration } from 'luxon';
@@ -127,7 +123,6 @@ export class Pipelines {
   static averageInFixedSizeSlidingWindowThreshold<T extends object>(
     window: FixedSizeSlidingWindow,
     trigger: Trigger,
-    notificationBuilder: NotificationBuilder<number, T>,
     rateLimit?: RateLimit,
   ): TransformationPipeline<number, T, number> {
     const triggerOperator = createTriggerOperator<T>(trigger);

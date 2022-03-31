@@ -35,8 +35,7 @@ const monitor: Monitor<DataType> = Monitors.builder({
     );
     return Promise.resolve(sourceData);
   }, Duration.fromObject({ seconds: 1 }))
-  .addTransformations<number, number>()
-  .transform({
+  .transform<number, number>({
     keys: ['cratio'],
     pipelines: [
       Pipelines.threshold({
@@ -53,8 +52,7 @@ const monitor: Monitor<DataType> = Monitors.builder({
     consoleNotificationSink,
   )
   .and()
-  .addTransformations<number, number>()
-  .transform({
+  .transform<number, number>({
     keys: ['cratio'],
     pipelines: [
       Pipelines.threshold({

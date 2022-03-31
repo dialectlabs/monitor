@@ -3,6 +3,9 @@ import {
   Monitor,
   Monitors,
   Pipelines,
+  ResourceEmail,
+  ResourceEmailRepository,
+  ResourceId,
   SourceData,
 } from '../src';
 import { DummySubscriberRepository } from './003-custom-subscriber-repository';
@@ -20,8 +23,25 @@ const threshold = 0.5;
 const consoleNotificationSink =
   new ConsoleNotificationSink<DialectNotification>();
 
+class DummyResourceEmailRepository implements ResourceEmailRepository {
+  findBy(resourceIds: ResourceId[]): Promise<ResourceEmail[]> {
+    return Promise.resolve([
+      {
+        resourceId: resourceIds[0],
+        email: process.env.RECEIVER_EMAIL!,
+      },
+    ]);
+  }
+}
 const monitor: Monitor<DataType> = Monitors.builder({
   subscriberRepository: new DummySubscriberRepository(1),
+  sinks: {
+    email: {
+      senderEmail: 'hello@dialect.to',
+      apiToken: process.env.EMAIL_SINK_TOKEN!,
+      resourceEmailRepository: new DummyResourceEmailRepository(),
+    },
+  },
 })
   .defineDataSource<DataType>()
   .push(
@@ -49,6 +69,13 @@ const monitor: Monitor<DataType> = Monitors.builder({
     ],
   })
   .notify()
+  .email(({ value }) => ({
+    subject: '[WARNING] Cratio above warning threshold',
+    text: `Your cratio = ${value} above warning threshold`,
+  }))
+  .dialectThread(({ value }) => ({
+    message: `Your cratio = ${value} above warning threshold`,
+  }))
   .custom<DialectNotification>(
     ({ value }) => ({
       message: `Your cratio = ${value} above warning threshold`,

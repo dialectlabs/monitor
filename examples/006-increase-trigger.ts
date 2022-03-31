@@ -40,8 +40,7 @@ const monitor: Monitor<DataPool> = Monitors.builder({
     counter++;
     return Promise.resolve(sourceData);
   }, Duration.fromObject({ seconds: 1 }))
-  .addTransformations<number, number>()
-  .transform({
+  .transform<number, number>({
     keys: ['share'],
     pipelines: [
       Pipelines.threshold({
