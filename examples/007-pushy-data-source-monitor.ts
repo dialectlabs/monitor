@@ -3,12 +3,12 @@ import {
   Monitor,
   Monitors,
   Pipelines,
-  ResourceId,
   SourceData,
 } from '../src';
-import { Duration } from 'luxon';
 import { DummySubscriberRepository } from './003-custom-subscriber-repository';
 import { ConsoleNotificationSink } from './004-custom-notification-sink';
+import { Observable } from 'rxjs';
+import { Keypair } from '@solana/web3.js';
 
 type DataType = {
   cratio: number;
@@ -19,39 +19,26 @@ const threshold = 0.5;
 
 const consoleNotificationSink =
   new ConsoleNotificationSink<DialectNotification>();
+
 const monitor: Monitor<DataType> = Monitors.builder({
   subscriberRepository: new DummySubscriberRepository(1),
 })
   .defineDataSource<DataType>()
-  .poll((subscribers: ResourceId[]) => {
-    const sourceData: SourceData<DataType>[] = subscribers.map(
-      (resourceId) => ({
-        data: {
-          cratio: Math.random(),
-          healthRatio: Math.random() * 10,
-        },
-        resourceId,
-      }),
-    );
-    return Promise.resolve(sourceData);
-  }, Duration.fromObject({ seconds: 1 }))
-  .transform<number, number>({
-    keys: ['cratio'],
-    pipelines: [
-      Pipelines.threshold({
-        type: 'falling-edge',
-        threshold,
-      }),
-    ],
-  })
-  .notify()
-  .custom<DialectNotification>(
-    ({ value }) => ({
-      message: `Your cratio = ${value} below warning threshold`,
+  .push(
+    new Observable((subscriber) => {
+      const publicKey = Keypair.generate().publicKey;
+      const d1: SourceData<DataType> = {
+        data: { cratio: 0, healthRatio: 2 },
+        resourceId: publicKey,
+      };
+      const d2: SourceData<DataType> = {
+        data: { cratio: 1, healthRatio: 0 },
+        resourceId: publicKey,
+      };
+      subscriber.next(d1);
+      subscriber.next(d2);
     }),
-    consoleNotificationSink,
   )
-  .and()
   .transform<number, number>({
     keys: ['cratio'],
     pipelines: [

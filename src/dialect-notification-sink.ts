@@ -1,18 +1,26 @@
+import { NotificationSink } from './ports';
+import { getDialectAccount } from './internal/dialect-extensions';
+import { Notification, ResourceId } from './data-model';
 import { Program } from '@project-serum/anchor';
-import { Notification, ResourceId } from '../data-model';
 import { Keypair } from '@solana/web3.js';
 import { sendMessage } from '@dialectlabs/web3';
-import { getDialectAccount } from './dialect-extensions';
-import { NotificationSink } from '../ports';
 
-export class DialectNotificationSink implements NotificationSink {
+/**
+ * Dialect web3 notification
+ */
+export interface DialectNotification extends Notification {
+  message: string;
+}
+
+export class DialectNotificationSink
+  implements NotificationSink<DialectNotification>
+{
   constructor(
     private readonly dialectProgram: Program,
     private readonly monitorKeypair: Keypair,
   ) {}
 
-  push(notification: Notification, recipients: ResourceId[]) {
-    const notificationText = `${notification.message}`;
+  push({ message }: DialectNotification, recipients: ResourceId[]) {
     return Promise.all(
       recipients
         .map((it) =>
@@ -27,7 +35,7 @@ export class DialectNotificationSink implements NotificationSink {
               this.dialectProgram,
               dialectAccount,
               this.monitorKeypair,
-              notificationText,
+              message,
             ),
           ),
         ),

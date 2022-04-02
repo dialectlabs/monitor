@@ -1,23 +1,21 @@
-import { DialectNotificationSink } from './dialect-notification-sink';
 import { InMemorySubscriberRepository } from './in-memory-subscriber.repository';
 import { OnChainSubscriberRepository } from './on-chain-subscriber.repository';
 import { Duration } from 'luxon';
 import { UnicastMonitor } from './unicast-monitor';
 import { concatMap, exhaustMap, from, Observable, timer } from 'rxjs';
-import { MonitorFactory, MonitorFactoryProps } from '../monitor-factory';
+import { MonitorFactory } from '../monitor-factory';
 import {
+  DataSource,
   DataSourceTransformationPipeline,
-  NotificationSink,
   PollableDataSource,
   PushyDataSource,
   SubscriberRepository,
 } from '../ports';
-import { Monitor } from '../monitor-api';
+import { Monitor, MonitorProps } from '../monitor-api';
 import { ResourceId, SourceData, SubscriberEvent } from '../data-model';
 import { BroadcastMonitor } from './broadcast-monitor';
 
 export class DefaultMonitorFactory implements MonitorFactory {
-  private readonly notificationSink: NotificationSink;
   private readonly subscriberRepository: SubscriberRepository;
 
   private readonly shutdownHooks: (() => Promise<any>)[] = [];
@@ -25,14 +23,9 @@ export class DefaultMonitorFactory implements MonitorFactory {
   constructor({
     dialectProgram,
     monitorKeypair,
-    notificationSink,
     subscriberRepository,
-  }: MonitorFactoryProps) {
+  }: MonitorProps) {
     if (dialectProgram && monitorKeypair) {
-      this.notificationSink = new DialectNotificationSink(
-        dialectProgram,
-        monitorKeypair,
-      );
       const onChainSubscriberRepository = new OnChainSubscriberRepository(
         dialectProgram,
         monitorKeypair,
@@ -42,16 +35,13 @@ export class DefaultMonitorFactory implements MonitorFactory {
         onChainSubscriberRepository,
       );
     }
-    if (notificationSink) {
-      this.notificationSink = notificationSink;
-    }
     if (subscriberRepository) {
       this.subscriberRepository = subscriberRepository;
     }
     // @ts-ignore
-    if (!this.notificationSink || !this.subscriberRepository) {
+    if (!this.subscriberRepository) {
       throw new Error(
-        'Please specify either dialectProgram & monitorKeypair or eventSink & subscriberRepository',
+        'Please specify either dialectProgram & monitorKeypair or subscriberRepository',
       );
     }
   }
@@ -61,27 +51,45 @@ export class DefaultMonitorFactory implements MonitorFactory {
   }
 
   createUnicastMonitor<T extends object>(
-    dataSource: PollableDataSource<T>,
-    datasourceTransformationPipelines: DataSourceTransformationPipeline<T>[],
+    dataSource: DataSource<T>,
+    datasourceTransformationPipelines: DataSourceTransformationPipeline<
+      T,
+      any
+    >[],
     pollInterval: Duration = Duration.fromObject({ seconds: 10 }),
   ): Monitor<T> {
-    const pushyDataSource = this.toPushyDataSource(
+    const pushyDataSource = this.decorateWithPushyDataSource(
       dataSource,
       pollInterval,
-      this.subscriberRepository,
     );
     const unicastMonitor = new UnicastMonitor<T>(
       pushyDataSource,
       datasourceTransformationPipelines,
-      this.notificationSink,
     );
     this.shutdownHooks.push(() => unicastMonitor.stop());
     return unicastMonitor;
   }
 
+  private decorateWithPushyDataSource<T extends object>(
+    dataSource: DataSource<T>,
+    pollInterval: Duration,
+  ): PushyDataSource<T> {
+    if ('subscribe' in dataSource) {
+      return dataSource as PushyDataSource<T>;
+    }
+    return this.toPushyDataSource(
+      dataSource as PollableDataSource<T>,
+      pollInterval,
+      this.subscriberRepository,
+    );
+  }
+
   createBroadcastMonitor<T extends object>(
     dataSource: PollableDataSource<T>,
-    datasourceTransformationPipelines: DataSourceTransformationPipeline<T>[],
+    datasourceTransformationPipelines: DataSourceTransformationPipeline<
+      T,
+      any
+    >[],
     pollInterval: Duration = Duration.fromObject({ seconds: 10 }),
   ): Monitor<T> {
     const pushyDataSource = this.toPushyDataSource(
@@ -92,7 +100,6 @@ export class DefaultMonitorFactory implements MonitorFactory {
     const broadcastMonitor = new BroadcastMonitor<T>(
       pushyDataSource,
       datasourceTransformationPipelines,
-      this.notificationSink,
       this.subscriberRepository,
     );
     this.shutdownHooks.push(() => broadcastMonitor.stop());
@@ -100,7 +107,10 @@ export class DefaultMonitorFactory implements MonitorFactory {
   }
 
   createSubscriberEventMonitor(
-    dataSourceTransformationPipelines: DataSourceTransformationPipeline<SubscriberEvent>[],
+    dataSourceTransformationPipelines: DataSourceTransformationPipeline<
+      SubscriberEvent,
+      any
+    >[],
   ): Monitor<SubscriberEvent> {
     const dataSource: PushyDataSource<SubscriberEvent> = new Observable<
       SourceData<SubscriberEvent>
@@ -125,7 +135,6 @@ export class DefaultMonitorFactory implements MonitorFactory {
     const unicastMonitor = new UnicastMonitor<SubscriberEvent>(
       dataSource,
       dataSourceTransformationPipelines,
-      this.notificationSink,
     );
     this.shutdownHooks.push(() => unicastMonitor.stop());
     return unicastMonitor;

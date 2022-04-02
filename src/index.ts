@@ -5,3 +5,5 @@ export * from './monitor-factory';
 export * from './ports';
 export * from './transformation-pipeline-operators';
 export * from './transformation-pipelines';
+export * from './sengrid-email-notification-sink';
+export * from './dialect-notification-sink';

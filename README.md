@@ -55,13 +55,14 @@ type DataType = {
 const monitor: Monitor<DataType> = Monitors.builder({
   dialectProgram: // ... set a dialect program,
   monitorKeypair: // ... set a keypair used to send notifications,
+  // ... other configuration
 })
   .defineDataSource<DataType>()
   .poll((subscribers: ResourceId[]) => {
     const sourceData: SourceData<DataType>[] = // ... extract data from chain for set of subscribers
     return Promise.resolve(sourceData);
   }, Duration.fromObject({ seconds: 3 }))
-  .transform<number>({
+  .transform<number, number>({
     keys: ['cratio'],  // select a subset of attrributes from DataType
     pipelines: [
       // Send notification each time when value falling below the threshold 
@@ -69,11 +70,6 @@ const monitor: Monitor<DataType> = Monitors.builder({
         {
           type: 'falling-edge',
           threshold: 0.5,
-        },
-        {
-          //  Define message when trigger fired
-          messageBuilder: (value) =>
-            `Your cratio = ${value} below warning threshold`,
         },
         // ... Optionally you can limit rate of the messages
         {
@@ -83,6 +79,15 @@ const monitor: Monitor<DataType> = Monitors.builder({
       ),
     ],
   })
+  .notify()
+  .email(({ value }) => ({
+    subject: '[WARNING] Cratio above warning threshold',
+    text: `Your cratio = ${value} above warning threshold`,
+  }))
+  .dialectThread(({ value }) => ({
+    message: `Your cratio = ${value} above warning threshold`,
+  }))
+  .and()
   .dispatch('unicast')
   .build();
 

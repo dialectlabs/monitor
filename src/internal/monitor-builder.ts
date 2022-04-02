@@ -1,33 +1,61 @@
 import {
+  AddSinksStep,
   AddTransformationsStep,
   BuildStep,
   ChooseDataSourceStep,
   DefineDataSourceStep,
   DispatchStrategy,
   KeysMatching,
-  MonitorBuilderProps,
+  NotifyStep,
   Transformation,
 } from '../monitor-builder';
-import { Data, Notification, SubscriberEvent } from '../data-model';
+import { Data, ResourceId, SubscriberEvent } from '../data-model';
 import {
   DataSourceTransformationPipeline,
+  NotificationSink,
   PollableDataSource,
   PushyDataSource,
 } from '../ports';
 import { Duration } from 'luxon';
-import { Observable } from 'rxjs';
+import { exhaustMap, from, Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { Monitor, Monitors } from '../monitor-api';
+import { Monitor, MonitorProps, Monitors } from '../monitor-api';
+import {
+  DialectNotification,
+  DialectNotificationSink,
+} from '../dialect-notification-sink';
+import {
+  EmailNotification,
+  SengridEmailNotificationSink,
+} from '../sengrid-email-notification-sink';
 
 /**
  * A set of factory methods to create monitors
  */
-export class MonitorsBuilderState<T extends Object> {
+export class MonitorsBuilderState<T extends object> {
   chooseDataSourceStep?: ChooseDataSourceStepImpl;
   defineDataSourceStep?: DefineDataSourceStepImpl<T>;
   addTransformationsStep?: AddTransformationsStepImpl<T>;
 
-  constructor(readonly builderProps: MonitorBuilderProps) {}
+  dialectNotificationSink?: DialectNotificationSink;
+  emailNotificationSink?: SengridEmailNotificationSink;
+
+  constructor(readonly monitorProps: MonitorProps) {
+    if (monitorProps.dialectProgram && monitorProps.monitorKeypair) {
+      this.dialectNotificationSink = new DialectNotificationSink(
+        monitorProps.dialectProgram,
+        monitorProps.monitorKeypair,
+      );
+    }
+    const sinks = monitorProps?.sinks;
+    if (sinks?.email) {
+      this.emailNotificationSink = new SengridEmailNotificationSink(
+        sinks.email.apiToken,
+        sinks.email.senderEmail,
+        sinks.email.resourceEmailRepository,
+      );
+    }
+  }
 }
 
 type DataSourceType = 'user-defined' | 'subscriber-events';
@@ -35,12 +63,12 @@ type DataSourceType = 'user-defined' | 'subscriber-events';
 export class ChooseDataSourceStepImpl implements ChooseDataSourceStep {
   dataSourceType?: DataSourceType;
 
-  constructor(readonly builderProps: MonitorBuilderProps) {}
+  constructor(readonly monitorProps: MonitorProps) {}
 
   subscriberEvents(): AddTransformationsStep<SubscriberEvent> {
     this.dataSourceType = 'subscriber-events';
     const monitorsBuilderState = new MonitorsBuilderState<SubscriberEvent>(
-      this.builderProps,
+      this.monitorProps,
     );
     monitorsBuilderState.chooseDataSourceStep = this;
     return new AddTransformationsStepImpl<SubscriberEvent>(
@@ -50,20 +78,24 @@ export class ChooseDataSourceStepImpl implements ChooseDataSourceStep {
 
   defineDataSource<T extends object>(): DefineDataSourceStep<T> {
     this.dataSourceType = 'user-defined';
-    const monitorsBuilderState = new MonitorsBuilderState<T>(this.builderProps);
+    const monitorsBuilderState = new MonitorsBuilderState<T>(this.monitorProps);
     monitorsBuilderState.chooseDataSourceStep = this;
     return new DefineDataSourceStepImpl<T>(monitorsBuilderState);
   }
 }
 
+type DataSourceStrategy = 'push' | 'poll';
+
 export class DefineDataSourceStepImpl<T extends object>
   implements DefineDataSourceStep<T>
 {
+  dataSourceStrategy?: DataSourceStrategy;
+  pushyDataSource?: PushyDataSource<T>;
   pollableDataSource?: PollableDataSource<T>;
   pollInterval?: Duration;
 
   constructor(private readonly monitorBuilderState: MonitorsBuilderState<T>) {
-    monitorBuilderState.defineDataSourceStep = this;
+    this.monitorBuilderState.defineDataSourceStep = this;
   }
 
   poll(
@@ -72,6 +104,13 @@ export class DefineDataSourceStepImpl<T extends object>
   ): AddTransformationsStep<T> {
     this.pollableDataSource = dataSource;
     this.pollInterval = pollInterval;
+    this.dataSourceStrategy = 'poll';
+    return new AddTransformationsStepImpl(this.monitorBuilderState);
+  }
+
+  push(dataSource: PushyDataSource<T>): AddTransformationsStep<T> {
+    this.pushyDataSource = dataSource;
+    this.dataSourceStrategy = 'push';
     return new AddTransformationsStepImpl(this.monitorBuilderState);
   }
 }
@@ -79,57 +118,171 @@ export class DefineDataSourceStepImpl<T extends object>
 class AddTransformationsStepImpl<T extends object>
   implements AddTransformationsStep<T>
 {
-  transformations: Transformation<T, unknown>[] = [];
-  dataSourceTransformationPipelines: DataSourceTransformationPipeline<T>[] = [];
+  dataSourceTransformationPipelines: DataSourceTransformationPipeline<
+    T,
+    any
+  >[] = [];
+
   dispatchStrategy?: DispatchStrategy;
 
   constructor(private readonly monitorBuilderState: MonitorsBuilderState<T>) {
     monitorBuilderState.addTransformationsStep = this;
   }
 
-  transform<V>(
-    transformation: Transformation<T, V>,
-  ): AddTransformationsStep<T> {
+  dispatch(strategy: DispatchStrategy): BuildStep<T> {
+    this.dispatchStrategy = strategy;
+    return new BuildStepImpl(this.monitorBuilderState!);
+  }
+
+  transform<V, R>(transformation: Transformation<T, V, R>): NotifyStep<T, R> {
+    const dataSourceTransformationPipelines: DataSourceTransformationPipeline<
+      T,
+      Data<R, T>
+    >[] = [];
+
     const { keys, pipelines } = transformation;
-    const adaptedToDataSourceTypePipelines = keys.flatMap(
-      (key: KeysMatching<T, V>) =>
-        pipelines.map(
-          (
-            pipeline: (
-              source: Observable<Data<V, T>>,
-            ) => Observable<Data<Notification, T>>,
-          ) => {
-            const adaptedToDataSourceType: (
-              dataSource: PushyDataSource<T>,
-            ) => Observable<Data<Notification, T>> = (
-              dataSource: PushyDataSource<T>,
-            ) =>
-              pipeline(
-                dataSource.pipe(
-                  map(({ data: origin, resourceId }) => ({
-                    context: {
-                      origin,
-                      resourceId,
-                      trace: [],
-                    },
-                    value: origin[key] as unknown as V,
-                  })),
-                ),
-              );
-            return adaptedToDataSourceType;
-          },
-        ),
+    const adaptedToDataSourceTypePipelines: ((
+      dataSource: PushyDataSource<T>,
+    ) => Observable<Data<R, T>>)[] = keys.flatMap((key: KeysMatching<T, V>) =>
+      pipelines.map(
+        (
+          pipeline: (source: Observable<Data<V, T>>) => Observable<Data<R, T>>,
+        ) => {
+          const adaptedToDataSourceType: (
+            dataSource: PushyDataSource<T>,
+          ) => Observable<Data<R, T>> = (dataSource: PushyDataSource<T>) =>
+            pipeline(
+              dataSource.pipe(
+                map(({ data: origin, resourceId }) => ({
+                  context: {
+                    origin,
+                    resourceId,
+                    trace: [],
+                  },
+                  value: origin[key] as unknown as V,
+                })),
+              ),
+            );
+          return adaptedToDataSourceType;
+        },
+      ),
     );
-    this.dataSourceTransformationPipelines.push(
-      ...adaptedToDataSourceTypePipelines,
+    dataSourceTransformationPipelines.push(...adaptedToDataSourceTypePipelines);
+    return new NotifyStepImpl(
+      this,
+      dataSourceTransformationPipelines,
+      this.monitorBuilderState,
     );
-    this.transformations.push(transformation as Transformation<T, unknown>);
+  }
+}
+
+class NotifyStepImpl<T extends object, R> implements NotifyStep<T, R> {
+  constructor(
+    private readonly addTransformationsStep: AddTransformationsStepImpl<T>,
+    private readonly dataSourceTransformationPipelines: DataSourceTransformationPipeline<
+      T,
+      Data<R, T>
+    >[],
+    private readonly monitorBuilderState: MonitorsBuilderState<T>,
+  ) {}
+
+  notify(): AddSinksStep<T, R> {
+    return new AddSinksStepImpl(
+      this.addTransformationsStep,
+      this.dataSourceTransformationPipelines,
+      this.monitorBuilderState.dialectNotificationSink,
+      this.monitorBuilderState.emailNotificationSink,
+    );
+  }
+}
+
+class AddSinksStepImpl<T extends object, R> implements AddSinksStep<T, R> {
+  private sinkWriters: ((
+    data: Data<R, T>,
+    resources: ResourceId[],
+  ) => Promise<any>)[] = [];
+
+  constructor(
+    private readonly addTransformationsStep: AddTransformationsStepImpl<T>,
+    private readonly dataSourceTransformationPipelines: DataSourceTransformationPipeline<
+      T,
+      Data<R, T>
+    >[],
+    private readonly dialectNotificationSink?: DialectNotificationSink,
+    private readonly emailNotificationSink?: SengridEmailNotificationSink,
+  ) {}
+
+  and(): AddTransformationsStep<T> {
+    const transformAndLoadPipelines: DataSourceTransformationPipeline<
+      T,
+      any
+    >[] = this.dataSourceTransformationPipelines.map(
+      (
+        dataSourceTransformationPipeline: DataSourceTransformationPipeline<
+          T,
+          Data<R, T>
+        >,
+      ) => {
+        const transformAndLoadPipeline: DataSourceTransformationPipeline<
+          T,
+          any
+        > = (dataSource, targets) =>
+          dataSourceTransformationPipeline(dataSource, targets).pipe(
+            exhaustMap((event) =>
+              from(
+                Promise.all(this.sinkWriters.map((it) => it(event, targets))),
+              ),
+            ),
+          );
+        return transformAndLoadPipeline;
+      },
+    );
+    this.addTransformationsStep.dataSourceTransformationPipelines.push(
+      ...transformAndLoadPipelines,
+    );
+    return this.addTransformationsStep!;
+  }
+
+  dialectThread(
+    adapter: (data: Data<R, T>) => DialectNotification,
+  ): AddSinksStep<T, R> {
+    if (!this.dialectNotificationSink) {
+      throw new Error(
+        'Dialect notification sink must be initialized before using',
+      );
+    }
+    const sinkWriter: (
+      data: Data<R, T>,
+      resources: ResourceId[],
+    ) => Promise<void> = (data, resources) =>
+      this.dialectNotificationSink!.push(adapter(data), resources);
+    this.sinkWriters.push(sinkWriter);
     return this;
   }
 
-  dispatch(strategy: DispatchStrategy): BuildStep<T> {
-    this.dispatchStrategy = strategy;
-    return new BuildStepImpl(this.monitorBuilderState);
+  custom<N>(adapter: (data: Data<R, T>) => N, sink: NotificationSink<N>) {
+    const sinkWriter: (
+      data: Data<R, T>,
+      resources: ResourceId[],
+    ) => Promise<void> = (data, resources) =>
+      sink.push(adapter(data), resources);
+    this.sinkWriters.push(sinkWriter);
+    return this;
+  }
+
+  email(adapter: (data: Data<R, T>) => EmailNotification): AddSinksStep<T, R> {
+    if (!this.emailNotificationSink) {
+      throw new Error(
+        'Email notification sink must be initialized before using',
+      );
+    }
+    const sinkWriter: (
+      data: Data<R, T>,
+      resources: ResourceId[],
+    ) => Promise<void> = (data, resources) =>
+      this.emailNotificationSink!.push(adapter(data), resources);
+    this.sinkWriters.push(sinkWriter);
+    return this;
   }
 }
 
@@ -138,15 +291,15 @@ class BuildStepImpl<T extends object> implements BuildStep<T> {
 
   build(): Monitor<T> {
     const {
-      builderProps,
+      monitorProps,
       chooseDataSourceStep,
       defineDataSourceStep,
       addTransformationsStep,
     } = this.monitorBuilderState;
 
-    if (!builderProps || !chooseDataSourceStep || !addTransformationsStep) {
+    if (!monitorProps || !chooseDataSourceStep || !addTransformationsStep) {
       throw new Error(
-        'Expected [builderProps, chooseDataSourceStep, addTransformationsStep] to be defined',
+        'Expected [monitorProps, chooseDataSourceStep, addTransformationsStep] to be defined',
       );
     }
     switch (chooseDataSourceStep.dataSourceType) {
@@ -157,13 +310,13 @@ class BuildStepImpl<T extends object> implements BuildStep<T> {
         return this.createUserDefinedMonitor(
           defineDataSourceStep,
           addTransformationsStep,
-          builderProps,
+          monitorProps,
         );
       }
       case 'subscriber-events': {
         return this.buildSubscriberEventMonitor(
           addTransformationsStep,
-          builderProps,
+          monitorProps,
         );
       }
       default: {
@@ -176,7 +329,7 @@ class BuildStepImpl<T extends object> implements BuildStep<T> {
 
   private buildSubscriberEventMonitor(
     addTransformationsStep: AddTransformationsStepImpl<T>,
-    builderProps: MonitorBuilderProps,
+    monitorProps: MonitorProps,
   ) {
     const { dataSourceTransformationPipelines, dispatchStrategy } =
       addTransformationsStep;
@@ -185,15 +338,42 @@ class BuildStepImpl<T extends object> implements BuildStep<T> {
         'Expected [dataSourceTransformationPipelines, dispatchStrategy] to be defined',
       );
     }
-    return Monitors.factory(builderProps).createSubscriberEventMonitor(
-      dataSourceTransformationPipelines as unknown as DataSourceTransformationPipeline<SubscriberEvent>[],
+    return Monitors.factory(monitorProps).createSubscriberEventMonitor(
+      dataSourceTransformationPipelines as unknown as DataSourceTransformationPipeline<
+        SubscriberEvent,
+        any
+      >[],
     );
   }
 
   private createUserDefinedMonitor(
     defineDataSourceStep: DefineDataSourceStepImpl<T>,
     addTransformationsStep: AddTransformationsStepImpl<T>,
-    builderProps: MonitorBuilderProps,
+    monitorProps: MonitorProps,
+  ) {
+    const { dataSourceStrategy } = defineDataSourceStep;
+    switch (dataSourceStrategy) {
+      case 'poll':
+        return this.createForPollable(
+          defineDataSourceStep,
+          addTransformationsStep,
+          monitorProps,
+        );
+      case 'push':
+        return this.createForPushy(
+          defineDataSourceStep,
+          addTransformationsStep,
+          monitorProps,
+        );
+      default:
+        throw new Error('Expected data source strategy to be defined');
+    }
+  }
+
+  private createForPollable(
+    defineDataSourceStep: DefineDataSourceStepImpl<T>,
+    addTransformationsStep: AddTransformationsStepImpl<T>,
+    monitorProps: MonitorProps,
   ) {
     const { pollableDataSource, pollInterval } = defineDataSourceStep;
     const { dataSourceTransformationPipelines, dispatchStrategy } =
@@ -211,13 +391,13 @@ class BuildStepImpl<T extends object> implements BuildStep<T> {
 
     switch (addTransformationsStep.dispatchStrategy) {
       case 'broadcast':
-        return Monitors.factory(builderProps).createBroadcastMonitor<T>(
+        return Monitors.factory(monitorProps).createBroadcastMonitor<T>(
           pollableDataSource,
           dataSourceTransformationPipelines,
           pollInterval,
         );
       case 'unicast':
-        return Monitors.factory(builderProps).createUnicastMonitor<T>(
+        return Monitors.factory(monitorProps).createUnicastMonitor<T>(
           pollableDataSource,
           dataSourceTransformationPipelines,
           pollInterval,
@@ -228,5 +408,29 @@ class BuildStepImpl<T extends object> implements BuildStep<T> {
             addTransformationsStep.dispatchStrategy,
         );
     }
+  }
+
+  private createForPushy(
+    defineDataSourceStep: DefineDataSourceStepImpl<T>,
+    addTransformationsStep: AddTransformationsStepImpl<T>,
+    monitorProps: MonitorProps,
+  ) {
+    const { pushyDataSource } = defineDataSourceStep;
+    const { dataSourceTransformationPipelines, dispatchStrategy } =
+      addTransformationsStep;
+    if (
+      !pushyDataSource ||
+      !dataSourceTransformationPipelines ||
+      !dispatchStrategy
+    ) {
+      throw new Error(
+        'Expected [pushyDataSource, dataSourceTransformationPipelines, dispatchStrategy] to be defined',
+      );
+    }
+    return Monitors.factory(monitorProps).createUnicastMonitor<T>(
+      pushyDataSource,
+      dataSourceTransformationPipelines,
+      Duration.fromObject({ seconds: 1 }), // TODO: make optional
+    );
   }
 }

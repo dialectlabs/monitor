@@ -1,22 +1,19 @@
 import {
-  exhaustMap,
   from,
   groupBy,
   GroupedObservable,
   mergeMap,
   Subscription as RxJsSubscription,
 } from 'rxjs';
-
-import { PublicKey } from '@solana/web3.js';
 import {
   DataSourceTransformationPipeline,
-  NotificationSink,
   PushyDataSource,
   SubscriberRepository,
 } from '../ports';
 import { Monitor } from '../monitor-api';
 import { SourceData } from '../data-model';
 import { Operators } from '../transformation-pipeline-operators';
+import { map } from 'rxjs/operators';
 
 export class BroadcastMonitor<T extends Object> implements Monitor<T> {
   private started = false;
@@ -25,8 +22,10 @@ export class BroadcastMonitor<T extends Object> implements Monitor<T> {
 
   constructor(
     private readonly dataSource: PushyDataSource<T>,
-    private readonly dataSourceTransformationPipelines: DataSourceTransformationPipeline<T>[],
-    private readonly notificationSink: NotificationSink,
+    private readonly dataSourceTransformationPipelines: DataSourceTransformationPipeline<
+      T,
+      any
+    >[],
     private readonly subscriberRepository: SubscriberRepository,
   ) {}
 
@@ -58,21 +57,16 @@ export class BroadcastMonitor<T extends Object> implements Monitor<T> {
             element: (it) => it,
           },
         ),
-        mergeMap((data: GroupedObservable<string, SourceData<T>>) => {
-          return this.dataSourceTransformationPipelines.map((pipeline) => {
-            return pipeline(data).pipe(
-              exhaustMap((event) => {
-                return from(
-                  this.subscriberRepository
-                    .findAll()
-                    .then((subscribers) =>
-                      this.notificationSink.push(event.value, subscribers),
-                    ),
-                );
-              }),
-            );
-          });
-        }),
+        mergeMap((data: GroupedObservable<string, SourceData<T>>) =>
+          from(this.subscriberRepository.findAll()).pipe(
+            map((it) =>
+              this.dataSourceTransformationPipelines.map((pipeline) =>
+                pipeline(data, it),
+              ),
+            ),
+            mergeMap((it) => it),
+          ),
+        ),
         mergeMap((it) => it),
       )
       .pipe(...Operators.FlowControl.onErrorRetry())

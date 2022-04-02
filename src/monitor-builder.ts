@@ -2,37 +2,13 @@ import { Duration } from 'luxon';
 import {
   NotificationSink,
   PollableDataSource,
-  SubscriberRepository,
+  PushyDataSource,
   TransformationPipeline,
 } from './ports';
-import { Program } from '@project-serum/anchor';
-import { Keypair } from '@solana/web3.js';
 import { Monitor } from './monitor-api';
-import { SubscriberEvent } from './data-model';
-
-/**
- * Please specify either
- * 1. dialectProgram + monitorKeypair to use on-chain bindings of internal components
- * 2. notificationSink + subscriberRepository to run w/o chain dependency
- */
-export interface MonitorBuilderProps {
-  /**
-   * Dialect program that will be used to interact with chain
-   */
-  dialectProgram?: Program;
-  /**
-   * Monitoring service keypair used to sign transactions to send messages and discover subscribers
-   */
-  monitorKeypair?: Keypair;
-  /**
-   * Allows to set custom notification sink
-   */
-  notificationSink?: NotificationSink;
-  /**
-   * Allows to set custom subscriber repository
-   */
-  subscriberRepository?: SubscriberRepository;
-}
+import { Data, SubscriberEvent } from './data-model';
+import { DialectNotification } from './dialect-notification-sink';
+import { EmailNotification } from './sengrid-email-notification-sink';
 
 export interface ChooseDataSourceStep {
   /**
@@ -60,6 +36,8 @@ export interface DefineDataSourceStep<T extends object> {
     dataSource: PollableDataSource<T>,
     pollInterval: Duration,
   ): AddTransformationsStep<T>;
+
+  push(dataSource: PushyDataSource<T>): AddTransformationsStep<T>;
 }
 
 export type KeysMatching<T extends object, V> = {
@@ -71,7 +49,7 @@ export type KeysMatching<T extends object, V> = {
  * @typeParam T data source type from {@linkcode DefineDataSourceStep}
  * @typeParam V data type of specified keys from T
  */
-export interface Transformation<T extends object, V> {
+export interface Transformation<T extends object, V, R> {
   /**
    * A set of keys from data source type to be transformed
    *  @typeParam V data type of specified keys from T
@@ -81,7 +59,7 @@ export interface Transformation<T extends object, V> {
    * Streaming transformations that produce dialect web3 notifications ot be executed for each key
    *  @typeParam V data type of specified keys from T
    */
-  pipelines: TransformationPipeline<V, T>[];
+  pipelines: TransformationPipeline<V, T, R>[];
 }
 
 /**
@@ -91,17 +69,31 @@ export interface Transformation<T extends object, V> {
 export type DispatchStrategy = 'unicast' | 'broadcast';
 
 export interface AddTransformationsStep<T extends object> {
-  /**
-   * Adds new transformation, all transformations are executed independently from each other
-   * @param transformation see {@linkcode Transformation}
-   */
-  transform<V>(transformation: Transformation<T, V>): AddTransformationsStep<T>;
+  transform<V, R>(transformation: Transformation<T, V, R>): NotifyStep<T, R>;
 
+  dispatch(strategy: DispatchStrategy): BuildStep<T>;
+}
+
+export interface NotifyStep<T extends object, R> {
   /**
    * Finish adding transformations and configure how to dispatch notifications
-   * @param strategy see {@linkcode DispatchStrategy}
    */
-  dispatch(strategy: DispatchStrategy): BuildStep<T>;
+  notify(): AddSinksStep<T, R>;
+}
+
+export interface AddSinksStep<T extends object, R> {
+  dialectThread(
+    adapter: (data: Data<R, T>) => DialectNotification,
+  ): AddSinksStep<T, R>;
+
+  email(adapter: (data: Data<R, T>) => EmailNotification): AddSinksStep<T, R>;
+
+  custom<N>(
+    adapter: (data: Data<R, T>) => N,
+    sink: NotificationSink<N>,
+  ): AddSinksStep<T, R>;
+
+  and(): AddTransformationsStep<T>;
 }
 
 export interface BuildStep<T extends object> {
