@@ -1,17 +1,17 @@
-# Monitor
+# Monitoring Toolkit
 
-A framework that simplifies implementation of dialect notification center integrations. The goal is to provide high-level developer API to extract on-chain data, transform it and generate notifications.
+Monitor is an open-source framework that makes it easy to extract and transform on-chain data into targeted, timely smart messages. You can implement a monitor service to provide your dApp's users with smart messages.
 
-Monitor provides the following built-in features to implement a new notification center integration:
+The monitor framework provides features to seamlessly integrate notifications with your dApp:
+1. Ability to track dApp users that subscribe to notifications
+2. Ability to continuously monitor on-chain resources, like accounts, for a set of your subscribers
+3. A rich, high-level API for unbounded data-stream processing to analyze the extracted on-chain data
 
-1. Tracks dApp subscribers
-2. Continuously monitors on-chain resources like accounts for a set of your dApp subscribers
-3. Provides rich high-level API for data stream processing to analyze the data, extracted from on-chain resources
-
-- Windowing: fixed size, fixed time, fixed size sliding
-- Aggregation: average, min, max
-- Thresholding: rising edge, falling edge
-- Rate limiting
+Data-stream processing features include:
+  - Windowing: fixed size, fixed time, fixed size sliding
+  - Aggregation: average, min, max
+  - Thresholding: rising edge, falling edge
+  - Rate limiting
 
 ## Installation
 
