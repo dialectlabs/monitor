@@ -43,9 +43,11 @@ export class DialectNotificationSink
     const failedSends = results
       .filter((it) => it.status === 'rejected')
       .map((it) => it as PromiseRejectedResult);
-    console.log(
-      `Failed to send dialect notification to ${failedSends.length} recipients`,
-    );
+    if (failedSends.length > 0) {
+      console.log(
+        `Failed to send dialect notification to ${failedSends.length} recipients`,
+      );
+    }
     return;
   }
 }
