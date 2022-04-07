@@ -245,6 +245,7 @@ class AddSinksStepImpl<T extends object, R> implements AddSinksStep<T, R> {
 
   dialectThread(
     adapter: (data: Data<R, T>) => DialectNotification,
+    recipientPredicate?: (data: Data<R, T>, recipient: ResourceId) => boolean,
   ): AddSinksStep<T, R> {
     if (!this.dialectNotificationSink) {
       throw new Error(
@@ -255,22 +256,39 @@ class AddSinksStepImpl<T extends object, R> implements AddSinksStep<T, R> {
       data: Data<R, T>,
       resources: ResourceId[],
     ) => Promise<void> = (data, resources) =>
-      this.dialectNotificationSink!.push(adapter(data), resources);
+      this.dialectNotificationSink!.push(
+        adapter(data),
+        resources.filter((it) =>
+          recipientPredicate ? recipientPredicate(data, it) : true,
+        ),
+      );
     this.sinkWriters.push(sinkWriter);
     return this;
   }
 
-  custom<N>(adapter: (data: Data<R, T>) => N, sink: NotificationSink<N>) {
+  custom<N>(
+    adapter: (data: Data<R, T>) => N,
+    sink: NotificationSink<N>,
+    recipientPredicate?: (data: Data<R, T>, recipient: ResourceId) => boolean,
+  ) {
     const sinkWriter: (
       data: Data<R, T>,
       resources: ResourceId[],
     ) => Promise<void> = (data, resources) =>
-      sink.push(adapter(data), resources);
+      sink.push(
+        adapter(data),
+        resources.filter((it) =>
+          recipientPredicate ? recipientPredicate(data, it) : true,
+        ),
+      );
     this.sinkWriters.push(sinkWriter);
     return this;
   }
 
-  email(adapter: (data: Data<R, T>) => EmailNotification): AddSinksStep<T, R> {
+  email(
+    adapter: (data: Data<R, T>) => EmailNotification,
+    recipientPredicate?: (data: Data<R, T>, recipient: ResourceId) => boolean,
+  ): AddSinksStep<T, R> {
     if (!this.emailNotificationSink) {
       throw new Error(
         'Email notification sink must be initialized before using',
@@ -280,7 +298,12 @@ class AddSinksStepImpl<T extends object, R> implements AddSinksStep<T, R> {
       data: Data<R, T>,
       resources: ResourceId[],
     ) => Promise<void> = (data, resources) =>
-      this.emailNotificationSink!.push(adapter(data), resources);
+      this.emailNotificationSink!.push(
+        adapter(data),
+        resources.filter((it) =>
+          recipientPredicate ? recipientPredicate(data, it) : true,
+        ),
+      );
     this.sinkWriters.push(sinkWriter);
     return this;
   }
