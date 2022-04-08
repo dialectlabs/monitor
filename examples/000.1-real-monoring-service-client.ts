@@ -109,11 +109,7 @@ const createClients = async (n: number): Promise<void> => {
               dialect: { members },
             },
           }) => {
-            const dialectAccount = await getDialectForMembers(
-              program,
-              members,
-              owner,
-            );
+            const dialectAccount = await getDialectForMembers(program, members);
             return [
               dialectAccount.publicKey.toString(),
               { owner, dialectAccount },
