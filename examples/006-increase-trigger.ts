@@ -45,7 +45,7 @@ const monitor: Monitor<DataPool> = Monitors.builder({
     pipelines: [
       Pipelines.threshold({
         type: 'increase',
-        threshold,
+        threshold: 1,
       }),
     ],
   })
