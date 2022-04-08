@@ -11,7 +11,7 @@ import {
   sleep,
   Wallet_,
 } from '@dialectlabs/web3';
-import { programs } from '@dialectlabs/web3/lib/es';
+import { programs } from '@dialectlabs/web3';
 
 const SOLANA_ENDPOINT = process.env.RPC_URL || 'http://localhost:8899';
 const MONITORING_SERVICE_PUBLIC_KEY = process.env
