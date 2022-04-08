@@ -19,8 +19,9 @@ const threshold = 0.5;
 
 const consoleNotificationSink =
   new ConsoleNotificationSink<DialectNotification>();
+const dummySubscriberRepository = new DummySubscriberRepository(2);
 const monitor: Monitor<DataType> = Monitors.builder({
-  subscriberRepository: new DummySubscriberRepository(1),
+  subscriberRepository: dummySubscriberRepository,
 })
   .defineDataSource<DataType>()
   .poll((subscribers: ResourceId[]) => {
@@ -67,8 +68,9 @@ const monitor: Monitor<DataType> = Monitors.builder({
       message: `Your cratio = ${value} above warning threshold`,
     }),
     consoleNotificationSink,
+    () => Math.random() > 0.5,
   )
   .and()
-  .dispatch('unicast')
+  .dispatch('broadcast')
   .build();
 monitor.start();

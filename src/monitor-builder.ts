@@ -6,7 +6,7 @@ import {
   TransformationPipeline,
 } from './ports';
 import { Monitor } from './monitor-api';
-import { Data, SubscriberEvent } from './data-model';
+import { Data, ResourceId, SubscriberEvent } from './data-model';
 import { DialectNotification } from './dialect-notification-sink';
 import { EmailNotification } from './sengrid-email-notification-sink';
 
@@ -84,13 +84,18 @@ export interface NotifyStep<T extends object, R> {
 export interface AddSinksStep<T extends object, R> {
   dialectThread(
     adapter: (data: Data<R, T>) => DialectNotification,
+    recipientPredicate?: (data: Data<R, T>, recipient: ResourceId) => boolean,
   ): AddSinksStep<T, R>;
 
-  email(adapter: (data: Data<R, T>) => EmailNotification): AddSinksStep<T, R>;
+  email(
+    adapter: (data: Data<R, T>) => EmailNotification,
+    recipientPredicate?: (data: Data<R, T>, recipient: ResourceId) => boolean,
+  ): AddSinksStep<T, R>;
 
   custom<N>(
     adapter: (data: Data<R, T>) => N,
     sink: NotificationSink<N>,
+    recipientPredicate?: (data: Data<R, T>, recipient: ResourceId) => boolean,
   ): AddSinksStep<T, R>;
 
   and(): AddTransformationsStep<T>;

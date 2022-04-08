@@ -20,8 +20,8 @@ export class DialectNotificationSink
     private readonly monitorKeypair: Keypair,
   ) {}
 
-  push({ message }: DialectNotification, recipients: ResourceId[]) {
-    return Promise.all(
+  async push({ message }: DialectNotification, recipients: ResourceId[]) {
+    const results = await Promise.allSettled(
       recipients
         .map((it) =>
           getDialectAccount(this.dialectProgram, [
@@ -39,6 +39,15 @@ export class DialectNotificationSink
             ),
           ),
         ),
-    ).then(() => {});
+    );
+    const failedSends = results
+      .filter((it) => it.status === 'rejected')
+      .map((it) => it as PromiseRejectedResult);
+    if (failedSends.length > 0) {
+      console.log(
+        `Failed to send dialect notification to ${failedSends.length} recipients`,
+      );
+    }
+    return;
   }
 }
