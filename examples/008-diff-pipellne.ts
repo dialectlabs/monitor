@@ -1,52 +1,56 @@
-import { DialectNotification, Monitor, Monitors, Pipelines, SourceData } from '../src';
+import {
+  DialectNotification,
+  Diff,
+  Monitor,
+  Monitors,
+  Pipelines,
+  SourceData,
+} from '../src';
 import { DummySubscriberRepository } from './003-custom-subscriber-repository';
 import { ConsoleNotificationSink } from './004-custom-notification-sink';
-import { Observable } from 'rxjs';
-import { Keypair } from '@solana/web3.js';
+import { AsyncSubject, Observable, Subject } from 'rxjs';
+import { Keypair, PublicKey } from '@solana/web3.js';
 
 type DataType = {
-  cratio: number;
-  healthRatio: number;
+  attribute: NestedObject[];
 };
 
-const threshold = 0.5;
+interface NestedObject {
+  publicKey: PublicKey;
+}
 
 const consoleNotificationSink =
   new ConsoleNotificationSink<DialectNotification>();
 
-const observable = new Observable((subscriber) => {
-  const publicKey = Keypair.generate().publicKey;
-  const d1: SourceData<DataType> = {
-    data: { cratio: 0, healthRatio: 2 },
-    resourceId: publicKey,
-  };
-  const d2: SourceData<DataType> = {
-    data: { cratio: 1, healthRatio: 0 },
-    resourceId: publicKey,
-  };
-  subscriber.next(d1);
-  subscriber.next(d2);
-});
+const subject = new Subject<SourceData<DataType>>();
+
 const monitor: Monitor<DataType> = Monitors.builder({
-  subscriberRepository: new DummySubscriberRepository(1),
+  subscriberRepository: new DummySubscriberRepository(3),
 })
   .defineDataSource<DataType>()
-  .push(
-    observable,
-  )
-  .transform<number, number>({
-    keys: ['cratio', 'healthRatio'],
-    pipelines: [
-      Pipelines.threshold({
-        type: 'rising-edge',
-        threshold,
-      }),
-    ],
+  .push(subject)
+  .transform<NestedObject[], Diff<NestedObject>>({
+    keys: ['attribute'],
+    pipelines: [Pipelines.diff((e1, e2) => e1.publicKey.equals(e2.publicKey))],
   })
   .notify()
   .custom<DialectNotification>(
     ({ value }) => ({
-      message: `Your cratio = ${value} above warning threshold`,
+      message: `Added: ${value.added.map(
+        (it) => it.publicKey,
+      )}, removed: ${value.removed.map((it) => it.publicKey)}`,
+    }),
+    consoleNotificationSink,
+  )
+  .and()
+  .transform<NestedObject[], NestedObject[]>({
+    keys: ['attribute'],
+    pipelines: [Pipelines.added((e1, e2) => e1.publicKey.equals(e2.publicKey))],
+  })
+  .notify()
+  .custom<DialectNotification>(
+    ({ value }) => ({
+      message: `Added: ${value.map((it) => it.publicKey)}`,
     }),
     consoleNotificationSink,
   )
@@ -54,3 +58,29 @@ const monitor: Monitor<DataType> = Monitors.builder({
   .dispatch('unicast')
   .build();
 monitor.start();
+
+const publicKey = Keypair.generate().publicKey;
+const pk1 = new Keypair().publicKey;
+const pk2 = new Keypair().publicKey;
+const pk3 = new Keypair().publicKey;
+
+console.log(pk1.toBase58(), pk2.toBase58(), pk3.toBase58());
+const d1: SourceData<DataType> = {
+  data: { attribute: [{ publicKey: pk1 }, { publicKey: pk2 }] },
+  resourceId: publicKey,
+};
+const d2: SourceData<DataType> = {
+  data: { attribute: [{ publicKey: pk3 }] },
+  resourceId: publicKey,
+};
+setTimeout(() => {
+  subject.next(d1);
+}, 500);
+
+setTimeout(() => {
+  subject.next(d2);
+}, 1000);
+
+setTimeout(() => {
+  subject.next(d1);
+}, 1500);
