@@ -45,7 +45,11 @@ export class DialectNotificationSink
       .map((it) => it as PromiseRejectedResult);
     if (failedSends.length > 0) {
       console.log(
-        `Failed to send dialect notification to ${failedSends.length} recipients`,
+        `Failed to send dialect notification to ${
+          failedSends.length
+        } recipients, reasons: 
+        ${failedSends.map((it) => it.reason)}
+        `,
       );
     }
     return;

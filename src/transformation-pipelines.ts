@@ -1,4 +1,4 @@
-import { SubscriberEvent, SubscriberState } from './data-model';
+import { Data, SubscriberEvent, SubscriberState } from './data-model';
 import { Operators } from './transformation-pipeline-operators';
 import { TransformationPipeline } from './ports';
 import { Duration } from 'luxon';
@@ -62,10 +62,118 @@ function createTriggerOperator<T extends object>(trigger: Trigger) {
   throw new Error('Should not happen');
 }
 
+export interface Diff<E> {
+  added: E[];
+  removed: E[];
+}
+
 /**
  * A set of commonly-used pipelines
  */
 export class Pipelines {
+  static added<T extends object, E extends object>(
+    compareBy: (e1: E, e2: E) => boolean,
+    rateLimit?: RateLimit,
+  ): TransformationPipeline<E[], T, E[]> {
+    return Pipelines.createNew<E[], T, E[]>((upstream) =>
+      upstream
+        .pipe(Operators.Window.fixedSizeSliding(2))
+        .pipe(Operators.Transform.filter((it) => it.length == 2))
+        .pipe(
+          Operators.Transform.map(([d1, d2]) => {
+            const added = d2.value.filter(
+              (e2) => !d1.value.find((e1) => compareBy(e1, e2)),
+            );
+            const data: Data<E[], T> = {
+              value: added,
+              context: d2.context,
+            };
+            return data;
+          }),
+        )
+        .pipe(
+          Operators.Transform.filter(({ value: added }) => added.length > 0),
+        )
+        .pipe(
+          rateLimit
+            ? Operators.FlowControl.rateLimit(rateLimit.timeSpan)
+            : Operators.Transform.identity(),
+        ),
+    );
+  }
+
+  static removed<T extends object, E extends object>(
+    compareBy: (e1: E, e2: E) => boolean,
+    rateLimit?: RateLimit,
+  ): TransformationPipeline<E[], T, E[]> {
+    return Pipelines.createNew<E[], T, E[]>((upstream) =>
+      upstream
+        .pipe(Operators.Window.fixedSizeSliding(2))
+        .pipe(Operators.Transform.filter((it) => it.length == 2))
+        .pipe(
+          Operators.Transform.map(([d1, d2]) => {
+            const removed = d1.value.filter(
+              (e1) => !d2.value.find((e2) => compareBy(e1, e2)),
+            );
+            const data: Data<E[], T> = {
+              value: removed,
+              context: d2.context,
+            };
+            return data;
+          }),
+        )
+        .pipe(
+          Operators.Transform.filter(({ value: added }) => added.length > 0),
+        )
+        .pipe(
+          rateLimit
+            ? Operators.FlowControl.rateLimit(rateLimit.timeSpan)
+            : Operators.Transform.identity(),
+        ),
+    );
+  }
+
+  static diff<T extends object, E extends object>(
+    compareBy: (e1: E, e2: E) => boolean,
+    rateLimit?: RateLimit,
+  ): TransformationPipeline<E[], T, Diff<E>> {
+    return Pipelines.createNew<E[], T, Diff<E>>((upstream) =>
+      upstream
+        .pipe(Operators.Window.fixedSizeSliding(2))
+        .pipe(Operators.Transform.filter((it) => it.length == 2))
+        .pipe(
+          Operators.Transform.map(([d1, d2]) => {
+            const added = d2.value.filter(
+              (e2) => !d1.value.find((e1) => compareBy(e1, e2)),
+            );
+            const removed = d1.value.filter(
+              (e1) => !d2.value.find((e2) => compareBy(e1, e2)),
+            );
+            const diff: Diff<E> = {
+              added,
+              removed,
+            };
+            const data: Data<Diff<E>, T> = {
+              value: diff,
+              context: d2.context,
+            };
+            return data;
+          }),
+        )
+        .pipe(
+          Operators.Transform.filter(
+            ({ value: { added, removed } }) =>
+              added.length + removed.length > 0,
+          ),
+        )
+        .pipe(
+          rateLimit
+            ? Operators.FlowControl.rateLimit(rateLimit.timeSpan)
+            : Operators.Transform.identity(),
+        ),
+    );
+  }
+
   static threshold<T extends object>(
     trigger: Trigger,
     rateLimit?: RateLimit,
