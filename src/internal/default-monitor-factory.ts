@@ -2,7 +2,16 @@ import { InMemorySubscriberRepository } from './in-memory-subscriber.repository'
 import { OnChainSubscriberRepository } from './on-chain-subscriber.repository';
 import { Duration } from 'luxon';
 import { UnicastMonitor } from './unicast-monitor';
-import { concatMap, exhaustMap, from, Observable, timer } from 'rxjs';
+import {
+  catchError,
+  concatMap,
+  exhaustMap,
+  from,
+  Observable,
+  throwError,
+  TimeoutError,
+  timer,
+} from 'rxjs';
 import { MonitorFactory } from '../monitor-factory';
 import {
   DataSource,
@@ -14,6 +23,7 @@ import {
 import { Monitor, MonitorProps } from '../monitor-api';
 import { ResourceId, SourceData, SubscriberEvent } from '../data-model';
 import { BroadcastMonitor } from './broadcast-monitor';
+import { timeout } from 'rxjs/operators';
 
 export class DefaultMonitorFactory implements MonitorFactory {
   private readonly subscriberRepository: SubscriberRepository;
@@ -144,10 +154,22 @@ export class DefaultMonitorFactory implements MonitorFactory {
     dataSource: PollableDataSource<T>,
     pollInterval: Duration,
     subscriberRepository: SubscriberRepository,
+    pollTimeout: Duration = Duration.fromObject({ minutes: 5 }),
   ): PushyDataSource<T> {
     return timer(0, pollInterval.toMillis()).pipe(
       exhaustMap(() => subscriberRepository.findAll()),
       exhaustMap((resources: ResourceId[]) => from(dataSource(resources))),
+      timeout(pollTimeout.toMillis()),
+      catchError((error) => {
+        if (error instanceof TimeoutError) {
+          return throwError(
+            new Error(
+              `Poll timeout of ${pollTimeout.toISO()} reached. ` + error,
+            ),
+          );
+        }
+        return throwError(error);
+      }),
       concatMap((it) => it),
     );
   }
