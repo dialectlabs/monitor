@@ -1,4 +1,4 @@
-import { NotificationSink, ResourceId, Notification } from '..';
+import { NotificationSink, ResourceId, Notification } from '../src';
 
 export class ConsoleNotificationSink<N extends Notification>
   implements NotificationSink<N>

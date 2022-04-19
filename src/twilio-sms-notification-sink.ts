@@ -42,6 +42,6 @@ export class TwilioSmsNotificationSink
         from: this.senderSmsNumber,
         body: notification.body
       }).then(() => {});
-    }));
+    })).then(() => {});
   }
 }

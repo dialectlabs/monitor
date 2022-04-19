@@ -37,9 +37,9 @@ const monitor: Monitor<DataType> = Monitors.builder({
   subscriberRepository: new DummySubscriberRepository(1),
   sinks: {
     sms: {
-      twilioUsername: process.env.TWILIO_ACCOUNT_SID,
-      twilioPassword: process.env.TWILIO_AUTH_TOKEN,
-      senderSmsNumber: process.env.TWILIO_SMS_SENDER,
+      twilioUsername: process.env.TWILIO_ACCOUNT_SID!,
+      twilioPassword: process.env.TWILIO_AUTH_TOKEN!,
+      senderSmsNumber: process.env.TWILIO_SMS_SENDER!,
       resourceSmsNumberRepository: new DummyResourceSmsRepository(),
     },
   },
@@ -72,9 +72,6 @@ const monitor: Monitor<DataType> = Monitors.builder({
   .notify()
   .sms(({ value }) => ({
     body: `[WARNING] Your cratio = ${value} above warning threshold`,
-  }))
-  .dialectThread(({ value }) => ({
-    message: `Your cratio = ${value} above warning threshold`,
   }))
   .custom<DialectNotification>(
     ({ value }) => ({
