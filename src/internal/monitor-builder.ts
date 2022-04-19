@@ -15,7 +15,6 @@ import {
   NotificationSink,
   PollableDataSource,
   PushyDataSource,
-  SubscriberRepository,
 } from '../ports';
 import { Duration } from 'luxon';
 import { exhaustMap, from, Observable } from 'rxjs';
@@ -139,6 +138,30 @@ class AddTransformationsStepImpl<T extends object>
 
   constructor(private readonly monitorBuilderState: MonitorsBuilderState<T>) {
     monitorBuilderState.addTransformationsStep = this;
+  }
+
+  notify(): AddSinksStep<T, T> {
+    const identityTransformation: DataSourceTransformationPipeline<
+      T,
+      Data<T, T>
+    > = (dataSource) =>
+      dataSource.pipe(
+        map(({ data: value, resourceId }) => ({
+          context: {
+            origin: value,
+            resourceId,
+            trace: [],
+          },
+          value,
+        })),
+      );
+    this.dataSourceTransformationPipelines.push(identityTransformation);
+    return new AddSinksStepImpl(
+      this,
+      this.dataSourceTransformationPipelines,
+      this.monitorBuilderState.dialectNotificationSink,
+      this.monitorBuilderState.emailNotificationSink,
+    );
   }
 
   dispatch(strategy: DispatchStrategy): BuildStep<T> {
