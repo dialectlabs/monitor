@@ -16,7 +16,8 @@
     "@sendgrid/mail": "^7.6.2",
     "@solana/web3.js": "^1.27.0",
     "luxon": "^2.3.0",
-    "rxjs": "^7.5.2"
+    "rxjs": "^7.5.2",
+    "twilio": "^3.76.1"
   },
   "devDependencies": {
     "@types/bs58": "^4.0.1",
