@@ -15,6 +15,7 @@ import {
   NotificationSink,
   PollableDataSource,
   PushyDataSource,
+  SubscriberRepository,
 } from '../ports';
 import { Duration } from 'luxon';
 import { exhaustMap, from, Observable } from 'rxjs';
@@ -28,6 +29,8 @@ import {
   EmailNotification,
   SengridEmailNotificationSink,
 } from '../sengrid-email-notification-sink';
+import { OnChainSubscriberRepository } from './on-chain-subscriber.repository';
+import { InMemorySubscriberRepository } from './in-memory-subscriber.repository';
 
 /**
  * A set of factory methods to create monitors
@@ -42,9 +45,18 @@ export class MonitorsBuilderState<T extends object> {
 
   constructor(readonly monitorProps: MonitorProps) {
     if (monitorProps.dialectProgram && monitorProps.monitorKeypair) {
+      if (!monitorProps.subscriberRepository) {
+        const onChainSubscriberRepository = new OnChainSubscriberRepository(
+          monitorProps.dialectProgram,
+          monitorProps.monitorKeypair,
+        );
+        monitorProps.subscriberRepository =
+          InMemorySubscriberRepository.decorate(onChainSubscriberRepository);
+      }
       this.dialectNotificationSink = new DialectNotificationSink(
         monitorProps.dialectProgram,
         monitorProps.monitorKeypair,
+        monitorProps.subscriberRepository,
       );
     }
     const sinks = monitorProps?.sinks;
