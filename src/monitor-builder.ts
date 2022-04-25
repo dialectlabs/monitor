@@ -73,6 +73,8 @@ export interface AddTransformationsStep<T extends object> {
   transform<V, R>(transformation: Transformation<T, V, R>): NotifyStep<T, R>;
 
   dispatch(strategy: DispatchStrategy): BuildStep<T>;
+
+  notify(): AddSinksStep<T, T>;
 }
 
 export interface NotifyStep<T extends object, R> {

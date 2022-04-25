@@ -1,4 +1,4 @@
-import { NotificationSink } from './ports';
+import { NotificationSink, SubscriberRepository } from './ports';
 import { getDialectAccount } from './internal/dialect-extensions';
 import { Notification, ResourceId } from './data-model';
 import { Program } from '@project-serum/anchor';
@@ -18,11 +18,19 @@ export class DialectNotificationSink
   constructor(
     private readonly dialectProgram: Program,
     private readonly monitorKeypair: Keypair,
+    private readonly subscriberRepository: SubscriberRepository,
   ) {}
 
   async push({ message }: DialectNotification, recipients: ResourceId[]) {
+    const allSubscribers = await this.subscriberRepository.findAll();
+    const subscriberPkToSubscriber = Object.fromEntries(
+      allSubscribers.map((it) => [it.toBase58(), it]),
+    );
+    const recipientsFiltered = recipients.filter(
+      (it) => !!subscriberPkToSubscriber[it.toBase58()],
+    );
     const results = await Promise.allSettled(
-      recipients
+      recipientsFiltered
         .map((it) =>
           getDialectAccount(this.dialectProgram, [
             this.monitorKeypair.publicKey,
