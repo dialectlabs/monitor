@@ -22,15 +22,15 @@ export class DialectNotificationSink
   ) {}
 
   async push({ message }: DialectNotification, recipients: ResourceId[]) {
-    const subscribers = Object.fromEntries(
-      (await this.subscriberRepository.findAll()).map((it) => [
-        it.toBase58(),
-        it,
-      ]),
+    const allSubscribers = await this.subscriberRepository.findAll();
+    const subscriberPkToSubscriber = Object.fromEntries(
+      allSubscribers.map((it) => [it.toBase58(), it]),
+    );
+    const recipientsFiltered = recipients.filter(
+      (it) => !!subscriberPkToSubscriber[it.toBase58()],
     );
     const results = await Promise.allSettled(
-      recipients
-        .filter((it) => !!subscribers[it.toBase58()])
+      recipientsFiltered
         .map((it) =>
           getDialectAccount(this.dialectProgram, [
             this.monitorKeypair.publicKey,
