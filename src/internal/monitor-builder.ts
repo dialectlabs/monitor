@@ -28,6 +28,8 @@ import {
   EmailNotification,
   SengridEmailNotificationSink,
 } from '../sengrid-email-notification-sink';
+import { OnChainSubscriberRepository } from './on-chain-subscriber.repository';
+import { InMemorySubscriberRepository } from './in-memory-subscriber.repository';
 
 /**
  * A set of factory methods to create monitors
@@ -42,9 +44,18 @@ export class MonitorsBuilderState<T extends object> {
 
   constructor(readonly monitorProps: MonitorProps) {
     if (monitorProps.dialectProgram && monitorProps.monitorKeypair) {
+      if (!monitorProps.subscriberRepository) {
+        const onChainSubscriberRepository = new OnChainSubscriberRepository(
+          monitorProps.dialectProgram,
+          monitorProps.monitorKeypair,
+        );
+        monitorProps.subscriberRepository =
+          InMemorySubscriberRepository.decorate(onChainSubscriberRepository);
+      }
       this.dialectNotificationSink = new DialectNotificationSink(
         monitorProps.dialectProgram,
         monitorProps.monitorKeypair,
+        monitorProps.subscriberRepository,
       );
     }
     const sinks = monitorProps?.sinks;
@@ -127,6 +138,30 @@ class AddTransformationsStepImpl<T extends object>
 
   constructor(private readonly monitorBuilderState: MonitorsBuilderState<T>) {
     monitorBuilderState.addTransformationsStep = this;
+  }
+
+  notify(): AddSinksStep<T, T> {
+    const identityTransformation: DataSourceTransformationPipeline<
+      T,
+      Data<T, T>
+    > = (dataSource) =>
+      dataSource.pipe(
+        map(({ data: value, resourceId }) => ({
+          context: {
+            origin: value,
+            resourceId,
+            trace: [],
+          },
+          value,
+        })),
+      );
+    this.dataSourceTransformationPipelines.push(identityTransformation);
+    return new AddSinksStepImpl(
+      this,
+      this.dataSourceTransformationPipelines,
+      this.monitorBuilderState.dialectNotificationSink,
+      this.monitorBuilderState.emailNotificationSink,
+    );
   }
 
   dispatch(strategy: DispatchStrategy): BuildStep<T> {
