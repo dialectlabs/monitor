@@ -2,6 +2,8 @@ import {
   ResourceId,
   SubscriberEventHandler,
   SubscriberRepository,
+  Web2Subscriber,
+  Web2SubscriberRepository,
 } from '../src';
 import { Keypair } from '@solana/web3.js';
 
@@ -37,5 +39,15 @@ export class DummySubscriberRepository implements SubscriberRepository {
   addNewSubscriber(resourceId: ResourceId) {
     this.subscribers.push(resourceId);
     this.onSubscriberAddedHandlers.forEach((it) => it(resourceId));
+  }
+}
+
+export class DummyWeb2SubscriberRepository implements Web2SubscriberRepository {
+  async findAll(): Promise<Web2Subscriber[]> {
+    return Promise.resolve([]);
+  }
+
+  async findBy(resourceIds: ResourceId[]): Promise<Web2Subscriber[]> {
+    return Promise.resolve([]);
   }
 }

@@ -28,10 +28,24 @@ import {
   EmailNotification,
   SengridEmailNotificationSink,
 } from '../sengrid-email-notification-sink';
-import { SmsNotification, TwilioSmsNotificationSink } from '../twilio-sms-notification-sink';
-import { TelegramNotification, TelegramNotificationSink } from '../telegram-notification-sink';
+import {
+  SmsNotification,
+  TwilioSmsNotificationSink,
+} from '../twilio-sms-notification-sink';
+import {
+  TelegramNotification,
+  TelegramNotificationSink,
+} from '../telegram-notification-sink';
 import { OnChainSubscriberRepository } from './on-chain-subscriber.repository';
 import { InMemorySubscriberRepository } from './in-memory-subscriber.repository';
+import {
+  InMemoryWeb2SubscriberRepository,
+  PostgresWeb2SubscriberRepository,
+} from './postgres-web-resorce.repository';
+import {
+  NoopWeb2SubscriberRepository,
+  Web2SubscriberRepository,
+} from '../web-subscriber.repository';
 
 /**
  * A set of factory methods to create monitors
@@ -47,6 +61,25 @@ export class MonitorsBuilderState<T extends object> {
   telegramNotificationSink?: TelegramNotificationSink;
 
   constructor(readonly monitorProps: MonitorProps) {
+    if (
+      monitorProps.web2SubscriberRepositoryUrl &&
+      !monitorProps.web2SubscriberRepository
+    ) {
+      const postgresWeb2ResourceRepository: Web2SubscriberRepository =
+        new PostgresWeb2SubscriberRepository(
+          monitorProps.web2SubscriberRepositoryUrl,
+          monitorProps.monitorKeypair?.publicKey!,
+        );
+      monitorProps.web2SubscriberRepository =
+        new InMemoryWeb2SubscriberRepository(
+          monitorProps.monitorKeypair?.publicKey!,
+          postgresWeb2ResourceRepository,
+        );
+    }
+    const web2SubscriberRepository =
+      monitorProps.web2SubscriberRepository ??
+      new NoopWeb2SubscriberRepository();
+
     if (monitorProps.dialectProgram && monitorProps.monitorKeypair) {
       if (!monitorProps.subscriberRepository) {
         const onChainSubscriberRepository = new OnChainSubscriberRepository(
@@ -67,20 +100,23 @@ export class MonitorsBuilderState<T extends object> {
       this.emailNotificationSink = new SengridEmailNotificationSink(
         sinks.email.apiToken,
         sinks.email.senderEmail,
-        sinks.email.resourceEmailRepository,
+        web2SubscriberRepository,
       );
     }
     if (sinks?.sms) {
       this.smsNotificationSink = new TwilioSmsNotificationSink(
-        { username: sinks.sms.twilioUsername, password: sinks.sms.twilioPassword },
+        {
+          username: sinks.sms.twilioUsername,
+          password: sinks.sms.twilioPassword,
+        },
         sinks.sms.senderSmsNumber,
-        sinks.sms.resourceSmsNumberRepository,
+        web2SubscriberRepository,
       );
     }
     if (sinks?.telegram) {
       this.telegramNotificationSink = new TelegramNotificationSink(
         sinks.telegram.telegramBotToken,
-        sinks.telegram.resourceTelegramChatIdRepository,
+        web2SubscriberRepository,
       );
     }
   }
@@ -369,9 +405,7 @@ class AddSinksStepImpl<T extends object, R> implements AddSinksStep<T, R> {
     recipientPredicate?: (data: Data<R, T>, recipient: ResourceId) => boolean,
   ): AddSinksStep<T, R> {
     if (!this.smsNotificationSink) {
-      throw new Error(
-        'SMS notification sink must be initialized before using',
-      );
+      throw new Error('SMS notification sink must be initialized before using');
     }
     const sinkWriter: (
       data: Data<R, T>,

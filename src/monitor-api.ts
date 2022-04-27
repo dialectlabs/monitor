@@ -6,9 +6,7 @@ import { ChooseDataSourceStepImpl } from './internal/monitor-builder';
 import { Program } from '@project-serum/anchor';
 import { Keypair } from '@solana/web3.js';
 import { SubscriberRepository } from './ports';
-import { ResourceEmailRepository } from './sengrid-email-notification-sink';
-import { ResourceSmsNumberRepository } from './twilio-sms-notification-sink';
-import { ResourceTelegramChatIdRepository } from './telegram-notification-sink';
+import { Web2SubscriberRepository } from './web-subscriber.repository';
 
 /**
  * Please specify either
@@ -30,6 +28,16 @@ export interface MonitorProps {
   subscriberRepository?: SubscriberRepository;
 
   /**
+   * Allows to set custom web2 subscriber repository
+   */
+  web2SubscriberRepositoryUrl?: string;
+
+  /**
+   * Allows to set custom web2 subscriber repository
+   */
+  web2SubscriberRepository?: Web2SubscriberRepository;
+
+  /**
    * Allows to set sinks configuration to send notifications
    */
   sinks?: SinksConfiguration;
@@ -44,19 +52,16 @@ export interface SinksConfiguration {
 export interface EmailSinkConfiguration {
   apiToken: string;
   senderEmail: string;
-  resourceEmailRepository: ResourceEmailRepository;
 }
 
 export interface SmsSinkConfiguration {
   twilioUsername: string;
   twilioPassword: string;
   senderSmsNumber: string;
-  resourceSmsNumberRepository: ResourceSmsNumberRepository;
 }
 
 export interface TelegramSinkConfiguration {
   telegramBotToken: string;
-  resourceTelegramChatIdRepository: ResourceTelegramChatIdRepository;
 }
 
 /**
