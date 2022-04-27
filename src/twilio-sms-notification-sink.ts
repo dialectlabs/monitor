@@ -36,12 +36,27 @@ export class TwilioSmsNotificationSink
     const recipientSmSNumbers = await this.resourceIdToReceiverSmsNumberMapper.findBy(
       recipients,
     );
-    return Promise.allSettled(recipientSmSNumbers.map(({ smsNumber }) => {
+    const results = await Promise.allSettled(recipientSmSNumbers.map(({ smsNumber }) => {
       this.twilio.messages.create({
         to: smsNumber,
         from: this.senderSmsNumber,
         body: notification.body
       }).then(() => {});
-    })).then(() => {});
+    }));
+    
+    const failedSends = results
+      .filter((it) => it.status === 'rejected')
+      .map((it) => it as PromiseRejectedResult);
+    if (failedSends.length > 0) {
+      console.log(
+        `Failed to send dialect notification to ${
+          failedSends.length
+        } recipient(s), reasons: 
+        ${failedSends.map((it) => it.reason)}
+        `,
+      );
+    };
+
+    return;
   }
 }
