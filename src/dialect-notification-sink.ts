@@ -4,6 +4,7 @@ import { Notification, ResourceId } from './data-model';
 import { Program } from '@project-serum/anchor';
 import { Keypair } from '@solana/web3.js';
 import { sendMessage } from '@dialectlabs/web3';
+import { retryAsync } from 'ts-retry';
 
 /**
  * Dialect web3 notification
@@ -30,23 +31,23 @@ export class DialectNotificationSink
       (it) => !!subscriberPkToSubscriber[it.toBase58()],
     );
     const results = await Promise.allSettled(
-      recipientsFiltered
-        .map((it) =>
-          getDialectAccount(this.dialectProgram, [
-            this.monitorKeypair.publicKey,
-            it,
-          ]),
-        )
-        .map((dialectAccountPromise) =>
-          dialectAccountPromise.then((dialectAccount) =>
-            sendMessage(
+      recipientsFiltered.map(async (it) =>
+        retryAsync(
+          async () => {
+            const dialectAccount = await getDialectAccount(
+              this.dialectProgram,
+              [this.monitorKeypair.publicKey, it],
+            );
+            return sendMessage(
               this.dialectProgram,
               dialectAccount,
               this.monitorKeypair,
               message,
-            ),
-          ),
+            );
+          },
+          { delay: 100, maxTry: 5 },
         ),
+      ),
     );
     const failedSends = results
       .filter((it) => it.status === 'rejected')
