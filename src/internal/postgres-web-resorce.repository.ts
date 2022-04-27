@@ -15,8 +15,17 @@ export class PostgresWeb2SubscriberRepository
   ) {}
 
   findBy(resourceIds: ResourceId[]): Promise<Web2Subscriber[]> {
+    // Option one: use prisma
+    // - first increment: copy the schema into this repo and generate a client based on this schema here and use it
+    // - (in parallel) try to publish prisma client to npm from wallet-address-registry-service
+    // Option two: use another db client e.g. slonik
+    //   const fooResult = await connection.query(sql`
+    //     SELECT id
+    //     FROM foo
+    //     WHERE bar = ${bar}
+    //   `);
     //
-    // Step 1. Get db connection ready to exec queries
+    // Step 1. Get db client ready
     // Option 1. Use prisma client to make query
     // Option 2. Don't use prisma, use some other db client
     // Step 2. Just write a query
