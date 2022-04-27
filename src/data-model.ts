@@ -12,6 +12,7 @@ export type ResourceId = PublicKey;
 export interface SourceData<T> {
   data: T;
   resourceId: ResourceId;
+  groupingKey?: string;
 }
 
 /**

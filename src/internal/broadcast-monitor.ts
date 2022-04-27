@@ -55,7 +55,7 @@ export class BroadcastMonitor<T extends Object> implements Monitor<T> {
     const monitorPipelineSubscription = this.dataSource
       .pipe(
         groupBy<SourceData<T>, string, SourceData<T>>(
-          ({ resourceId }) => resourceId.toString(),
+          ({ groupingKey, resourceId }) => groupingKey ?? resourceId.toString(),
           {
             element: (it) => it,
           },

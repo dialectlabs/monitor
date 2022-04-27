@@ -88,6 +88,7 @@ export interface NotifyStep<T extends object, R> {
 export interface AddSinksStep<T extends object, R> {
   dialectThread(
     adapter: (data: Data<R, T>) => DialectNotification,
+    recipientsSelector?: (data: Data<R, T>) => ResourceId[],
     recipientPredicate?: (data: Data<R, T>, recipient: ResourceId) => boolean,
   ): AddSinksStep<T, R>;
 

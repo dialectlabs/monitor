@@ -340,6 +340,7 @@ class AddSinksStepImpl<T extends object, R> implements AddSinksStep<T, R> {
 
   dialectThread(
     adapter: (data: Data<R, T>) => DialectNotification,
+    recipientsSelector?: (data: Data<R, T>) => ResourceId[],
     recipientPredicate?: (data: Data<R, T>, recipient: ResourceId) => boolean,
   ): AddSinksStep<T, R> {
     if (!this.dialectNotificationSink) {
@@ -350,13 +351,17 @@ class AddSinksStepImpl<T extends object, R> implements AddSinksStep<T, R> {
     const sinkWriter: (
       data: Data<R, T>,
       resources: ResourceId[],
-    ) => Promise<void> = (data, resources) =>
-      this.dialectNotificationSink!.push(
+    ) => Promise<void> = (data, resources) => {
+      const toBeNotified = recipientsSelector
+        ? recipientsSelector(data)
+        : resources;
+      return this.dialectNotificationSink!.push(
         adapter(data),
-        resources.filter((it) =>
+        toBeNotified.filter((it) =>
           recipientPredicate ? recipientPredicate(data, it) : true,
         ),
       );
+    };
     this.sinkWriters.push(sinkWriter);
     return this;
   }
