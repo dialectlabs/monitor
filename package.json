@@ -17,6 +17,7 @@
     "@solana/web3.js": "^1.27.0",
     "luxon": "^2.3.0",
     "rxjs": "^7.5.2",
+    "telegraf": "^4.7.0",
     "twilio": "^3.76.1"
   },
   "devDependencies": {
