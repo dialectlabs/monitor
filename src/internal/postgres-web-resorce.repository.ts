@@ -4,6 +4,7 @@ import {
   Web2Subscriber,
   Web2SubscriberRepository,
 } from '../web-subscriber.repository';
+import { DateTime } from 'luxon';
 
 // TODO: implement this
 export class PostgresWeb2SubscriberRepository
@@ -24,6 +25,7 @@ export class PostgresWeb2SubscriberRepository
     //     FROM foo
     //     WHERE bar = ${bar}
     //   `);
+    // Option three: call rest API hosted in wallet-address-registry for fetching
     //
     // Step 1. Get db client ready
     // Option 1. Use prisma client to make query
@@ -47,23 +49,29 @@ export class InMemoryWeb2SubscriberRepository
   >();
 
   private lastUpdatedAtUtcSeconds: number = -1;
+  private ttl = 60;
 
   constructor(
     private readonly monitorPublicKey: PublicKey,
     private readonly delegate: Web2SubscriberRepository,
   ) {}
 
-  findBy(resourceIds: ResourceId[]): Promise<Web2Subscriber[]> {
-    // TODO: implement
-    /*
-     *  if (now - lastUpdatedAtUtcSeconds > ttl) {
-      resourceIdToResourceInfo = this.delegate.findAll();
-      this.lastUpdatedAtUtcSeconds = now;
-    }
-    *     return resourceIdToResourceInfo;
+  async findBy(resourceIds: ResourceId[]): Promise<Web2Subscriber[]> {
+    
+    const nowUtcSeconds = DateTime.now().toUTC().toSeconds();
+    if ((nowUtcSeconds - this.lastUpdatedAtUtcSeconds) > this.ttl) {
 
-     * */
-    return Promise.resolve([]);
+      (await this.delegate.findAll()).map((web2Subscriber) => {
+        this.resourceIdToResourceInfo.set(web2Subscriber.resourceId.toString(), web2Subscriber);
+        // Or, if db does not provide filtered:
+        // let pk = resourceIds.find((pubkey) => pubkey.equals(web2Subscriber.resourceId));
+        // if (pk) {
+        //   this.resourceIdToResourceInfo.set(pk.toString(), web2Subscriber);
+        // }
+      });
+      this.lastUpdatedAtUtcSeconds = nowUtcSeconds;
+    }
+    return Array.from(this.resourceIdToResourceInfo.values());
   }
 
   findAll(): Promise<Web2Subscriber[]> {

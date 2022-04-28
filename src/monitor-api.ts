@@ -18,10 +18,12 @@ export interface MonitorProps {
    * Dialect program that will be used to interact with chain
    */
   dialectProgram?: Program;
+
   /**
    * Monitoring service keypair used to sign transactions to send messages and discover subscribers
    */
   monitorKeypair?: Keypair;
+  
   /**
    * Allows to set custom subscriber repository
    */

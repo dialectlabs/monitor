@@ -28,6 +28,7 @@ import {
   NoopWeb2SubscriberRepository,
   Web2SubscriberRepository,
 } from '../web-subscriber.repository';
+import { PublicKey } from '@solana/web3.js';
 
 export class DefaultMonitorFactory implements MonitorFactory {
   private readonly subscriberRepository: SubscriberRepository;
@@ -168,7 +169,11 @@ export class DefaultMonitorFactory implements MonitorFactory {
     pollTimeout: Duration = Duration.fromObject({ minutes: 5 }),
   ): PushyDataSource<T> {
     return timer(0, pollInterval.toMillis()).pipe(
-      exhaustMap(() => subscriberRepository.findAll()), // TODO: fetch web2SubscriberRepository  and subscriberRepository and merge as a set
+      exhaustMap(async () => {
+        let mergedSubRep = await subscriberRepository.findAll();
+        await web2SubscriberRepository.findAll().then((web2Subscribers) => web2Subscribers.map((web2Sub) => mergedSubRep.push(web2Sub.resourceId)));
+        return mergedSubRep;
+      }),
       exhaustMap((resources: ResourceId[]) => from(dataSource(resources))),
       timeout(pollTimeout.toMillis()),
       catchError((error) => {
