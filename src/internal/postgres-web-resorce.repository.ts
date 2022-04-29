@@ -5,6 +5,9 @@ import {
   Web2SubscriberRepository,
 } from '../web-subscriber.repository';
 import { DateTime } from 'luxon';
+import * as Axios from 'axios';
+
+const axios = Axios.default;
 
 // TODO: implement this
 export class PostgresWeb2SubscriberRepository
@@ -35,14 +38,14 @@ export class PostgresWeb2SubscriberRepository
   }
 
   findAll(): Promise<Web2Subscriber[]> {
-    const DIALECT_BASE_URL = '/api';
-    const dappPublicKey = process.env.MONITOR_PUBLIC_KEY;
-    let url = `${DIALECT_BASE_URL}/v0/web2Subscriber/all/dapp:${dappPublicKey}`;
-    let headers = new Headers();
-    headers.set('Authorization', 'Basic ' + process.env.POSTGRES_AUTH);
+    const localUrl = 'http://localhost:3000/api';
+    // TODO update to use postgresUrl
+    let url = `${localUrl}/v0/web2Subscriber/all/${this.monitorPublicKey}`;
     
     async () => {
-      let rawResponse = await fetch(url, {method:'GET', headers: headers});
+      let rawResponse = await axios.get(url, {
+        headers: { 'Authorization': + `Basic ${process.env.POSTGRES_BASIC_AUTH}`}
+      });
       console.log(rawResponse);
     }
 

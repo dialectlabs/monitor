@@ -1,11 +1,26 @@
 import { Context, Telegraf } from 'telegraf';
+import * as Axios from 'axios';
+
+const axios = Axios.default;
 
 async function run() { 
-  let tgBot = new Telegraf(process.env.TELEGRAM_BOT_KEY!);
-  await tgBot.start(async (ctx) => console.log({ctx}));
-  await tgBot.launch();
-  tgBot.telegram.sendMessage(process.env.TELEGRAM_TEST_CHAT_ID!, "Say hello to the future of web3 messaging!");
-  console.log({telegraf: tgBot});
+
+  
+
+  const DIALECT_BASE_URL = 'http://localhost:3000/api';
+  const dappPublicKey = "D1ALECTfeCZt9bAbPWtJk7ntv24vDYGPmyS7swp7DY5h"; //process.env.MONITOR_PUBLIC_KEY;
+  let url = `${DIALECT_BASE_URL}/v0/web2Subscriber/all/${dappPublicKey}`;
+  
+  async () => {
+    let rawResponse = await axios.get(url, {
+      headers: { 'Authorization': + `Basic ${process.env.POSTGRES_BASIC_AUTH}`}
+    });
+    
+    console.log(rawResponse);
+  }
+
+  // TODO return formatted response data
+  return Promise.resolve([]);
 }
 
 run();
