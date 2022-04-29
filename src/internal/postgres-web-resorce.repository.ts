@@ -18,39 +18,22 @@ export class PostgresWeb2SubscriberRepository
     private readonly monitorPublicKey: PublicKey,
   ) {}
 
-  findBy(resourceIds: ResourceId[]): Promise<Web2Subscriber[]> {
-    // Option one: use prisma
-    // - first increment: copy the schema into this repo and generate a client based on this schema here and use it
-    // - (in parallel) try to publish prisma client to npm from wallet-address-registry-service
-    // Option two: use another db client e.g. slonik
-    //   const fooResult = await connection.query(sql`
-    //     SELECT id
-    //     FROM foo
-    //     WHERE bar = ${bar}
-    //   `);
-    // Option three: call rest API hosted in wallet-address-registry for fetching
-    //
-    // Step 1. Get db client ready
-    // Option 1. Use prisma client to make query
-    // Option 2. Don't use prisma, use some other db client
-    // Step 2. Just write a query
-    return Promise.resolve([]);
+  async findBy(resourceIds: ResourceId[]): Promise<Web2Subscriber[]> {
+    let values: Web2Subscriber[] = (await this.findAll()).filter((web2Sub) => resourceIds.findIndex((it) => it == web2Sub.resourceId) != -1);
+    return Promise.all(values);
   }
 
-  findAll(): Promise<Web2Subscriber[]> {
-    const localUrl = 'http://localhost:3000/api';
-    // TODO update to use postgresUrl
-    let url = `${localUrl}/v0/web2Subscriber/all/${this.monitorPublicKey}`;
-    
-    async () => {
-      let rawResponse = await axios.get(url, {
-        headers: { 'Authorization': + `Basic ${process.env.POSTGRES_BASIC_AUTH}`}
-      });
-      console.log(rawResponse);
-    }
-
-    // TODO return formatted response data
-    return Promise.resolve([]);
+  async findAll(): Promise<Web2Subscriber[]> {
+    let web2Subscribers: Web2Subscriber[] = [];
+    const web2SubscriberRoute = '/api/v0/web2Subscriber/all/';
+    let url = `${this.postgresUrl}${web2SubscriberRoute}${this.monitorPublicKey}`;
+    console.log(url);
+    let result = await axios.get(url, {
+      auth: { username: process.env.POSTGRES_BASIC_AUTH!, password: '' }
+    });
+    web2Subscribers = result.data as Web2Subscriber[];
+    console.log(web2Subscribers);
+    return Promise.all(web2Subscribers);
   }
 }
 
@@ -73,22 +56,21 @@ export class InMemoryWeb2SubscriberRepository
 
   async findBy(resourceIds: ResourceId[]): Promise<Web2Subscriber[]> {
     
-    const nowUtcSeconds = DateTime.now().toUTC().toSeconds();
-    if ((nowUtcSeconds - this.lastUpdatedAtUtcSeconds) > this.ttl) {
+    if ((DateTime.now().toUTC().toSeconds() - this.lastUpdatedAtUtcSeconds) > this.ttl) {
 
       (await this.delegate.findAll()).map((web2Subscriber) => {
-        // filter for supplied resourceIds
+        // find supplied resourceIds
         let pk = resourceIds.find((pubkey) => pubkey.equals(web2Subscriber.resourceId));
         if (pk) {
           this.resourceIdToResourceInfo.set(pk.toString(), web2Subscriber);
         }
       });
-      this.lastUpdatedAtUtcSeconds = nowUtcSeconds;
+      this.lastUpdatedAtUtcSeconds = DateTime.now().toUTC().toSeconds();
     }
     return Array.from(this.resourceIdToResourceInfo.values());
   }
 
   findAll(): Promise<Web2Subscriber[]> {
-    return Promise.resolve([]);
+    return this.delegate.findAll();
   }
 }
