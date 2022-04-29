@@ -35,6 +35,18 @@ export class PostgresWeb2SubscriberRepository
   }
 
   findAll(): Promise<Web2Subscriber[]> {
+    const DIALECT_BASE_URL = '/api';
+    const dappPublicKey = process.env.MONITOR_PUBLIC_KEY;
+    let url = `${DIALECT_BASE_URL}/v0/web2Subscriber/all/dapp:${dappPublicKey}`;
+    let headers = new Headers();
+    headers.set('Authorization', 'Basic ' + process.env.POSTGRES_AUTH);
+    
+    async () => {
+      let rawResponse = await fetch(url, {method:'GET', headers: headers});
+      console.log(rawResponse);
+    }
+
+    // TODO return formatted response data
     return Promise.resolve([]);
   }
 }
@@ -62,12 +74,11 @@ export class InMemoryWeb2SubscriberRepository
     if ((nowUtcSeconds - this.lastUpdatedAtUtcSeconds) > this.ttl) {
 
       (await this.delegate.findAll()).map((web2Subscriber) => {
-        this.resourceIdToResourceInfo.set(web2Subscriber.resourceId.toString(), web2Subscriber);
-        // Or, if db does not provide filtered:
-        // let pk = resourceIds.find((pubkey) => pubkey.equals(web2Subscriber.resourceId));
-        // if (pk) {
-        //   this.resourceIdToResourceInfo.set(pk.toString(), web2Subscriber);
-        // }
+        // filter for supplied resourceIds
+        let pk = resourceIds.find((pubkey) => pubkey.equals(web2Subscriber.resourceId));
+        if (pk) {
+          this.resourceIdToResourceInfo.set(pk.toString(), web2Subscriber);
+        }
       });
       this.lastUpdatedAtUtcSeconds = nowUtcSeconds;
     }
