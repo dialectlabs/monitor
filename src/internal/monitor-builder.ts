@@ -46,6 +46,7 @@ import {
   NoopWeb2SubscriberRepository,
   Web2SubscriberRepository,
 } from '../web-subscriber.repository';
+import { PublicKey } from '@solana/web3.js';
 
 /**
  * A set of factory methods to create monitors
@@ -69,12 +70,14 @@ export class MonitorsBuilderState<T extends object> {
         new PostgresWeb2SubscriberRepository(
           monitorProps.web2SubscriberRepositoryUrl,
           monitorProps.monitorKeypair?.publicKey!, // TODO: handle this carefully
+          //new PublicKey("D2pyBevYb6dit1oCx6e8vCxFK9mBeYCRe8TTntk2Tm98"),
         );
-      monitorProps.web2SubscriberRepository =
-        new InMemoryWeb2SubscriberRepository(
-          monitorProps.monitorKeypair?.publicKey!,
-          postgresWeb2ResourceRepository,
-        );
+        monitorProps.web2SubscriberRepository = postgresWeb2ResourceRepository; // TODO use below
+      // monitorProps.web2SubscriberRepository =
+      //   new InMemoryWeb2SubscriberRepository(
+      //     monitorProps.monitorKeypair?.publicKey!,
+      //     postgresWeb2ResourceRepository,
+      //   );
     }
     const web2SubscriberRepository =
       monitorProps.web2SubscriberRepository ??
