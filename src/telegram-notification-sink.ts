@@ -32,7 +32,8 @@ export class TelegramNotificationSink
         .filter(({ telegramId }) => telegramId)
         .map(({ telegramId }) => {
           this.bot.telegram
-            .sendMessage(telegramId!.split(';')[1], notification.body)
+            //.sendMessage(telegramId!.split(';')[1], notification.body)
+            .sendMessage(telegramId!, notification.body)
             .then(() => {});
         }),
     );
