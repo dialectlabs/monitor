@@ -35,7 +35,7 @@ export class PostgresWeb2SubscriberRepository
   }
 }
 
-// TODO: implement/test this for performance
+// TODO: test this for performance increase
 export class InMemoryWeb2SubscriberRepository
   implements Web2SubscriberRepository
 {
