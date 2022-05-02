@@ -9,7 +9,6 @@ import * as Axios from 'axios';
 
 const axios = Axios.default;
 
-// TODO: implement this
 export class PostgresWeb2SubscriberRepository
   implements Web2SubscriberRepository
 {
@@ -36,7 +35,7 @@ export class PostgresWeb2SubscriberRepository
   }
 }
 
-// TODO: implement this
+// TODO: implement/test this for performance
 export class InMemoryWeb2SubscriberRepository
   implements Web2SubscriberRepository
 {
