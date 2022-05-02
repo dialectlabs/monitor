@@ -8,6 +8,7 @@ import { Keypair } from '@solana/web3.js';
 import { SubscriberRepository } from './ports';
 import { ResourceEmailRepository } from './sengrid-email-notification-sink';
 import { ResourceSmsNumberRepository } from './twilio-sms-notification-sink';
+import { ResourceTelegramChatIdRepository } from './telegram-notification-sink';
 
 /**
  * Please specify either
@@ -37,6 +38,7 @@ export interface MonitorProps {
 export interface SinksConfiguration {
   email?: EmailSinkConfiguration;
   sms?: SmsSinkConfiguration;
+  telegram?: TelegramSinkConfiguration;
 }
 
 export interface EmailSinkConfiguration {
@@ -50,6 +52,11 @@ export interface SmsSinkConfiguration {
   twilioPassword: string;
   senderSmsNumber: string;
   resourceSmsNumberRepository: ResourceSmsNumberRepository;
+}
+
+export interface TelegramSinkConfiguration {
+  telegramBotToken: string;
+  resourceTelegramChatIdRepository: ResourceTelegramChatIdRepository;
 }
 
 /**

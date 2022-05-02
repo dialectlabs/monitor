@@ -29,6 +29,7 @@ import {
   SengridEmailNotificationSink,
 } from '../sengrid-email-notification-sink';
 import { SmsNotification, TwilioSmsNotificationSink } from '../twilio-sms-notification-sink';
+import { TelegramNotification, TelegramNotificationSink } from '../telegram-notification-sink';
 import { OnChainSubscriberRepository } from './on-chain-subscriber.repository';
 import { InMemorySubscriberRepository } from './in-memory-subscriber.repository';
 
@@ -43,6 +44,7 @@ export class MonitorsBuilderState<T extends object> {
   dialectNotificationSink?: DialectNotificationSink;
   emailNotificationSink?: SengridEmailNotificationSink;
   smsNotificationSink?: TwilioSmsNotificationSink;
+  telegramNotificationSink?: TelegramNotificationSink;
 
   constructor(readonly monitorProps: MonitorProps) {
     if (monitorProps.dialectProgram && monitorProps.monitorKeypair) {
@@ -73,6 +75,12 @@ export class MonitorsBuilderState<T extends object> {
         { username: sinks.sms.twilioUsername, password: sinks.sms.twilioPassword },
         sinks.sms.senderSmsNumber,
         sinks.sms.resourceSmsNumberRepository,
+      );
+    }
+    if (sinks?.telegram) {
+      this.telegramNotificationSink = new TelegramNotificationSink(
+        sinks.telegram.telegramBotToken,
+        sinks.telegram.resourceTelegramChatIdRepository,
       );
     }
   }
@@ -237,6 +245,7 @@ class NotifyStepImpl<T extends object, R> implements NotifyStep<T, R> {
       this.monitorBuilderState.dialectNotificationSink,
       this.monitorBuilderState.emailNotificationSink,
       this.monitorBuilderState.smsNotificationSink,
+      this.monitorBuilderState.telegramNotificationSink,
     );
   }
 }
@@ -256,6 +265,7 @@ class AddSinksStepImpl<T extends object, R> implements AddSinksStep<T, R> {
     private readonly dialectNotificationSink?: DialectNotificationSink,
     private readonly emailNotificationSink?: SengridEmailNotificationSink,
     private readonly smsNotificationSink?: TwilioSmsNotificationSink,
+    private readonly telegramNotificationSink?: TelegramNotificationSink,
   ) {}
 
   and(): AddTransformationsStep<T> {
@@ -368,6 +378,29 @@ class AddSinksStepImpl<T extends object, R> implements AddSinksStep<T, R> {
       resources: ResourceId[],
     ) => Promise<void> = (data, resources) =>
       this.smsNotificationSink!.push(
+        adapter(data),
+        resources.filter((it) =>
+          recipientPredicate ? recipientPredicate(data, it) : true,
+        ),
+      );
+    this.sinkWriters.push(sinkWriter);
+    return this;
+  }
+
+  telegram(
+    adapter: (data: Data<R, T>) => TelegramNotification,
+    recipientPredicate?: (data: Data<R, T>, recipient: ResourceId) => boolean,
+  ): AddSinksStep<T, R> {
+    if (!this.telegramNotificationSink) {
+      throw new Error(
+        'Telegram notification sink must be initialized before using',
+      );
+    }
+    const sinkWriter: (
+      data: Data<R, T>,
+      resources: ResourceId[],
+    ) => Promise<void> = (data, resources) =>
+      this.telegramNotificationSink!.push(
         adapter(data),
         resources.filter((it) =>
           recipientPredicate ? recipientPredicate(data, it) : true,
