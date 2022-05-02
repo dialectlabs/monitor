@@ -42,6 +42,21 @@ export class SengridEmailNotificationSink
       from: this.senderEmail,
       to: email,
     }));
-    return sgMail.send(emails).then(() => {});
+    const results = await Promise.allSettled(await sgMail.send(emails));
+    
+    const failedSends = results
+      .filter((it) => it.status === 'rejected')
+      .map((it) => it as PromiseRejectedResult);
+    if (failedSends.length > 0) {
+      console.log(
+        `Failed to send dialect notification to ${
+          failedSends.length
+        } recipient(s), reasons: 
+        ${failedSends.map((it) => it.reason)}
+        `,
+      );
+    };
+
+    return;
   }
 }

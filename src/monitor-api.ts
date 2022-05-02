@@ -7,6 +7,7 @@ import { Program } from '@project-serum/anchor';
 import { Keypair } from '@solana/web3.js';
 import { SubscriberRepository } from './ports';
 import { ResourceEmailRepository } from './sengrid-email-notification-sink';
+import { ResourceSmsNumberRepository } from './twilio-sms-notification-sink';
 
 /**
  * Please specify either
@@ -35,12 +36,20 @@ export interface MonitorProps {
 
 export interface SinksConfiguration {
   email?: EmailSinkConfiguration;
+  sms?: SmsSinkConfiguration;
 }
 
 export interface EmailSinkConfiguration {
   apiToken: string;
   senderEmail: string;
   resourceEmailRepository: ResourceEmailRepository;
+}
+
+export interface SmsSinkConfiguration {
+  twilioUsername: string;
+  twilioPassword: string;
+  senderSmsNumber: string;
+  resourceSmsNumberRepository: ResourceSmsNumberRepository;
 }
 
 /**

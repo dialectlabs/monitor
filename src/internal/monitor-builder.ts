@@ -28,6 +28,7 @@ import {
   EmailNotification,
   SengridEmailNotificationSink,
 } from '../sengrid-email-notification-sink';
+import { SmsNotification, TwilioSmsNotificationSink } from '../twilio-sms-notification-sink';
 import { OnChainSubscriberRepository } from './on-chain-subscriber.repository';
 import { InMemorySubscriberRepository } from './in-memory-subscriber.repository';
 
@@ -41,6 +42,7 @@ export class MonitorsBuilderState<T extends object> {
 
   dialectNotificationSink?: DialectNotificationSink;
   emailNotificationSink?: SengridEmailNotificationSink;
+  smsNotificationSink?: TwilioSmsNotificationSink;
 
   constructor(readonly monitorProps: MonitorProps) {
     if (monitorProps.dialectProgram && monitorProps.monitorKeypair) {
@@ -64,6 +66,13 @@ export class MonitorsBuilderState<T extends object> {
         sinks.email.apiToken,
         sinks.email.senderEmail,
         sinks.email.resourceEmailRepository,
+      );
+    }
+    if (sinks?.sms) {
+      this.smsNotificationSink = new TwilioSmsNotificationSink(
+        { username: sinks.sms.twilioUsername, password: sinks.sms.twilioPassword },
+        sinks.sms.senderSmsNumber,
+        sinks.sms.resourceSmsNumberRepository,
       );
     }
   }
@@ -227,6 +236,7 @@ class NotifyStepImpl<T extends object, R> implements NotifyStep<T, R> {
       this.dataSourceTransformationPipelines,
       this.monitorBuilderState.dialectNotificationSink,
       this.monitorBuilderState.emailNotificationSink,
+      this.monitorBuilderState.smsNotificationSink,
     );
   }
 }
@@ -245,6 +255,7 @@ class AddSinksStepImpl<T extends object, R> implements AddSinksStep<T, R> {
     >[],
     private readonly dialectNotificationSink?: DialectNotificationSink,
     private readonly emailNotificationSink?: SengridEmailNotificationSink,
+    private readonly smsNotificationSink?: TwilioSmsNotificationSink,
   ) {}
 
   and(): AddTransformationsStep<T> {
@@ -334,6 +345,29 @@ class AddSinksStepImpl<T extends object, R> implements AddSinksStep<T, R> {
       resources: ResourceId[],
     ) => Promise<void> = (data, resources) =>
       this.emailNotificationSink!.push(
+        adapter(data),
+        resources.filter((it) =>
+          recipientPredicate ? recipientPredicate(data, it) : true,
+        ),
+      );
+    this.sinkWriters.push(sinkWriter);
+    return this;
+  }
+
+  sms(
+    adapter: (data: Data<R, T>) => SmsNotification,
+    recipientPredicate?: (data: Data<R, T>, recipient: ResourceId) => boolean,
+  ): AddSinksStep<T, R> {
+    if (!this.smsNotificationSink) {
+      throw new Error(
+        'SMS notification sink must be initialized before using',
+      );
+    }
+    const sinkWriter: (
+      data: Data<R, T>,
+      resources: ResourceId[],
+    ) => Promise<void> = (data, resources) =>
+      this.smsNotificationSink!.push(
         adapter(data),
         resources.filter((it) =>
           recipientPredicate ? recipientPredicate(data, it) : true,

@@ -9,6 +9,7 @@ import { Monitor } from './monitor-api';
 import { Data, ResourceId, SubscriberEvent } from './data-model';
 import { DialectNotification } from './dialect-notification-sink';
 import { EmailNotification } from './sengrid-email-notification-sink';
+import { SmsNotification } from './twilio-sms-notification-sink';
 
 export interface ChooseDataSourceStep {
   /**
@@ -91,6 +92,11 @@ export interface AddSinksStep<T extends object, R> {
 
   email(
     adapter: (data: Data<R, T>) => EmailNotification,
+    recipientPredicate?: (data: Data<R, T>, recipient: ResourceId) => boolean,
+  ): AddSinksStep<T, R>;
+
+  sms(
+    adapter: (data: Data<R, T>) => SmsNotification,
     recipientPredicate?: (data: Data<R, T>, recipient: ResourceId) => boolean,
   ): AddSinksStep<T, R>;
 
