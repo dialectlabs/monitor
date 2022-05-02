@@ -26,13 +26,11 @@ export class TelegramNotificationSink
       recipients,
     );
 
-    // for telegram, "<username>;<chat_id>" so split and get [1] for chat_id
     const results = await Promise.allSettled(
       recipientTelegramNumbers
         .filter(({ telegramId }) => telegramId)
         .map(({ telegramId }) => {
           this.bot.telegram
-            //.sendMessage(telegramId!.split(';')[1], notification.body)
             .sendMessage(telegramId!, notification.body)
             .then(() => {});
         }),
