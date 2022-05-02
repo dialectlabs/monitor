@@ -41,7 +41,7 @@ export class SengridEmailNotificationSink
       .map((it) => it as PromiseRejectedResult);
     if (failedSends.length > 0) {
       console.log(
-        `Failed to send dialect notification to ${
+        `Failed to send dialect email notification to ${
           failedSends.length
         } recipient(s), reasons: 
         ${failedSends.map((it) => it.reason)}
