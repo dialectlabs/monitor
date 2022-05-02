@@ -25,8 +25,7 @@ export class PostgresWeb2SubscriberRepository
 
   async findAll(): Promise<Web2Subscriber[]> {
     let web2Subscribers: Web2Subscriber[] = [];
-    const web2SubscriberRoute = '/api/v0/web2Subscriber/all/';
-    let url = `${this.postgresUrl}${web2SubscriberRoute}${this.monitorPublicKey}`;
+    let url = `${this.postgresUrl}/api/v0/dapps/${this.monitorPublicKey}/subscribers`;
     console.log(url);
     let result = await axios.get(url, {
       auth: { username: process.env.POSTGRES_BASIC_AUTH!, password: '' }
