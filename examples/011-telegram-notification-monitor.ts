@@ -3,10 +3,8 @@ import {
   Monitor,
   Monitors,
   Pipelines,
-  ResourceId,
   SourceData,
 } from '../src';
-import { ResourceTelegram, ResourceTelegramChatIdRepository } from '../src/telegram-notification-sink';
 import { DummySubscriberRepository } from './003-custom-subscriber-repository';
 import { ConsoleNotificationSink } from './004-custom-notification-sink';
 import { Observable } from 'rxjs';
@@ -22,22 +20,11 @@ const threshold = 0.5;
 const consoleNotificationSink =
   new ConsoleNotificationSink<DialectNotification>();
 
-class DummyResourceTelegramRepository implements ResourceTelegramChatIdRepository {
-  findBy(resourceIds: ResourceId[]): Promise<ResourceTelegram[]> {
-    return Promise.resolve([
-      {
-        resourceId: resourceIds[0],
-        telegramChatId: process.env.TELEGRAM_TEST_CHAT_ID!,
-      },
-    ]);
-  }
-}
 const monitor: Monitor<DataType> = Monitors.builder({
   subscriberRepository: new DummySubscriberRepository(1),
   sinks: {
     telegram: {
       telegramBotToken: process.env.TELEGRAM_BOT_KEY!,
-      resourceTelegramChatIdRepository: new DummyResourceTelegramRepository(),
     },
   },
 })

@@ -3,8 +3,8 @@ import {
   Monitor,
   Monitors,
   Pipelines,
-  ResourceId,
   SourceData,
+  Web2SubscriberRepository,
 } from '../src';
 import { DummySubscriberRepository } from './003-custom-subscriber-repository';
 import { ConsoleNotificationSink } from './004-custom-notification-sink';
@@ -24,6 +24,13 @@ const consoleNotificationSink =
 const monitor: Monitor<DataType> = Monitors.builder({
   subscriberRepository: new DummySubscriberRepository(1),
   sinks: {
+    email: {
+      senderEmail: 'hello@dialect.to',
+      apiToken: process.env.EMAIL_SINK_TOKEN!,
+    },
+    telegram: {
+      telegramBotToken: process.env.TELEGRAM_BOT_KEY!,
+    },
     sms: {
       twilioUsername: process.env.TWILIO_ACCOUNT_SID!,
       twilioPassword: process.env.TWILIO_AUTH_TOKEN!,
@@ -57,8 +64,12 @@ const monitor: Monitor<DataType> = Monitors.builder({
     ],
   })
   .notify()
-  .sms(({ value }) => ({
-    body: `[WARNING] Your cratio = ${value} above warning threshold`,
+  .email(({ value }) => ({
+    subject: '[WARNING] Cratio above warning threshold',
+    text: `Your cratio = ${value} above warning threshold`,
+  }))
+  .dialectThread(({ value }) => ({
+    message: `Your cratio = ${value} above warning threshold`,
   }))
   .custom<DialectNotification>(
     ({ value }) => ({

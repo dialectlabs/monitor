@@ -24,9 +24,15 @@ import { Monitor, MonitorProps } from '../monitor-api';
 import { ResourceId, SourceData, SubscriberEvent } from '../data-model';
 import { BroadcastMonitor } from './broadcast-monitor';
 import { timeout } from 'rxjs/operators';
+import {
+  NoopWeb2SubscriberRepository,
+  Web2SubscriberRepository,
+} from '../web-subscriber.repository';
+import { PublicKey } from '@solana/web3.js';
 
 export class DefaultMonitorFactory implements MonitorFactory {
   private readonly subscriberRepository: SubscriberRepository;
+  private readonly web2SubscriberRepository: Web2SubscriberRepository;
 
   private readonly shutdownHooks: (() => Promise<any>)[] = [];
 
@@ -34,6 +40,7 @@ export class DefaultMonitorFactory implements MonitorFactory {
     dialectProgram,
     monitorKeypair,
     subscriberRepository,
+    web2SubscriberRepository,
   }: MonitorProps) {
     if (dialectProgram && monitorKeypair) {
       const onChainSubscriberRepository = new OnChainSubscriberRepository(
@@ -45,6 +52,8 @@ export class DefaultMonitorFactory implements MonitorFactory {
         onChainSubscriberRepository,
       );
     }
+    this.web2SubscriberRepository =
+      web2SubscriberRepository ?? new NoopWeb2SubscriberRepository();
     if (subscriberRepository) {
       this.subscriberRepository = subscriberRepository;
     }
@@ -91,6 +100,7 @@ export class DefaultMonitorFactory implements MonitorFactory {
       dataSource as PollableDataSource<T>,
       pollInterval,
       this.subscriberRepository,
+      this.web2SubscriberRepository,
     );
   }
 
@@ -106,6 +116,7 @@ export class DefaultMonitorFactory implements MonitorFactory {
       dataSource,
       pollInterval,
       this.subscriberRepository,
+      this.web2SubscriberRepository,
     );
     const broadcastMonitor = new BroadcastMonitor<T>(
       pushyDataSource,
@@ -154,10 +165,15 @@ export class DefaultMonitorFactory implements MonitorFactory {
     dataSource: PollableDataSource<T>,
     pollInterval: Duration,
     subscriberRepository: SubscriberRepository,
+    web2SubscriberRepository: Web2SubscriberRepository,
     pollTimeout: Duration = Duration.fromObject({ minutes: 5 }),
   ): PushyDataSource<T> {
     return timer(0, pollInterval.toMillis()).pipe(
-      exhaustMap(() => subscriberRepository.findAll()),
+      exhaustMap(async () => {
+        let mergedSubRep = await subscriberRepository.findAll();
+        await web2SubscriberRepository.findAll().then((web2Subscribers) => web2Subscribers.map((web2Sub) => mergedSubRep.push(web2Sub.resourceId)));
+        return mergedSubRep;
+      }),
       exhaustMap((resources: ResourceId[]) => from(dataSource(resources))),
       timeout(pollTimeout.toMillis()),
       catchError((error) => {

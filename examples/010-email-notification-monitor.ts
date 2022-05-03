@@ -3,12 +3,12 @@ import {
   Monitor,
   Monitors,
   Pipelines,
-  ResourceEmail,
-  ResourceEmailRepository,
-  ResourceId,
   SourceData,
 } from '../src';
-import { DummySubscriberRepository } from './003-custom-subscriber-repository';
+import {
+  DummySubscriberRepository,
+  DummyWeb2SubscriberRepository,
+} from './003-custom-subscriber-repository';
 import { ConsoleNotificationSink } from './004-custom-notification-sink';
 import { Observable } from 'rxjs';
 import { Keypair } from '@solana/web3.js';
@@ -23,23 +23,13 @@ const threshold = 0.5;
 const consoleNotificationSink =
   new ConsoleNotificationSink<DialectNotification>();
 
-class DummyResourceEmailRepository implements ResourceEmailRepository {
-  findBy(resourceIds: ResourceId[]): Promise<ResourceEmail[]> {
-    return Promise.resolve([
-      {
-        resourceId: resourceIds[0],
-        email: process.env.RECEIVER_EMAIL!,
-      },
-    ]);
-  }
-}
 const monitor: Monitor<DataType> = Monitors.builder({
   subscriberRepository: new DummySubscriberRepository(1),
+  web2SubscriberRepository: new DummyWeb2SubscriberRepository(),
   sinks: {
     email: {
       senderEmail: 'hello@dialect.to',
       apiToken: process.env.EMAIL_SINK_TOKEN!,
-      resourceEmailRepository: new DummyResourceEmailRepository(),
     },
   },
 })

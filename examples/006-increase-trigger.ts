@@ -29,6 +29,7 @@ const monitor: Monitor<DataPool> = Monitors.builder({
 })
   .defineDataSource<DataPool>()
   .poll((subscribers: ResourceId[]) => {
+    // subscribers are only those users who created a dialect thread!
     const sourceData: SourceData<DataPool>[] = subscribers.map(
       (resourceId) => ({
         data: {
