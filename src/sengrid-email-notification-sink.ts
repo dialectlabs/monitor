@@ -29,7 +29,7 @@ export class SengridEmailNotificationSink
     const recipientEmails = await this.web2SubscriberRepository.findBy(
       recipients,
     );
-    const emails: MailDataRequired[] = recipientEmails.map(({ email }) => ({
+    const emails: MailDataRequired[] = recipientEmails.filter(({email}) => email).map(({ email }) => ({
       ...notification,
       from: this.senderEmail,
       to: email,

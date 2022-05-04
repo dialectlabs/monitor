@@ -26,7 +26,10 @@ export class TwilioSmsNotificationSink
     const recipientSmSNumbers = await this.web2SubscriberRepository.findBy(
       recipients,
     );
-    const results = await Promise.allSettled(recipientSmSNumbers.map(({ smsNumber }) => {
+    const results = await Promise.allSettled(
+      recipientSmSNumbers
+      .filter(({smsNumber}) => smsNumber)
+      .map(({ smsNumber }) => {
       this.twilio.messages.create({
         to: smsNumber!,
         from: this.senderSmsNumber,
