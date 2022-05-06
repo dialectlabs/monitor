@@ -5,7 +5,7 @@ export type Email = string;
 export interface Web2Subscriber {
   resourceId: ResourceId;
   email?: Email;
-  telegramId?: string; // "<username>;<chat_id>"
+  telegramId?: string;
   smsNumber?: string;
 }
 

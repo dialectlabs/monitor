@@ -6,6 +6,7 @@ import {
 } from '../web-subscriber.repository';
 import { DateTime } from 'luxon';
 import * as Axios from 'axios';
+import { emit } from 'process';
 
 const axios = Axios.default;
 
@@ -29,8 +30,17 @@ export class PostgresWeb2SubscriberRepository
     let result = await axios.get(url, {
       auth: { username: process.env.POSTGRES_BASIC_AUTH!, password: '' }
     });
+    // TODO investigate -- why the resourceId leave db as Pubkey and deserialize to string?
+    // for now, force resourceId to Pubkey again on this side.
     web2Subscribers = result.data as Web2Subscriber[];
-    console.log(web2Subscribers);
+    web2Subscribers = web2Subscribers.map((it) => {
+      return {
+        resourceId: new PublicKey(it.resourceId),
+        email: it.email,
+        telegramId: it.telegramId,
+        smsNumber: it.smsNumber,
+      } as Web2Subscriber;
+    });
     return Promise.all(web2Subscribers);
   }
 }

@@ -170,9 +170,16 @@ export class DefaultMonitorFactory implements MonitorFactory {
   ): PushyDataSource<T> {
     return timer(0, pollInterval.toMillis()).pipe(
       exhaustMap(async () => {
-        let mergedSubRep = await subscriberRepository.findAll();
-        await web2SubscriberRepository.findAll().then((web2Subscribers) => web2Subscribers.map((web2Sub) => mergedSubRep.push(web2Sub.resourceId)));
-        return mergedSubRep;
+        let mergeSubRepo = await subscriberRepository.findAll();
+        await web2SubscriberRepository.findAll().then((web2Subscribers) => {
+          web2Subscribers.map((web2Sub) => {
+            // only add if repo doesn't already have sub
+            if (mergeSubRepo.findIndex((it) => it.equals(web2Sub.resourceId)) == -1) {
+              mergeSubRepo.push(web2Sub.resourceId);
+            }
+          });
+        });
+        return mergeSubRepo;
       }),
       exhaustMap((resources: ResourceId[]) => from(dataSource(resources))),
       timeout(pollTimeout.toMillis()),

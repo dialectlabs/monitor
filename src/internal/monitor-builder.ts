@@ -93,6 +93,8 @@ export class MonitorsBuilderState<T extends object> {
         monitorProps.subscriberRepository =
           InMemorySubscriberRepository.decorate(onChainSubscriberRepository);
       }
+
+      // TODO inspect
       this.dialectNotificationSink = new DialectNotificationSink(
         monitorProps.dialectProgram,
         monitorProps.monitorKeypair,
