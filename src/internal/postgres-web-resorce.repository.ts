@@ -19,7 +19,9 @@ export class PostgresWeb2SubscriberRepository
   ) {}
 
   async findBy(resourceIds: ResourceId[]): Promise<Web2Subscriber[]> {
-    let values: Web2Subscriber[] = (await this.findAll()).filter((web2Sub) => resourceIds.findIndex((it) => it == web2Sub.resourceId) != -1);
+    let values: Web2Subscriber[] = (await this.findAll()).filter((web2Sub) => resourceIds.findIndex((it) => it.equals(web2Sub.resourceId)) != -1);
+    console.log("___findBy");
+    console.log(values);
     return Promise.all(values);
   }
 
@@ -30,8 +32,10 @@ export class PostgresWeb2SubscriberRepository
     let result = await axios.get(url, {
       auth: { username: process.env.POSTGRES_BASIC_AUTH!, password: '' }
     });
-    // TODO investigate -- why the resourceId leave db as Pubkey and deserialize to string?
-    // for now, force resourceId to Pubkey again on this side.
+    console.log("---finaAll()");
+    console.log(this.monitorPublicKey);
+    console.log(result.data);
+    // redo resourceId to Pubkey again on this side.
     web2Subscribers = result.data as Web2Subscriber[];
     web2Subscribers = web2Subscribers.map((it) => {
       return {
@@ -41,6 +45,7 @@ export class PostgresWeb2SubscriberRepository
         smsNumber: it.smsNumber,
       } as Web2Subscriber;
     });
+    console.log("^^^findAll()");
     return Promise.all(web2Subscribers);
   }
 }
