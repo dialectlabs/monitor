@@ -2,7 +2,7 @@ import { SubscriberRepository } from '../ports';
 import { Web2SubscriberRepository } from '../web-subscriber.repository';
 import _ from 'lodash';
 
-export async function getSubscribers(
+export async function findAllDistinct(
   subscriberRepository: SubscriberRepository,
   web2SubscriberRepository: Web2SubscriberRepository,
 ) {

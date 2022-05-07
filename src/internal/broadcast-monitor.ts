@@ -15,7 +15,7 @@ import { SourceData } from '../data-model';
 import { Operators } from '../transformation-pipeline-operators';
 import { map } from 'rxjs/operators';
 import { Web2SubscriberRepository } from '../web-subscriber.repository';
-import { getSubscribers } from './utilts';
+import { findAllDistinct } from './subsbscriber-repository-utilts';
 
 export class BroadcastMonitor<T extends Object> implements Monitor<T> {
   private started = false;
@@ -62,7 +62,7 @@ export class BroadcastMonitor<T extends Object> implements Monitor<T> {
         ),
         mergeMap((data: GroupedObservable<string, SourceData<T>>) =>
           from(
-            getSubscribers(
+            findAllDistinct(
               this.subscriberRepository,
               this.web2SubscriberRepository,
             ),

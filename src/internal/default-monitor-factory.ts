@@ -28,7 +28,7 @@ import {
   NoopWeb2SubscriberRepository,
   Web2SubscriberRepository,
 } from '../web-subscriber.repository';
-import { getSubscribers } from './utilts';
+import { findAllDistinct } from './subsbscriber-repository-utilts';
 
 export class DefaultMonitorFactory implements MonitorFactory {
   private readonly subscriberRepository: SubscriberRepository;
@@ -171,7 +171,7 @@ export class DefaultMonitorFactory implements MonitorFactory {
   ): PushyDataSource<T> {
     return timer(0, pollInterval.toMillis()).pipe(
       exhaustMap(() =>
-        getSubscribers(subscriberRepository, web2SubscriberRepository),
+        findAllDistinct(subscriberRepository, web2SubscriberRepository),
       ),
       exhaustMap((resources: ResourceId[]) => from(dataSource(resources))),
       timeout(pollTimeout.toMillis()),
