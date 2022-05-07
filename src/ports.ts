@@ -1,5 +1,5 @@
 import { Observable } from 'rxjs';
-import { Data, ResourceId, SourceData, Notification } from './data-model';
+import { Data, Notification, ResourceId, SourceData } from './data-model';
 
 /**
  * An abstraction that represents a source of data, bound to specific type

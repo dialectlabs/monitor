@@ -1,7 +1,6 @@
 import { InMemorySubscriberRepository } from './in-memory-subscriber.repository';
 import { OnChainSubscriberRepository } from './on-chain-subscriber.repository';
 import { Duration } from 'luxon';
-import { UnicastMonitor } from './unicast-monitor';
 import {
   catchError,
   concatMap,
@@ -14,7 +13,6 @@ import {
 } from 'rxjs';
 import { MonitorFactory } from '../monitor-factory';
 import {
-  DataSource,
   DataSourceTransformationPipeline,
   PollableDataSource,
   PushyDataSource,
@@ -69,41 +67,6 @@ export class DefaultMonitorFactory implements MonitorFactory {
     return Promise.all(this.shutdownHooks.map((it) => it()));
   }
 
-  createUnicastMonitor<T extends object>(
-    dataSource: DataSource<T>,
-    datasourceTransformationPipelines: DataSourceTransformationPipeline<
-      T,
-      any
-    >[],
-    pollInterval: Duration = Duration.fromObject({ seconds: 10 }),
-  ): Monitor<T> {
-    const pushyDataSource = this.decorateWithPushyDataSource(
-      dataSource,
-      pollInterval,
-    );
-    const unicastMonitor = new UnicastMonitor<T>(
-      pushyDataSource,
-      datasourceTransformationPipelines,
-    );
-    this.shutdownHooks.push(() => unicastMonitor.stop());
-    return unicastMonitor;
-  }
-
-  private decorateWithPushyDataSource<T extends object>(
-    dataSource: DataSource<T>,
-    pollInterval: Duration,
-  ): PushyDataSource<T> {
-    if ('subscribe' in dataSource) {
-      return dataSource as PushyDataSource<T>;
-    }
-    return this.toPushyDataSource(
-      dataSource as PollableDataSource<T>,
-      pollInterval,
-      this.subscriberRepository,
-      this.web2SubscriberRepository,
-    );
-  }
-
   createBroadcastMonitor<T extends object>(
     dataSource: PollableDataSource<T>,
     datasourceTransformationPipelines: DataSourceTransformationPipeline<
@@ -140,26 +103,27 @@ export class DefaultMonitorFactory implements MonitorFactory {
       this.subscriberRepository.subscribe(
         (resourceId) =>
           subscriber.next({
-            resourceId,
+            groupingKey: resourceId.toBase58(),
             data: {
               state: 'added',
             },
           }),
         (resourceId) =>
           subscriber.next({
-            resourceId,
+            groupingKey: resourceId.toBase58(),
             data: {
               state: 'removed',
             },
           }),
       ),
     );
-    const unicastMonitor = new UnicastMonitor<SubscriberEvent>(
+    const monitor = new BroadcastMonitor<SubscriberEvent>(
       dataSource,
       dataSourceTransformationPipelines,
+      this.subscriberRepository,
     );
-    this.shutdownHooks.push(() => unicastMonitor.stop());
-    return unicastMonitor;
+    this.shutdownHooks.push(() => monitor.stop());
+    return monitor;
   }
 
   private toPushyDataSource<T extends object>(

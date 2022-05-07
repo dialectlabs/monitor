@@ -4,12 +4,6 @@ import { Monitor } from './monitor-api';
 import { SubscriberEvent } from './data-model';
 
 export interface MonitorFactory {
-  createUnicastMonitor<T extends object>(
-    dataSource: DataSource<T>,
-    transformationPipelines: DataSourceTransformationPipeline<T, any>[],
-    pollInterval: Duration,
-  ): Monitor<T>;
-
   createBroadcastMonitor<T extends object>(
     dataSource: DataSource<T>,
     transformationPipelines: DataSourceTransformationPipeline<T, any>[],

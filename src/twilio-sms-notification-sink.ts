@@ -14,6 +14,7 @@ export class TwilioSmsNotificationSink
   implements NotificationSink<SmsNotification>
 {
   private twilio: Twilio;
+
   constructor(
     private readonly twilioAccount: { username: string; password: string },
     private readonly senderSmsNumber: string,
@@ -30,15 +31,18 @@ export class TwilioSmsNotificationSink
     console.log(recipientSmSNumbers);
     const results = await Promise.allSettled(
       recipientSmSNumbers
-      .filter(({smsNumber}) => smsNumber)
-      .map(({ smsNumber }) => {
-      this.twilio.messages.create({
-        to: smsNumber!,
-        from: this.senderSmsNumber,
-        body: notification.body
-      }).then(() => {});
-    }));
-    
+        .filter(({ smsNumber }) => smsNumber)
+        .map(({ smsNumber }) => {
+          this.twilio.messages
+            .create({
+              to: smsNumber!,
+              from: this.senderSmsNumber,
+              body: notification.body,
+            })
+            .then(() => {});
+        }),
+    );
+
     const failedSends = results
       .filter((it) => it.status === 'rejected')
       .map((it) => it as PromiseRejectedResult);
@@ -50,8 +54,7 @@ export class TwilioSmsNotificationSink
         ${failedSends.map((it) => it.reason)}
         `,
       );
-    };
-
+    }
     return;
   }
 }

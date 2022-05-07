@@ -11,8 +11,7 @@ export type ResourceId = PublicKey;
  */
 export interface SourceData<T> {
   data: T;
-  resourceId: ResourceId;
-  groupingKey?: string;
+  groupingKey: string;
 }
 
 /**
@@ -28,7 +27,6 @@ export interface Data<V, T extends object> {
  * A holder for any context data that need to be preserved through all pipeline transformations
  */
 export interface Context<T extends object> {
-  resourceId: ResourceId;
   origin: T;
   trace: Trace[];
 }

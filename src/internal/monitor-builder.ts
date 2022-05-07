@@ -190,8 +190,6 @@ class AddTransformationsStepImpl<T extends object>
     any
   >[] = [];
 
-  dispatchStrategy?: DispatchStrategy;
-
   constructor(private readonly monitorBuilderState: MonitorsBuilderState<T>) {
     monitorBuilderState.addTransformationsStep = this;
   }
@@ -202,10 +200,9 @@ class AddTransformationsStepImpl<T extends object>
       Data<T, T>
     > = (dataSource) =>
       dataSource.pipe(
-        map(({ data: value, resourceId }) => ({
+        map(({ data: value }) => ({
           context: {
             origin: value,
-            resourceId,
             trace: [],
           },
           value,
@@ -218,11 +215,6 @@ class AddTransformationsStepImpl<T extends object>
       this.monitorBuilderState.dialectNotificationSink,
       this.monitorBuilderState.emailNotificationSink,
     );
-  }
-
-  dispatch(strategy: DispatchStrategy): BuildStep<T> {
-    this.dispatchStrategy = strategy;
-    return new BuildStepImpl(this.monitorBuilderState!);
   }
 
   transform<V, R>(transformation: Transformation<T, V, R>): NotifyStep<T, R> {
@@ -244,10 +236,9 @@ class AddTransformationsStepImpl<T extends object>
           ) => Observable<Data<R, T>> = (dataSource: PushyDataSource<T>) =>
             pipeline(
               dataSource.pipe(
-                map(({ data: origin, resourceId }) => ({
+                map(({ data: origin }) => ({
                   context: {
                     origin,
-                    resourceId,
                     trace: [],
                   },
                   value: origin[key] as unknown as V,
@@ -340,116 +331,90 @@ class AddSinksStepImpl<T extends object, R> implements AddSinksStep<T, R> {
 
   dialectThread(
     adapter: (data: Data<R, T>) => DialectNotification,
-    recipientsSelector?: (data: Data<R, T>) => ResourceId[],
-    recipientPredicate?: (data: Data<R, T>, recipient: ResourceId) => boolean,
+    dispatchStrategy: DispatchStrategy<T>,
   ): AddSinksStep<T, R> {
     if (!this.dialectNotificationSink) {
       throw new Error(
         'Dialect notification sink must be initialized before using',
       );
     }
-    const sinkWriter: (
-      data: Data<R, T>,
-      resources: ResourceId[],
-    ) => Promise<void> = (data, resources) => {
-      const toBeNotified = recipientsSelector
-        ? recipientsSelector(data)
-        : resources;
-      return this.dialectNotificationSink!.push(
-        adapter(data),
-        toBeNotified.filter((it) =>
-          recipientPredicate ? recipientPredicate(data, it) : true,
-        ),
-      );
-    };
-    this.sinkWriters.push(sinkWriter);
-    return this;
+    return this.custom(adapter, this.dialectNotificationSink, dispatchStrategy);
   }
 
   custom<N>(
     adapter: (data: Data<R, T>) => N,
     sink: NotificationSink<N>,
-    recipientPredicate?: (data: Data<R, T>, recipient: ResourceId) => boolean,
+    dispatchStrategy: DispatchStrategy<T>,
   ) {
     const sinkWriter: (
       data: Data<R, T>,
       resources: ResourceId[],
-    ) => Promise<void> = (data, resources) =>
-      sink.push(
-        adapter(data),
-        resources.filter((it) =>
-          recipientPredicate ? recipientPredicate(data, it) : true,
-        ),
+    ) => Promise<void> = (data, resources) => {
+      const toBeNotified = this.selectResources(
+        dispatchStrategy,
+        resources,
+        data,
       );
+      return sink!.push(adapter(data), toBeNotified);
+    };
     this.sinkWriters.push(sinkWriter);
     return this;
   }
 
   email(
     adapter: (data: Data<R, T>) => EmailNotification,
-    recipientPredicate?: (data: Data<R, T>, recipient: ResourceId) => boolean,
+    dispatchStrategy: DispatchStrategy<T>,
   ): AddSinksStep<T, R> {
     if (!this.emailNotificationSink) {
       throw new Error(
         'Email notification sink must be initialized before using',
       );
     }
-    const sinkWriter: (
-      data: Data<R, T>,
-      resources: ResourceId[],
-    ) => Promise<void> = (data, resources) =>
-      this.emailNotificationSink!.push(
-        adapter(data),
-        resources.filter((it) =>
-          recipientPredicate ? recipientPredicate(data, it) : true,
-        ),
-      );
-    this.sinkWriters.push(sinkWriter);
-    return this;
+    return this.custom(adapter, this.emailNotificationSink, dispatchStrategy);
   }
 
   sms(
     adapter: (data: Data<R, T>) => SmsNotification,
-    recipientPredicate?: (data: Data<R, T>, recipient: ResourceId) => boolean,
+    dispatchStrategy: DispatchStrategy<T>,
   ): AddSinksStep<T, R> {
     if (!this.smsNotificationSink) {
       throw new Error('SMS notification sink must be initialized before using');
     }
-    const sinkWriter: (
-      data: Data<R, T>,
-      resources: ResourceId[],
-    ) => Promise<void> = (data, resources) =>
-      this.smsNotificationSink!.push(
-        adapter(data),
-        resources.filter((it) =>
-          recipientPredicate ? recipientPredicate(data, it) : true,
-        ),
-      );
-    this.sinkWriters.push(sinkWriter);
-    return this;
+    return this.custom(adapter, this.smsNotificationSink, dispatchStrategy);
   }
 
   telegram(
     adapter: (data: Data<R, T>) => TelegramNotification,
-    recipientPredicate?: (data: Data<R, T>, recipient: ResourceId) => boolean,
+    dispatchStrategy: DispatchStrategy<T>,
   ): AddSinksStep<T, R> {
     if (!this.telegramNotificationSink) {
       throw new Error(
         'Telegram notification sink must be initialized before using',
       );
     }
-    const sinkWriter: (
-      data: Data<R, T>,
-      resources: ResourceId[],
-    ) => Promise<void> = (data, resources) =>
-      this.telegramNotificationSink!.push(
-        adapter(data),
-        resources.filter((it) =>
-          recipientPredicate ? recipientPredicate(data, it) : true,
-        ),
-      );
-    this.sinkWriters.push(sinkWriter);
-    return this;
+    return this.custom(
+      adapter,
+      this.telegramNotificationSink,
+      dispatchStrategy,
+    );
+  }
+
+  private selectResources(
+    dispatchStrategy: DispatchStrategy<T>,
+    resources: ResourceId[],
+    { context }: Data<R, T>,
+  ) {
+    switch (dispatchStrategy.type) {
+      case 'broadcast': {
+        return resources;
+      }
+      case 'unicast': {
+        return [dispatchStrategy.target(context)];
+      }
+      case 'multicast': {
+        return dispatchStrategy.target(context);
+      }
+    }
   }
 }
 
@@ -498,9 +463,8 @@ class BuildStepImpl<T extends object> implements BuildStep<T> {
     addTransformationsStep: AddTransformationsStepImpl<T>,
     monitorProps: MonitorProps,
   ) {
-    const { dataSourceTransformationPipelines, dispatchStrategy } =
-      addTransformationsStep;
-    if (!dataSourceTransformationPipelines || !dispatchStrategy) {
+    const { dataSourceTransformationPipelines } = addTransformationsStep;
+    if (!dataSourceTransformationPipelines) {
       throw new Error(
         'Expected [dataSourceTransformationPipelines, dispatchStrategy] to be defined',
       );
@@ -543,38 +507,21 @@ class BuildStepImpl<T extends object> implements BuildStep<T> {
     monitorProps: MonitorProps,
   ) {
     const { pollableDataSource, pollInterval } = defineDataSourceStep;
-    const { dataSourceTransformationPipelines, dispatchStrategy } =
-      addTransformationsStep;
+    const { dataSourceTransformationPipelines } = addTransformationsStep;
     if (
       !pollableDataSource ||
       !pollInterval ||
-      !dataSourceTransformationPipelines ||
-      !dispatchStrategy
+      !dataSourceTransformationPipelines
     ) {
       throw new Error(
-        'Expected [pollableDataSource, pollInterval, dataSourceTransformationPipelines, dispatchStrategy] to be defined',
+        'Expected [pollableDataSource, pollInterval, dataSourceTransformationPipelines] to be defined',
       );
     }
-
-    switch (addTransformationsStep.dispatchStrategy) {
-      case 'broadcast':
-        return Monitors.factory(monitorProps).createBroadcastMonitor<T>(
-          pollableDataSource,
-          dataSourceTransformationPipelines,
-          pollInterval,
-        );
-      case 'unicast':
-        return Monitors.factory(monitorProps).createUnicastMonitor<T>(
-          pollableDataSource,
-          dataSourceTransformationPipelines,
-          pollInterval,
-        );
-      default:
-        throw new Error(
-          'Unknown dispatchStrategy: ' +
-            addTransformationsStep.dispatchStrategy,
-        );
-    }
+    return Monitors.factory(monitorProps).createBroadcastMonitor<T>(
+      pollableDataSource,
+      dataSourceTransformationPipelines,
+      pollInterval,
+    );
   }
 
   private createForPushy(
@@ -583,18 +530,13 @@ class BuildStepImpl<T extends object> implements BuildStep<T> {
     monitorProps: MonitorProps,
   ) {
     const { pushyDataSource } = defineDataSourceStep;
-    const { dataSourceTransformationPipelines, dispatchStrategy } =
-      addTransformationsStep;
-    if (
-      !pushyDataSource ||
-      !dataSourceTransformationPipelines ||
-      !dispatchStrategy
-    ) {
+    const { dataSourceTransformationPipelines } = addTransformationsStep;
+    if (!pushyDataSource || !dataSourceTransformationPipelines) {
       throw new Error(
-        'Expected [pushyDataSource, dataSourceTransformationPipelines, dispatchStrategy] to be defined',
+        'Expected [pushyDataSource, dataSourceTransformationPipelines] to be defined',
       );
     }
-    return Monitors.factory(monitorProps).createUnicastMonitor<T>(
+    return Monitors.factory(monitorProps).createBroadcastMonitor<T>(
       pushyDataSource,
       dataSourceTransformationPipelines,
       Duration.fromObject({ seconds: 1 }), // TODO: make optional
