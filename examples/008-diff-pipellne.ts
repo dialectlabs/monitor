@@ -4,6 +4,7 @@ import {
   Monitor,
   Monitors,
   Pipelines,
+  ResourceId,
   SourceData,
 } from '../src';
 import { DummySubscriberRepository } from './003-custom-subscriber-repository';
@@ -13,6 +14,7 @@ import { Keypair, PublicKey } from '@solana/web3.js';
 
 type DataType = {
   attribute: NestedObject[];
+  resourceId: ResourceId;
 };
 
 interface NestedObject {
@@ -41,8 +43,9 @@ const monitor: Monitor<DataType> = Monitors.builder({
       )}, removed: ${value.removed.map((it) => it.publicKey)}`,
     }),
     consoleNotificationSink,
+    { strategy: 'unicast', to: ({ origin: { resourceId } }) => resourceId },
   )
-  .and()
+  .also()
   .transform<NestedObject[], NestedObject[]>({
     keys: ['attribute'],
     pipelines: [Pipelines.added((e1, e2) => e1.publicKey.equals(e2.publicKey))],
@@ -53,9 +56,9 @@ const monitor: Monitor<DataType> = Monitors.builder({
       message: `Added: ${value.map((it) => it.publicKey)}`,
     }),
     consoleNotificationSink,
+    { strategy: 'unicast', to: ({ origin: { resourceId } }) => resourceId },
   )
   .and()
-  .dispatch('unicast')
   .build();
 monitor.start();
 
@@ -67,11 +70,11 @@ const pk3 = new Keypair().publicKey;
 console.log(pk1.toBase58(), pk2.toBase58(), pk3.toBase58());
 const d1: SourceData<DataType> = {
   data: { attribute: [{ publicKey: pk1 }, { publicKey: pk2 }] },
-  resourceId: publicKey,
+  groupingKey: publicKey.toBase58(),
 };
 const d2: SourceData<DataType> = {
   data: { attribute: [{ publicKey: pk3 }] },
-  resourceId: publicKey,
+  groupingKey: publicKey.toBase58(),
 };
 setTimeout(() => {
   subject.next(d1);

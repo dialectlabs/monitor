@@ -51,6 +51,7 @@ export interface Notification {}
  * An event that is fired when something changes in subscriber state e.g. new subscriber is added
  */
 export interface SubscriberEvent {
+  resourceId: ResourceId;
   state: SubscriberState;
 }
 

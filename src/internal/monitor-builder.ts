@@ -190,7 +190,7 @@ class AddTransformationsStepImpl<T extends object>
     any
   >[] = [];
 
-  constructor(private readonly monitorBuilderState: MonitorsBuilderState<T>) {
+  constructor(readonly monitorBuilderState: MonitorsBuilderState<T>) {
     monitorBuilderState.addTransformationsStep = this;
   }
 
@@ -298,7 +298,7 @@ class AddSinksStepImpl<T extends object, R> implements AddSinksStep<T, R> {
     private readonly telegramNotificationSink?: TelegramNotificationSink,
   ) {}
 
-  and(): AddTransformationsStep<T> {
+  also(): AddTransformationsStep<T> {
     const transformAndLoadPipelines: DataSourceTransformationPipeline<
       T,
       any
@@ -404,17 +404,21 @@ class AddSinksStepImpl<T extends object, R> implements AddSinksStep<T, R> {
     resources: ResourceId[],
     { context }: Data<R, T>,
   ) {
-    switch (dispatchStrategy.type) {
+    switch (dispatchStrategy.strategy) {
       case 'broadcast': {
         return resources;
       }
       case 'unicast': {
-        return [dispatchStrategy.target(context)];
+        return [dispatchStrategy.to(context)];
       }
       case 'multicast': {
-        return dispatchStrategy.target(context);
+        return dispatchStrategy.to(context);
       }
     }
+  }
+
+  and(): BuildStep<T> {
+    return new BuildStepImpl(this.addTransformationsStep!.monitorBuilderState);
   }
 }
 

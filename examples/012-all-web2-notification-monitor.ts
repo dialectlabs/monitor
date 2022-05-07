@@ -77,7 +77,7 @@ const monitor: Monitor<DataType> = Monitors.builder({
     }),
     consoleNotificationSink,
   )
-  .and()
+  .also()
   .dispatch('unicast')
   .build();
 monitor.start();

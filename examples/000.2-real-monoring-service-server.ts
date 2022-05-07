@@ -79,11 +79,10 @@ const dataSourceMonitor: Monitor<DataType> = Monitors.builder({
       message: `Your cratio = ${value} below warning threshold`,
     }),
     {
-      type: 'unicast',
-      target: ({ origin: { resourceId } }) => resourceId,
+      strategy: 'unicast',
+      to: ({ origin: { resourceId } }) => resourceId,
     },
   )
   .and()
-  .dispatch('unicast')
   .build();
 dataSourceMonitor.start();

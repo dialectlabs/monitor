@@ -13,6 +13,7 @@ import { ConsoleNotificationSink } from './004-custom-notification-sink';
 
 type DataPool = {
   share: number;
+  resourceId: ResourceId;
 };
 
 let counter = 0;
@@ -34,8 +35,9 @@ const monitor: Monitor<DataPool> = Monitors.builder({
       (resourceId) => ({
         data: {
           share: counter * counter,
+          resourceId,
         },
-        resourceId,
+        groupingKey: resourceId.toBase58(),
       }),
     );
     counter++;
@@ -56,8 +58,8 @@ const monitor: Monitor<DataPool> = Monitors.builder({
       message: `Value: ${value} increase by ${getTriggerOutput(context)} `,
     }),
     consoleDataSink,
+    { strategy: 'broadcast' },
   )
   .and()
-  .dispatch('broadcast')
   .build();
 monitor.start();

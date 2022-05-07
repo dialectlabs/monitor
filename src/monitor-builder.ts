@@ -74,17 +74,17 @@ export type DispatchStrategy<T extends object> =
   | MulticastDispatchStrategy<T>;
 
 export type BroadcastDispatchStrategy = {
-  type: 'broadcast';
+  strategy: 'broadcast';
 };
 
 export type UnicastDispatchStrategy<T extends object> = {
-  type: 'unicast';
-  target: (ctx: Context<T>) => ResourceId;
+  strategy: 'unicast';
+  to: (ctx: Context<T>) => ResourceId;
 };
 
 export type MulticastDispatchStrategy<T extends object> = {
-  type: 'multicast';
-  target: (ctx: Context<T>) => ResourceId[];
+  strategy: 'multicast';
+  to: (ctx: Context<T>) => ResourceId[];
 };
 
 export interface AddTransformationsStep<T extends object> {
@@ -127,7 +127,9 @@ export interface AddSinksStep<T extends object, R> {
     dispatchStrategy: DispatchStrategy<T>,
   ): AddSinksStep<T, R>;
 
-  and(): AddTransformationsStep<T>;
+  also(): AddTransformationsStep<T>;
+
+  and(): BuildStep<T>;
 }
 
 export interface BuildStep<T extends object> {

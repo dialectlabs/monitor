@@ -105,6 +105,7 @@ export class DefaultMonitorFactory implements MonitorFactory {
           subscriber.next({
             groupingKey: resourceId.toBase58(),
             data: {
+              resourceId,
               state: 'added',
             },
           }),
@@ -112,6 +113,7 @@ export class DefaultMonitorFactory implements MonitorFactory {
           subscriber.next({
             groupingKey: resourceId.toBase58(),
             data: {
+              resourceId,
               state: 'removed',
             },
           }),

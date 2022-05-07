@@ -21,13 +21,17 @@ const monitor = Monitors.builder({
   })
   .notify()
   .custom<DialectNotification>(
-    ({ context }) => ({
-      message: `Hey ${context.resourceId}, welcome!`,
+    ({
+      context: {
+        origin: { resourceId },
+      },
+    }) => ({
+      message: `Hey ${resourceId}, welcome!`,
     }),
     consoleNotificationSink,
+    { strategy: 'unicast', to: ({ origin: { resourceId } }) => resourceId },
   )
   .and()
-  .dispatch('unicast')
   .build();
 
 monitor.start().then(() => {

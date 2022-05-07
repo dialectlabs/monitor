@@ -3,6 +3,7 @@ import {
   Monitor,
   Monitors,
   Pipelines,
+  ResourceId,
   SourceData,
 } from '../src';
 import { DummySubscriberRepository } from './003-custom-subscriber-repository';
@@ -13,6 +14,7 @@ import { Keypair } from '@solana/web3.js';
 type DataType = {
   cratio: number;
   healthRatio: number;
+  resourceId: ResourceId;
 };
 
 const threshold = 0.5;
@@ -28,12 +30,12 @@ const monitor: Monitor<DataType> = Monitors.builder({
     new Observable((subscriber) => {
       const publicKey = Keypair.generate().publicKey;
       const d1: SourceData<DataType> = {
-        data: { cratio: 0, healthRatio: 2 },
-        resourceId: publicKey,
+        data: { cratio: 0, healthRatio: 2, resourceId: publicKey },
+        groupingKey: publicKey.toBase58(),
       };
       const d2: SourceData<DataType> = {
-        data: { cratio: 1, healthRatio: 0 },
-        resourceId: publicKey,
+        data: { cratio: 1, healthRatio: 0, resourceId: publicKey },
+        groupingKey: publicKey.toBase58(),
       };
       subscriber.next(d1);
       subscriber.next(d2);
@@ -54,8 +56,8 @@ const monitor: Monitor<DataType> = Monitors.builder({
       message: `Your cratio = ${value} above warning threshold`,
     }),
     consoleNotificationSink,
+    { strategy: 'unicast', to: ({ origin: { resourceId } }) => resourceId },
   )
   .and()
-  .dispatch('unicast')
   .build();
 monitor.start();
