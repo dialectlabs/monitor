@@ -78,7 +78,7 @@ export class Pipelines {
     return Pipelines.createNew<E[], T, E[]>((upstream) =>
       upstream
         .pipe(Operators.Window.fixedSizeSliding(2))
-        .pipe(Operators.Transform.filter((it) => it.length == 2))
+        .pipe(Operators.Transform.filter((it) => it.length === 2))
         .pipe(
           Operators.Transform.map(([d1, d2]) => {
             const added = d2.value.filter(
@@ -109,7 +109,7 @@ export class Pipelines {
     return Pipelines.createNew<E[], T, E[]>((upstream) =>
       upstream
         .pipe(Operators.Window.fixedSizeSliding(2))
-        .pipe(Operators.Transform.filter((it) => it.length == 2))
+        .pipe(Operators.Transform.filter((it) => it.length === 2))
         .pipe(
           Operators.Transform.map(([d1, d2]) => {
             const removed = d1.value.filter(
@@ -140,7 +140,7 @@ export class Pipelines {
     return Pipelines.createNew<E[], T, Diff<E>>((upstream) =>
       upstream
         .pipe(Operators.Window.fixedSizeSliding(2))
-        .pipe(Operators.Transform.filter((it) => it.length == 2))
+        .pipe(Operators.Transform.filter((it) => it.length === 2))
         .pipe(
           Operators.Transform.map(([d1, d2]) => {
             const added = d2.value.filter(
