@@ -16,7 +16,7 @@ export class RestWeb2SubscriberRepository implements Web2SubscriberRepository {
   ) {
     this.subscribersEndpoint = `${
       this.serviceUrl
-    }/api/v0/dapps/${this.monitorPublicKey.toBase58()}/subscribers`;
+    }/v0/dapps/${this.monitorPublicKey.toBase58()}/subscribers`;
   }
 
   async findBy(resourceIds: ResourceId[]): Promise<Web2Subscriber[]> {
