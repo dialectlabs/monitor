@@ -25,6 +25,8 @@ export class TelegramNotificationSink
     const recipientTelegramNumbers = await this.web2SubscriberRepository.findBy(
       recipients,
     );
+    console.log("tg-notif-sink, recipients:\n");
+    console.log(recipientTelegramNumbers);
 
     const results = await Promise.allSettled(
       recipientTelegramNumbers

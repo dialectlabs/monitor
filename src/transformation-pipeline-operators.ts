@@ -125,7 +125,7 @@ export class Operators {
         Operators.Window.fixedSizeSliding(2),
         filter(
           (it) =>
-            it.length == 2 &&
+            it.length === 2 &&
             it[0].value <= threshold &&
             threshold < it[1].value,
         ),
@@ -144,7 +144,7 @@ export class Operators {
         Operators.Window.fixedSizeSliding(2),
         filter(
           (data) =>
-            data.length == 2 &&
+            data.length === 2 &&
             data[0].value >= threshold &&
             threshold > data[1].value,
         ),
@@ -163,7 +163,7 @@ export class Operators {
         Operators.Window.fixedSizeSliding(2),
         filter(
           (data) =>
-            data.length == 2 && data[1].value - data[0].value >= threshold,
+            data.length === 2 && data[1].value - data[0].value >= threshold,
         ),
         map(([fst, snd]) => ({
           ...snd,
@@ -193,7 +193,7 @@ export class Operators {
         Operators.Window.fixedSizeSliding(2),
         filter(
           (data) =>
-            data.length == 2 && data[0].value - data[1].value >= threshold,
+            data.length === 2 && data[0].value - data[1].value >= threshold,
         ),
         map(([_, snd]) => snd),
       ];

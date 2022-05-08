@@ -14,6 +14,8 @@ import { Monitor } from '../monitor-api';
 import { SourceData } from '../data-model';
 import { Operators } from '../transformation-pipeline-operators';
 import { map } from 'rxjs/operators';
+import { Web2SubscriberRepository } from '../web-subscriber.repository';
+import { findAllDistinct } from './subsbscriber-repository-utilts';
 
 export class BroadcastMonitor<T extends Object> implements Monitor<T> {
   private started = false;
@@ -27,6 +29,7 @@ export class BroadcastMonitor<T extends Object> implements Monitor<T> {
       any
     >[],
     private readonly subscriberRepository: SubscriberRepository,
+    private readonly web2SubscriberRepository: Web2SubscriberRepository,
   ) {}
 
   async start() {
@@ -58,7 +61,12 @@ export class BroadcastMonitor<T extends Object> implements Monitor<T> {
           },
         ),
         mergeMap((data: GroupedObservable<string, SourceData<T>>) =>
-          from(this.subscriberRepository.findAll()).pipe(
+          from(
+            findAllDistinct(
+              this.subscriberRepository,
+              this.web2SubscriberRepository,
+            ),
+          ).pipe(
             map((it) =>
               this.dataSourceTransformationPipelines.map((pipeline) =>
                 pipeline(data, it),
