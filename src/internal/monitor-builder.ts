@@ -38,7 +38,10 @@ import {
 } from '../telegram-notification-sink';
 import { OnChainSubscriberRepository } from './on-chain-subscriber.repository';
 import { InMemorySubscriberRepository } from './in-memory-subscriber.repository';
-import { RestWeb2SubscriberRepository } from './rest-web2-subscriber.repository';
+import {
+  InMemoryWeb2SubscriberRepository,
+  RestWeb2SubscriberRepository,
+} from './rest-web2-subscriber.repository';
 import {
   NoopWeb2SubscriberRepository,
   Web2SubscriberRepository,
@@ -68,13 +71,11 @@ export class MonitorsBuilderState<T extends object> {
           monitorProps.monitorKeypair?.publicKey!, // TODO: handle this carefully
           //new PublicKey("D2pyBevYb6dit1oCx6e8vCxFK9mBeYCRe8TTntk2Tm98"),
         );
-      monitorProps.web2SubscriberRepository = postgresWeb2ResourceRepository;
-      // TODO use below once tested for performance increase
-      // monitorProps.web2SubscriberRepository =
-      //   new InMemoryWeb2SubscriberRepository(
-      //     monitorProps.monitorKeypair?.publicKey!,
-      //     postgresWeb2ResourceRepository,
-      //   );
+      monitorProps.web2SubscriberRepository =
+        new InMemoryWeb2SubscriberRepository(
+          monitorProps.monitorKeypair?.publicKey!,
+          postgresWeb2ResourceRepository,
+        );
     }
     const web2SubscriberRepository =
       monitorProps.web2SubscriberRepository ??

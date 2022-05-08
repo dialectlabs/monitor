@@ -21,8 +21,8 @@ export class RestWeb2SubscriberRepository implements Web2SubscriberRepository {
 
   async findBy(resourceIds: ResourceId[]): Promise<Web2Subscriber[]> {
     const all = await this.findAll();
-    const filtered: Web2Subscriber[] = all.filter(
-      (web2Sub) => !resourceIds.find((it) => it.equals(web2Sub.resourceId)),
+    const filtered: Web2Subscriber[] = all.filter((web2Sub) =>
+      resourceIds.find((it) => it.equals(web2Sub.resourceId)),
     );
     // console.log('___findBy');
     // console.log(filtered);
@@ -63,17 +63,14 @@ export class RestWeb2SubscriberRepository implements Web2SubscriberRepository {
   }
 }
 
-// TODO: test this for performance increase
 export class InMemoryWeb2SubscriberRepository
   implements Web2SubscriberRepository
 {
-  private resourceIdToResourceInfo: Map<string, Web2Subscriber> = new Map<
-    string,
-    Web2Subscriber
-  >();
+  private resourceIdToResourceInfo: Record<string, Web2Subscriber> = {};
 
   private lastUpdatedAtUtcSeconds: number = -1;
-  private ttl = 60;
+  private ttlSeconds = 60;
+  private isCaching = false;
 
   constructor(
     private readonly monitorPublicKey: PublicKey,
@@ -81,26 +78,31 @@ export class InMemoryWeb2SubscriberRepository
   ) {}
 
   async findBy(resourceIds: ResourceId[]): Promise<Web2Subscriber[]> {
-    if (
-      DateTime.now().toUTC().toSeconds() - this.lastUpdatedAtUtcSeconds >
-      this.ttl
-    ) {
-      (await this.delegate.findAll()).map((web2Subscriber) => {
-        // find supplied resourceIds
-        let pk = resourceIds.find((pubkey) =>
-          pubkey.equals(web2Subscriber.resourceId),
-        );
-        if (pk) {
-          this.resourceIdToResourceInfo.set(pk.toString(), web2Subscriber);
-        }
-      });
-      this.lastUpdatedAtUtcSeconds = DateTime.now().toUTC().toSeconds();
-    }
-    return Array.from(this.resourceIdToResourceInfo.values());
+    const all = await this.findAll();
+    return all.filter((s) => resourceIds.find((it) => it.equals(s.resourceId)));
   }
 
-  findAll(): Promise<Web2Subscriber[]> {
-    return this.delegate.findAll();
+  async findAll(): Promise<Web2Subscriber[]> {
+    if (this.isCaching) {
+      return Object.values(this.resourceIdToResourceInfo);
+    }
+    const now = DateTime.now().toUTC().toSeconds();
+    if (now - this.lastUpdatedAtUtcSeconds <= this.ttlSeconds) {
+      return Object.values(this.resourceIdToResourceInfo);
+    }
+    try {
+      console.log('Started caching');
+      this.isCaching = true;
+      const allSubscribers = await this.delegate.findAll();
+      this.resourceIdToResourceInfo = Object.fromEntries(
+        allSubscribers.map((it) => [it.resourceId, it]),
+      );
+      this.lastUpdatedAtUtcSeconds = now;
+      console.log('Caching complete');
+      return Object.values(this.resourceIdToResourceInfo);
+    } finally {
+      this.isCaching = false;
+    }
   }
 }
 
