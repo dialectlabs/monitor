@@ -5,7 +5,7 @@ import {
   Web2SubscriberRepository,
 } from '../web-subscriber.repository';
 import { DateTime } from 'luxon';
-import axios from 'axios';
+import axios, { AxiosError } from 'axios';
 
 export class RestWeb2SubscriberRepository implements Web2SubscriberRepository {
   private readonly subscribersEndpoint;
@@ -50,13 +50,14 @@ export class RestWeb2SubscriberRepository implements Web2SubscriberRepository {
       return (
         await axios.get<SubscriberDto[]>(this.subscribersEndpoint, {
           auth: {
-            username: process.env.WEB2_SUSBSCRIBER_SERVICE_BASIC_AUTH!,
+            username: process.env.WEB2_SUBSCRIBER_SERVICE_BASIC_AUTH!,
             password: '',
           },
         })
       ).data;
     } catch (e) {
-      console.error('Failed to fetch subscribers', e);
+      const err = e as AxiosError;
+      console.error('Failed to fetch subscribers', err.message);
       return [];
     }
   }
