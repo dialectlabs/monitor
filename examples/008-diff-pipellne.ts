@@ -69,11 +69,17 @@ const pk3 = new Keypair().publicKey;
 
 console.log(pk1.toBase58(), pk2.toBase58(), pk3.toBase58());
 const d1: SourceData<DataType> = {
-  data: { attribute: [{ publicKey: pk1 }, { publicKey: pk2 }] },
+  data: {
+    attribute: [{ publicKey: pk1 }, { publicKey: pk2 }],
+    resourceId: publicKey,
+  },
   groupingKey: publicKey.toBase58(),
 };
 const d2: SourceData<DataType> = {
-  data: { attribute: [{ publicKey: pk3 }] },
+  data: {
+    attribute: [{ publicKey: pk3 }],
+    resourceId: publicKey,
+  },
   groupingKey: publicKey.toBase58(),
 };
 setTimeout(() => {
