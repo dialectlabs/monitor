@@ -63,11 +63,7 @@ const d1: SourceData<DataType> = {
 };
 setTimeout(() => {
   subject.next(d1);
-}, 500);
-
-setTimeout(() => {
-  subject.next(d1);
-}, 1000);
+}, 100);
 
 const d2: SourceData<DataType> = {
   data: { cratio: 1, healthRatio: 0, resourceId: publicKey },
@@ -75,4 +71,4 @@ const d2: SourceData<DataType> = {
 };
 setTimeout(() => {
   subject.next(d2);
-}, 2000);
+}, 200);

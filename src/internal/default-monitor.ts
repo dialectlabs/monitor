@@ -53,6 +53,7 @@ export class DefaultMonitor<T extends Object> implements Monitor<T> {
 
   private async startMonitorPipeline() {
     const monitorPipelineSubscription = this.dataSource
+      .pipe(map((it) => ({ ...it })))
       .pipe(
         groupBy<SourceData<T>, string, SourceData<T>>(
           ({ groupingKey }) => groupingKey,
@@ -60,21 +61,11 @@ export class DefaultMonitor<T extends Object> implements Monitor<T> {
             element: (it) => it,
           },
         ),
-        mergeMap((data: GroupedObservable<string, SourceData<T>>) =>
-          from(
-            findAllDistinct(
-              this.subscriberRepository,
-              this.web2SubscriberRepository,
-            ),
-          ).pipe(
-            map((it: ResourceId[]) => {
-              return this.dataSourceTransformationPipelines.map((pipeline) =>
-                pipeline(data, it),
-              );
-            }),
-            mergeMap((it) => it),
-          ),
-        ),
+        mergeMap((data: GroupedObservable<string, SourceData<T>>) => {
+          return this.dataSourceTransformationPipelines.map((pipeline) =>
+            pipeline(data, []),
+          );
+        }),
         mergeMap((it) => it),
       )
       .pipe(...Operators.FlowControl.onErrorRetry())

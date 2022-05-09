@@ -41,7 +41,3 @@ const pk = new Keypair().publicKey;
 setTimeout(() => {
   dummySubscriberRepository.addNewSubscriber(pk);
 }, 100);
-
-setTimeout(() => {
-  dummySubscriberRepository.addNewSubscriber(pk);
-}, 200);
