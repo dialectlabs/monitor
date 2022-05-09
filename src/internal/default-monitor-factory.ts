@@ -13,6 +13,7 @@ import {
 } from 'rxjs';
 import { MonitorFactory } from '../monitor-factory';
 import {
+  DataSource,
   DataSourceTransformationPipeline,
   PollableDataSource,
   PushyDataSource,
@@ -68,27 +69,29 @@ export class DefaultMonitorFactory implements MonitorFactory {
   }
 
   createDefaultMonitor<T extends object>(
-    dataSource: PollableDataSource<T>,
+    dataSource: DataSource<T>,
     datasourceTransformationPipelines: DataSourceTransformationPipeline<
       T,
       any
     >[],
     pollInterval: Duration = Duration.fromObject({ seconds: 10 }),
   ): Monitor<T> {
-    const pushyDataSource = this.toPushyDataSource(
-      dataSource,
-      pollInterval,
-      this.subscriberRepository,
-      this.web2SubscriberRepository,
-    );
-    const broadcastMonitor = new DefaultMonitor<T>(
+    const pushyDataSource = !('subscribe' in dataSource)
+      ? this.toPushyDataSource(
+          dataSource as PollableDataSource<T>,
+          pollInterval,
+          this.subscriberRepository,
+          this.web2SubscriberRepository,
+        )
+      : dataSource;
+    const monitor = new DefaultMonitor<T>(
       pushyDataSource,
       datasourceTransformationPipelines,
       this.subscriberRepository,
       this.web2SubscriberRepository,
     );
-    this.shutdownHooks.push(() => broadcastMonitor.stop());
-    return broadcastMonitor;
+    this.shutdownHooks.push(() => monitor.stop());
+    return monitor;
   }
 
   createSubscriberEventMonitor(
