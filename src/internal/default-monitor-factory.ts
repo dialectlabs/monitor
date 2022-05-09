@@ -20,7 +20,7 @@ import {
 } from '../ports';
 import { Monitor, MonitorProps } from '../monitor-api';
 import { ResourceId, SourceData, SubscriberEvent } from '../data-model';
-import { BroadcastMonitor } from './broadcast-monitor';
+import { DefaultMonitor } from './default-monitor';
 import { timeout } from 'rxjs/operators';
 import {
   NoopWeb2SubscriberRepository,
@@ -81,7 +81,7 @@ export class DefaultMonitorFactory implements MonitorFactory {
       this.subscriberRepository,
       this.web2SubscriberRepository,
     );
-    const broadcastMonitor = new BroadcastMonitor<T>(
+    const broadcastMonitor = new DefaultMonitor<T>(
       pushyDataSource,
       datasourceTransformationPipelines,
       this.subscriberRepository,
@@ -119,7 +119,7 @@ export class DefaultMonitorFactory implements MonitorFactory {
           }),
       ),
     );
-    const monitor = new BroadcastMonitor<SubscriberEvent>(
+    const monitor = new DefaultMonitor<SubscriberEvent>(
       dataSource,
       dataSourceTransformationPipelines,
       this.subscriberRepository,

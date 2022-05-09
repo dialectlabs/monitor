@@ -17,7 +17,7 @@ import { map } from 'rxjs/operators';
 import { Web2SubscriberRepository } from '../web-subscriber.repository';
 import { findAllDistinct } from './subsbscriber-repository-utilts';
 
-export class BroadcastMonitor<T extends Object> implements Monitor<T> {
+export class DefaultMonitor<T extends Object> implements Monitor<T> {
   private started = false;
 
   private subscriptions: RxJsSubscription[] = [];
