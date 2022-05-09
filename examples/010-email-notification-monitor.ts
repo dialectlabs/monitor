@@ -66,22 +66,21 @@ const monitor: Monitor<DataType> = Monitors.builder({
       subject: '[WARNING] Cratio above warning threshold',
       text: `Your cratio = ${value} above warning threshold`,
     }),
-    { strategy: 'unicast', to: (ctx) => ctx.origin.resourceId },
+    { dispatch: 'unicast', to: ({ origin }) => origin.resourceId },
   )
   .dialectThread(
     ({ value }) => ({
       message: `Your cratio = ${value} above warning threshold`,
     }),
-    { strategy: 'unicast', to: (ctx) => ctx.origin.resourceId },
+    { dispatch: 'unicast', to: ({ origin }) => origin.resourceId },
   )
   .custom<DialectNotification>(
     ({ value }) => ({
       message: `Your cratio = ${value} above warning threshold`,
     }),
     consoleNotificationSink,
-    { strategy: 'unicast', to: (ctx) => ctx.origin.resourceId },
+    { dispatch: 'unicast', to: ({ origin }) => origin.resourceId },
   )
-  .also()
-  .dispatch('unicast')
+  .and()
   .build();
 monitor.start();

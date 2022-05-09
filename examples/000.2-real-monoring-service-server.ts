@@ -79,7 +79,7 @@ const dataSourceMonitor: Monitor<DataType> = Monitors.builder({
       message: `Your cratio = ${value} below warning threshold`,
     }),
     {
-      strategy: 'unicast',
+      dispatch: 'unicast',
       to: ({ origin: { resourceId } }) => resourceId,
     },
   )

@@ -29,7 +29,7 @@ const monitor = Monitors.builder({
       message: `Hey ${resourceId}, welcome!`,
     }),
     consoleNotificationSink,
-    { strategy: 'unicast', to: ({ origin: { resourceId } }) => resourceId },
+    { dispatch: 'unicast', to: ({ origin: { resourceId } }) => resourceId },
   )
   .and()
   .build();

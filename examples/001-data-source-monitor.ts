@@ -53,7 +53,7 @@ const monitor: Monitor<DataType> = Monitors.builder({
       message: `Your cratio = ${value} below warning threshold`,
     }),
     consoleNotificationSink,
-    { strategy: 'broadcast' },
+    { dispatch: 'broadcast' },
   )
   .also()
   .transform<number, number>({
@@ -71,7 +71,7 @@ const monitor: Monitor<DataType> = Monitors.builder({
       message: `Your cratio = ${value} above warning threshold`,
     }),
     consoleNotificationSink,
-    { strategy: 'broadcast' },
+    { dispatch: 'broadcast' },
   )
   .and()
   .build();

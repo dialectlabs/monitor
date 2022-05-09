@@ -58,7 +58,7 @@ const monitor: Monitor<DataPool> = Monitors.builder({
       message: `Value: ${value} increase by ${getTriggerOutput(context)} `,
     }),
     consoleDataSink,
-    { strategy: 'broadcast' },
+    { dispatch: 'broadcast' },
   )
   .and()
   .build();

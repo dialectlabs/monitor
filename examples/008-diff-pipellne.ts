@@ -43,7 +43,7 @@ const monitor: Monitor<DataType> = Monitors.builder({
       )}, removed: ${value.removed.map((it) => it.publicKey)}`,
     }),
     consoleNotificationSink,
-    { strategy: 'unicast', to: ({ origin: { resourceId } }) => resourceId },
+    { dispatch: 'unicast', to: ({ origin: { resourceId } }) => resourceId },
   )
   .also()
   .transform<NestedObject[], NestedObject[]>({
@@ -56,7 +56,7 @@ const monitor: Monitor<DataType> = Monitors.builder({
       message: `Added: ${value.map((it) => it.publicKey)}`,
     }),
     consoleNotificationSink,
-    { strategy: 'unicast', to: ({ origin: { resourceId } }) => resourceId },
+    { dispatch: 'unicast', to: ({ origin: { resourceId } }) => resourceId },
   )
   .and()
   .build();

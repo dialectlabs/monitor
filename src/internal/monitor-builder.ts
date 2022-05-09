@@ -404,7 +404,7 @@ class AddSinksStepImpl<T extends object, R> implements AddSinksStep<T, R> {
     resources: ResourceId[],
     { context }: Data<R, T>,
   ) {
-    switch (dispatchStrategy.strategy) {
+    switch (dispatchStrategy.dispatch) {
       case 'broadcast': {
         return resources;
       }

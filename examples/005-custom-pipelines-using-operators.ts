@@ -79,7 +79,7 @@ const monitor: Monitor<DataType> = Monitors.builder({
       message: `        notification ${value}`,
     }),
     consoleNotificationSink,
-    { strategy: 'unicast', to: ({ origin: { resourceId } }) => resourceId },
+    { dispatch: 'unicast', to: ({ origin: { resourceId } }) => resourceId },
   )
   .and()
   .build();

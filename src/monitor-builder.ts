@@ -74,16 +74,16 @@ export type DispatchStrategy<T extends object> =
   | MulticastDispatchStrategy<T>;
 
 export type BroadcastDispatchStrategy = {
-  strategy: 'broadcast';
+  dispatch: 'broadcast';
 };
 
 export type UnicastDispatchStrategy<T extends object> = {
-  strategy: 'unicast';
+  dispatch: 'unicast';
   to: (ctx: Context<T>) => ResourceId;
 };
 
 export type MulticastDispatchStrategy<T extends object> = {
-  strategy: 'multicast';
+  dispatch: 'multicast';
   to: (ctx: Context<T>) => ResourceId[];
 };
 
