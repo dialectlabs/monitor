@@ -11,6 +11,7 @@ import {
 } from '../monitor-builder';
 import { Data, ResourceId, SubscriberEvent } from '../data-model';
 import {
+  ContextEnrichedPushyDataSource,
   DataSourceTransformationPipeline,
   NotificationSink,
   PollableDataSource,
@@ -198,16 +199,8 @@ class AddTransformationsStepImpl<T extends object>
     const identityTransformation: DataSourceTransformationPipeline<
       T,
       Data<T, T>
-    > = (dataSource) =>
-      dataSource.pipe(
-        map(({ data: value }) => ({
-          context: {
-            origin: value,
-            trace: [],
-          },
-          value,
-        })),
-      );
+    > = (dataSource) => dataSource;
+    // > = (dataSource) => dataSource.pipe(tap(console.log(t)));
     this.dataSourceTransformationPipelines.push(identityTransformation);
     return new AddSinksStepImpl(
       this,
@@ -225,23 +218,22 @@ class AddTransformationsStepImpl<T extends object>
 
     const { keys, pipelines } = transformation;
     const adaptedToDataSourceTypePipelines: ((
-      dataSource: PushyDataSource<T>,
+      dataSource: ContextEnrichedPushyDataSource<T>,
     ) => Observable<Data<R, T>>)[] = keys.flatMap((key: KeysMatching<T, V>) =>
       pipelines.map(
         (
           pipeline: (source: Observable<Data<V, T>>) => Observable<Data<R, T>>,
         ) => {
           const adaptedToDataSourceType: (
-            dataSource: PushyDataSource<T>,
-          ) => Observable<Data<R, T>> = (dataSource: PushyDataSource<T>) =>
+            dataSource: ContextEnrichedPushyDataSource<T>,
+          ) => Observable<Data<R, T>> = (
+            dataSource: ContextEnrichedPushyDataSource<T>,
+          ) =>
             pipeline(
               dataSource.pipe(
-                map(({ data: origin }) => ({
-                  context: {
-                    origin,
-                    trace: [],
-                  },
-                  value: origin[key] as unknown as V,
+                map((it) => ({
+                  ...it,
+                  value: it.value[key] as unknown as V,
                 })),
               ),
             );
@@ -281,10 +273,7 @@ class NotifyStepImpl<T extends object, R> implements NotifyStep<T, R> {
 }
 
 class AddSinksStepImpl<T extends object, R> implements AddSinksStep<T, R> {
-  private sinkWriters: ((
-    data: Data<R, T>,
-    resources: ResourceId[],
-  ) => Promise<any>)[] = [];
+  private sinkWriters: ((data: Data<R, T>) => Promise<any>)[] = [];
 
   constructor(
     private readonly addTransformationsStep: AddTransformationsStepImpl<T>,
@@ -301,36 +290,6 @@ class AddSinksStepImpl<T extends object, R> implements AddSinksStep<T, R> {
   also(): AddTransformationsStep<T> {
     this.populateDataSourceTransformationPipelines();
     return this.addTransformationsStep!;
-  }
-
-  private populateDataSourceTransformationPipelines() {
-    const transformAndLoadPipelines: DataSourceTransformationPipeline<
-      T,
-      any
-    >[] = this.dataSourceTransformationPipelines.map(
-      (
-        dataSourceTransformationPipeline: DataSourceTransformationPipeline<
-          T,
-          Data<R, T>
-        >,
-      ) => {
-        const transformAndLoadPipeline: DataSourceTransformationPipeline<
-          T,
-          any
-        > = (dataSource, targets) =>
-          dataSourceTransformationPipeline(dataSource, targets).pipe(
-            exhaustMap((event) =>
-              from(
-                Promise.all(this.sinkWriters.map((it) => it(event, targets))),
-              ),
-            ),
-          );
-        return transformAndLoadPipeline;
-      },
-    );
-    this.addTransformationsStep.dataSourceTransformationPipelines.push(
-      ...transformAndLoadPipelines,
-    );
   }
 
   dialectThread(
@@ -350,13 +309,10 @@ class AddSinksStepImpl<T extends object, R> implements AddSinksStep<T, R> {
     sink: NotificationSink<N>,
     dispatchStrategy: DispatchStrategy<T>,
   ) {
-    const sinkWriter: (
-      data: Data<R, T>,
-      resources: ResourceId[],
-    ) => Promise<void> = (data, resources) => {
+    const sinkWriter: (data: Data<R, T>) => Promise<void> = (data) => {
       const toBeNotified = this.selectResources(
         dispatchStrategy,
-        resources,
+        data.context.subscribers,
         data,
       );
       return sink!.push(adapter(data), toBeNotified);
@@ -403,6 +359,39 @@ class AddSinksStepImpl<T extends object, R> implements AddSinksStep<T, R> {
     );
   }
 
+  and(): BuildStep<T> {
+    this.populateDataSourceTransformationPipelines();
+    return new BuildStepImpl(this.addTransformationsStep!.monitorBuilderState);
+  }
+
+  private populateDataSourceTransformationPipelines() {
+    const transformAndLoadPipelines: DataSourceTransformationPipeline<
+      T,
+      any
+    >[] = this.dataSourceTransformationPipelines.map(
+      (
+        dataSourceTransformationPipeline: DataSourceTransformationPipeline<
+          T,
+          Data<R, T>
+        >,
+      ) => {
+        const transformAndLoadPipeline: DataSourceTransformationPipeline<
+          T,
+          any
+        > = (dataSource) =>
+          dataSourceTransformationPipeline(dataSource).pipe(
+            exhaustMap((event) =>
+              from(Promise.all(this.sinkWriters.map((it) => it(event)))),
+            ),
+          );
+        return transformAndLoadPipeline;
+      },
+    );
+    this.addTransformationsStep.dataSourceTransformationPipelines.push(
+      ...transformAndLoadPipelines,
+    );
+  }
+
   private selectResources(
     dispatchStrategy: DispatchStrategy<T>,
     resources: ResourceId[],
@@ -419,11 +408,6 @@ class AddSinksStepImpl<T extends object, R> implements AddSinksStep<T, R> {
         return dispatchStrategy.to(context);
       }
     }
-  }
-
-  and(): BuildStep<T> {
-    this.populateDataSourceTransformationPipelines();
-    return new BuildStepImpl(this.addTransformationsStep!.monitorBuilderState);
   }
 }
 
