@@ -34,6 +34,14 @@ const monitor = Monitors.builder({
   .and()
   .build();
 
-monitor.start().then(() => {
-  dummySubscriberRepository.addNewSubscriber(new Keypair().publicKey);
-});
+monitor.start();
+
+const pk = new Keypair().publicKey;
+
+setTimeout(() => {
+  dummySubscriberRepository.addNewSubscriber(pk);
+}, 100);
+
+setTimeout(() => {
+  dummySubscriberRepository.addNewSubscriber(pk);
+}, 200);
