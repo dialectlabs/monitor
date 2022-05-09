@@ -28,7 +28,9 @@ export interface Data<V, T extends object> {
  */
 export interface Context<T extends object> {
   origin: T;
+  groupingKey: string;
   trace: Trace[];
+  subscribers: ResourceId[];
 }
 
 /**

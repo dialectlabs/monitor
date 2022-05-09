@@ -3,9 +3,9 @@ import { OnChainSubscriberRepository } from './on-chain-subscriber.repository';
 import { Duration } from 'luxon';
 import {
   catchError,
-  concatMap,
   exhaustMap,
   from,
+  mergeMap,
   Observable,
   throwError,
   TimeoutError,
@@ -141,7 +141,7 @@ export class DefaultMonitorFactory implements MonitorFactory {
   ): PushyDataSource<T> {
     return timer(0, pollInterval.toMillis()).pipe(
       exhaustMap(() =>
-        findAllDistinct(subscriberRepository, web2SubscriberRepository),
+        from(findAllDistinct(subscriberRepository, web2SubscriberRepository)),
       ),
       exhaustMap((resources: ResourceId[]) => from(dataSource(resources))),
       timeout(pollTimeout.toMillis()),
@@ -155,7 +155,7 @@ export class DefaultMonitorFactory implements MonitorFactory {
         }
         return throwError(error);
       }),
-      concatMap((it) => it),
+      mergeMap((it) => it),
     );
   }
 }

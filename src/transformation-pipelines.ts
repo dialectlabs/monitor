@@ -2,7 +2,6 @@ import { Data, SubscriberEvent, SubscriberState } from './data-model';
 import { Operators } from './transformation-pipeline-operators';
 import { TransformationPipeline } from './ports';
 import { Duration } from 'luxon';
-import { tap } from 'rxjs/operators';
 
 export interface FixedSizeWindow {
   size: number;

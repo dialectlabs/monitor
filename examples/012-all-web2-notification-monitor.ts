@@ -5,7 +5,6 @@ import {
   Pipelines,
   ResourceId,
   SourceData,
-  Web2SubscriberRepository,
 } from '../src';
 import { DummySubscriberRepository } from './003-custom-subscriber-repository';
 import { ConsoleNotificationSink } from './004-custom-notification-sink';

@@ -8,7 +8,7 @@ import {
 } from '../src';
 import { DummySubscriberRepository } from './003-custom-subscriber-repository';
 import { ConsoleNotificationSink } from './004-custom-notification-sink';
-import { Observable, Subject } from 'rxjs';
+import { Subject } from 'rxjs';
 import { Keypair } from '@solana/web3.js';
 
 type DataType = {

@@ -27,7 +27,7 @@ export class TwilioSmsNotificationSink
     const recipientSmSNumbers = await this.web2SubscriberRepository.findBy(
       recipients,
     );
-    console.log("sms-notif-sink, recipients:\n");
+    console.log('sms-notif-sink, recipients:\n');
     console.log(recipientSmSNumbers);
     const results = await Promise.allSettled(
       recipientSmSNumbers

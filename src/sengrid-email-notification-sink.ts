@@ -27,13 +27,15 @@ export class SengridEmailNotificationSink
     const recipientEmails = await this.web2SubscriberRepository.findBy(
       recipients,
     );
-    console.log("sendgrid-notif-sink, recipients:\n");
+    console.log('sendgrid-notif-sink, recipients:\n');
     console.log(recipientEmails);
-    const emails: MailDataRequired[] = recipientEmails.filter(({email}) => email).map(({ email }) => ({
-      ...notification,
-      from: this.senderEmail,
-      to: email,
-    }));
+    const emails: MailDataRequired[] = recipientEmails
+      .filter(({ email }) => email)
+      .map(({ email }) => ({
+        ...notification,
+        from: this.senderEmail,
+        to: email,
+      }));
 
     const results = await Promise.allSettled(await sgMail.send(emails));
 
