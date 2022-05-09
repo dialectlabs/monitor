@@ -11,7 +11,7 @@ import {
   SubscriberRepository,
 } from '../ports';
 import { Monitor } from '../monitor-api';
-import { SourceData } from '../data-model';
+import { ResourceId, SourceData } from '../data-model';
 import { Operators } from '../transformation-pipeline-operators';
 import { map } from 'rxjs/operators';
 import { Web2SubscriberRepository } from '../web-subscriber.repository';
@@ -67,11 +67,11 @@ export class DefaultMonitor<T extends Object> implements Monitor<T> {
               this.web2SubscriberRepository,
             ),
           ).pipe(
-            map((it) =>
-              this.dataSourceTransformationPipelines.map((pipeline) =>
+            map((it: ResourceId[]) => {
+              return this.dataSourceTransformationPipelines.map((pipeline) =>
                 pipeline(data, it),
-              ),
-            ),
+              );
+            }),
             mergeMap((it) => it),
           ),
         ),

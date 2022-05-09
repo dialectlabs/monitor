@@ -20,13 +20,13 @@ import {
 } from '../ports';
 import { Monitor, MonitorProps } from '../monitor-api';
 import { ResourceId, SourceData, SubscriberEvent } from '../data-model';
-import { DefaultMonitor } from './default-monitor';
 import { timeout } from 'rxjs/operators';
 import {
   NoopWeb2SubscriberRepository,
   Web2SubscriberRepository,
 } from '../web-subscriber.repository';
 import { findAllDistinct } from './subsbscriber-repository-utilts';
+import { DefaultMonitor } from './default-monitor';
 
 export class DefaultMonitorFactory implements MonitorFactory {
   private readonly subscriberRepository: SubscriberRepository;
@@ -67,7 +67,7 @@ export class DefaultMonitorFactory implements MonitorFactory {
     return Promise.all(this.shutdownHooks.map((it) => it()));
   }
 
-  createBroadcastMonitor<T extends object>(
+  createDefaultMonitor<T extends object>(
     dataSource: PollableDataSource<T>,
     datasourceTransformationPipelines: DataSourceTransformationPipeline<
       T,
@@ -123,6 +123,7 @@ export class DefaultMonitorFactory implements MonitorFactory {
       dataSource,
       dataSourceTransformationPipelines,
       this.subscriberRepository,
+      this.web2SubscriberRepository,
     );
     this.shutdownHooks.push(() => monitor.stop());
     return monitor;

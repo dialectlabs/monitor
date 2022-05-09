@@ -299,6 +299,11 @@ class AddSinksStepImpl<T extends object, R> implements AddSinksStep<T, R> {
   ) {}
 
   also(): AddTransformationsStep<T> {
+    this.populateDataSourceTransformationPipelines();
+    return this.addTransformationsStep!;
+  }
+
+  private populateDataSourceTransformationPipelines() {
     const transformAndLoadPipelines: DataSourceTransformationPipeline<
       T,
       any
@@ -326,7 +331,6 @@ class AddSinksStepImpl<T extends object, R> implements AddSinksStep<T, R> {
     this.addTransformationsStep.dataSourceTransformationPipelines.push(
       ...transformAndLoadPipelines,
     );
-    return this.addTransformationsStep!;
   }
 
   dialectThread(
@@ -418,6 +422,7 @@ class AddSinksStepImpl<T extends object, R> implements AddSinksStep<T, R> {
   }
 
   and(): BuildStep<T> {
+    this.populateDataSourceTransformationPipelines();
     return new BuildStepImpl(this.addTransformationsStep!.monitorBuilderState);
   }
 }
@@ -521,7 +526,7 @@ class BuildStepImpl<T extends object> implements BuildStep<T> {
         'Expected [pollableDataSource, pollInterval, dataSourceTransformationPipelines] to be defined',
       );
     }
-    return Monitors.factory(monitorProps).createBroadcastMonitor<T>(
+    return Monitors.factory(monitorProps).createDefaultMonitor<T>(
       pollableDataSource,
       dataSourceTransformationPipelines,
       pollInterval,
@@ -540,7 +545,7 @@ class BuildStepImpl<T extends object> implements BuildStep<T> {
         'Expected [pushyDataSource, dataSourceTransformationPipelines] to be defined',
       );
     }
-    return Monitors.factory(monitorProps).createBroadcastMonitor<T>(
+    return Monitors.factory(monitorProps).createDefaultMonitor<T>(
       pushyDataSource,
       dataSourceTransformationPipelines,
       Duration.fromObject({ seconds: 1 }), // TODO: make optional
