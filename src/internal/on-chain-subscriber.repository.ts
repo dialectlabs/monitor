@@ -13,11 +13,10 @@ import { getDialectAccount } from './dialect-extensions';
 import { ResourceId } from '../data-model';
 
 let eventSubscription: EventSubscription;
+let onSubscriberAddedHandlers: SubscriberEventHandler[] = [];
+let onSubscriberRemovedHandlers: SubscriberEventHandler[] = [];
 
 export class OnChainSubscriberRepository implements SubscriberRepository {
-  private readonly onSubscriberAddedHandlers: SubscriberEventHandler[] = [];
-  private readonly onSubscriberRemovedHandlers: SubscriberEventHandler[] = [];
-
   constructor(
     private dialectProgram: Program,
     private readonly monitorKeypair: Keypair,
@@ -53,9 +52,9 @@ export class OnChainSubscriberRepository implements SubscriberRepository {
     onSubscriberAdded?: SubscriberEventHandler,
     onSubscriberRemoved?: SubscriberEventHandler,
   ) {
-    onSubscriberAdded && this.onSubscriberAddedHandlers.push(onSubscriberAdded);
+    onSubscriberAdded && onSubscriberAddedHandlers.push(onSubscriberAdded);
     onSubscriberRemoved &&
-      this.onSubscriberRemovedHandlers.push(onSubscriberRemoved);
+      onSubscriberRemovedHandlers.push(onSubscriberRemoved);
     if (!eventSubscription) {
       eventSubscription = await subscribeToEvents(
         this.dialectProgram,
@@ -63,18 +62,14 @@ export class OnChainSubscriberRepository implements SubscriberRepository {
           if (event.type === 'dialect-created' && this.shouldBeTracked(event)) {
             const subscriberResource = await this.findSubscriberInEvent(event);
             console.log(`Subscriber added  ${subscriberResource}`);
-            this.onSubscriberAddedHandlers.forEach((it) =>
-              it(subscriberResource),
-            );
+            onSubscriberAddedHandlers.forEach((it) => it(subscriberResource));
           }
           if (event.type === 'dialect-deleted' && this.shouldBeTracked(event)) {
             const subscriberResource = this.findSubscriberResource(
               event.members,
             );
             console.log(`Subscriber removed  ${subscriberResource}`);
-            this.onSubscriberRemovedHandlers.forEach((it) =>
-              it(subscriberResource),
-            );
+            onSubscriberRemovedHandlers.forEach((it) => it(subscriberResource));
           }
           return Promise.resolve();
         },
