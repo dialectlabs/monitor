@@ -30,21 +30,18 @@ export class DialectNotificationSink
       (it) => !!subscriberPkToSubscriber[it.toBase58()],
     );
     const results = await Promise.allSettled(
-      recipientsFiltered.map(
-        async (it) => async () => {
-          const dialectAccount = await getDialectAccount(this.dialectProgram, [
-            this.monitorKeypair.publicKey,
-            it,
-          ]);
-          return sendMessage(
-            this.dialectProgram,
-            dialectAccount,
-            this.monitorKeypair,
-            message,
-          );
-        },
-        { delay: 100, maxTry: 5 },
-      ),
+      recipientsFiltered.map(async (it) => {
+        const dialectAccount = await getDialectAccount(this.dialectProgram, [
+          this.monitorKeypair.publicKey,
+          it,
+        ]);
+        return sendMessage(
+          this.dialectProgram,
+          dialectAccount,
+          this.monitorKeypair,
+          message,
+        );
+      }),
     );
     const failedSends = results
       .filter((it) => it.status === 'rejected')

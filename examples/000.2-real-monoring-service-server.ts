@@ -61,23 +61,19 @@ const dataSourceMonitor: Monitor<DataType> = Monitors.builder({
   .transform<number, number>({
     keys: ['cratio'],
     pipelines: [
-      Pipelines.threshold(
-        {
-          type: 'falling-edge',
-          threshold: 0.5,
-        },
-        {
-          type: 'throttle-time',
-          timeSpan: Duration.fromObject({ minutes: 5 }),
-        },
-      ),
+      Pipelines.threshold({
+        type: 'falling-edge',
+        threshold: 0.5,
+      }),
     ],
   })
   .notify()
   .dialectThread(
-    ({ value }) => ({
-      message: `Your cratio = ${value} below warning threshold`,
-    }),
+    ({ value }) => {
+      return {
+        message: `Your cratio = ${value} below warning threshold`,
+      };
+    },
     {
       dispatch: 'unicast',
       to: ({ origin: { resourceId } }) => resourceId,

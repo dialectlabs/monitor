@@ -12,9 +12,9 @@ import {
 import { getDialectAccount } from './dialect-extensions';
 import { ResourceId } from '../data-model';
 
-export class OnChainSubscriberRepository implements SubscriberRepository {
-  private eventSubscription?: EventSubscription;
+let eventSubscription: EventSubscription;
 
+export class OnChainSubscriberRepository implements SubscriberRepository {
   private readonly onSubscriberAddedHandlers: SubscriberEventHandler[] = [];
   private readonly onSubscriberRemovedHandlers: SubscriberEventHandler[] = [];
 
@@ -37,7 +37,7 @@ export class OnChainSubscriberRepository implements SubscriberRepository {
   }
 
   async tearDown() {
-    this.eventSubscription && (await this.eventSubscription.unsubscribe());
+    eventSubscription && (await eventSubscription.unsubscribe());
   }
 
   async findAll(): Promise<ResourceId[]> {
@@ -56,8 +56,8 @@ export class OnChainSubscriberRepository implements SubscriberRepository {
     onSubscriberAdded && this.onSubscriberAddedHandlers.push(onSubscriberAdded);
     onSubscriberRemoved &&
       this.onSubscriberRemovedHandlers.push(onSubscriberRemoved);
-    if (!this.eventSubscription) {
-      this.eventSubscription = await subscribeToEvents(
+    if (!eventSubscription) {
+      eventSubscription = await subscribeToEvents(
         this.dialectProgram,
         async (event) => {
           if (event.type === 'dialect-created' && this.shouldBeTracked(event)) {
