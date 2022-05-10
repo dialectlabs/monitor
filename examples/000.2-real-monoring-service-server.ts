@@ -37,6 +37,7 @@ function getDialectProgram(): Program {
 type DataType = {
   cratio: number;
   healthRatio: number;
+  resourceId: ResourceId;
 };
 
 const dataSourceMonitor: Monitor<DataType> = Monitors.builder({
@@ -50,8 +51,9 @@ const dataSourceMonitor: Monitor<DataType> = Monitors.builder({
         data: {
           cratio: Math.random(),
           healthRatio: Math.random(),
+          resourceId,
         },
-        resourceId,
+        groupingKey: resourceId.toString(),
       }),
     );
     return Promise.resolve(sourceData);
@@ -59,23 +61,24 @@ const dataSourceMonitor: Monitor<DataType> = Monitors.builder({
   .transform<number, number>({
     keys: ['cratio'],
     pipelines: [
-      Pipelines.threshold(
-        {
-          type: 'falling-edge',
-          threshold: 0.5,
-        },
-        {
-          type: 'throttle-time',
-          timeSpan: Duration.fromObject({ minutes: 5 }),
-        },
-      ),
+      Pipelines.threshold({
+        type: 'falling-edge',
+        threshold: 0.5,
+      }),
     ],
   })
   .notify()
-  .dialectThread(({ value }) => ({
-    message: `Your cratio = ${value} below warning threshold`,
-  }))
+  .dialectThread(
+    ({ value }) => {
+      return {
+        message: `Your cratio = ${value} below warning threshold`,
+      };
+    },
+    {
+      dispatch: 'unicast',
+      to: ({ origin: { resourceId } }) => resourceId,
+    },
+  )
   .and()
-  .dispatch('unicast')
   .build();
 dataSourceMonitor.start();

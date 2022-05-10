@@ -13,6 +13,7 @@ import { ConsoleNotificationSink } from './004-custom-notification-sink';
 type DataType = {
   cratio: number;
   healthRatio: number;
+  subscribers: ResourceId[];
 };
 
 const threshold = 0.5;
@@ -30,8 +31,9 @@ const monitor: Monitor<DataType> = Monitors.builder({
         data: {
           cratio: Math.random(),
           healthRatio: Math.random() * 10,
+          subscribers,
         },
-        resourceId,
+        groupingKey: resourceId.toBase58(),
       }),
     );
     return Promise.resolve(sourceData);
@@ -51,8 +53,9 @@ const monitor: Monitor<DataType> = Monitors.builder({
       message: `Your cratio = ${value} below warning threshold`,
     }),
     consoleNotificationSink,
+    { dispatch: 'broadcast' },
   )
-  .and()
+  .also()
   .transform<number, number>({
     keys: ['cratio'],
     pipelines: [
@@ -68,9 +71,8 @@ const monitor: Monitor<DataType> = Monitors.builder({
       message: `Your cratio = ${value} above warning threshold`,
     }),
     consoleNotificationSink,
-    () => Math.random() > 0.5,
+    { dispatch: 'broadcast' },
   )
   .and()
-  .dispatch('broadcast')
   .build();
 monitor.start();

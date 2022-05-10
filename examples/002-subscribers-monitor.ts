@@ -21,15 +21,23 @@ const monitor = Monitors.builder({
   })
   .notify()
   .custom<DialectNotification>(
-    ({ context }) => ({
-      message: `Hey ${context.resourceId}, welcome!`,
+    ({
+      context: {
+        origin: { resourceId },
+      },
+    }) => ({
+      message: `Hey ${resourceId}, welcome!`,
     }),
     consoleNotificationSink,
+    { dispatch: 'unicast', to: ({ origin: { resourceId } }) => resourceId },
   )
   .and()
-  .dispatch('unicast')
   .build();
 
-monitor.start().then(() => {
-  dummySubscriberRepository.addNewSubscriber(new Keypair().publicKey);
-});
+monitor.start();
+
+const pk = new Keypair().publicKey;
+
+setTimeout(() => {
+  dummySubscriberRepository.addNewSubscriber(pk);
+}, 100);

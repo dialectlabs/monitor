@@ -1,6 +1,6 @@
 import { Notification, ResourceId } from './data-model';
 import { NotificationSink } from './ports';
-import { Context, Telegraf } from 'telegraf';
+import { Telegraf } from 'telegraf';
 import { Web2SubscriberRepository } from './web-subscriber.repository';
 
 /**
@@ -14,6 +14,7 @@ export class TelegramNotificationSink
   implements NotificationSink<TelegramNotification>
 {
   private bot: Telegraf;
+
   constructor(
     private readonly telegramBotToken: string,
     private readonly web2SubscriberRepository: Web2SubscriberRepository,
@@ -25,7 +26,7 @@ export class TelegramNotificationSink
     const recipientTelegramNumbers = await this.web2SubscriberRepository.findBy(
       recipients,
     );
-    console.log("tg-notif-sink, recipients:\n");
+    console.log('tg-notif-sink, recipients:\n');
     console.log(recipientTelegramNumbers);
 
     const results = await Promise.allSettled(

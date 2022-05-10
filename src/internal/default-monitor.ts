@@ -11,13 +11,12 @@ import {
   SubscriberRepository,
 } from '../ports';
 import { Monitor } from '../monitor-api';
-import { SourceData } from '../data-model';
+import { Data } from '../data-model';
 import { Operators } from '../transformation-pipeline-operators';
-import { map } from 'rxjs/operators';
 import { Web2SubscriberRepository } from '../web-subscriber.repository';
 import { findAllDistinct } from './subsbscriber-repository-utilts';
 
-export class BroadcastMonitor<T extends Object> implements Monitor<T> {
+export class DefaultMonitor<T extends Object> implements Monitor<T> {
   private started = false;
 
   private subscriptions: RxJsSubscription[] = [];
@@ -54,25 +53,18 @@ export class BroadcastMonitor<T extends Object> implements Monitor<T> {
   private async startMonitorPipeline() {
     const monitorPipelineSubscription = this.dataSource
       .pipe(
-        groupBy<SourceData<T>, string, SourceData<T>>(
-          ({ resourceId }) => resourceId.toString(),
+        mergeMap(({ data, groupingKey }) =>
+          from(this.enrichWithContext(data, groupingKey)),
+        ),
+        groupBy<Data<T, T>, string, Data<T, T>>(
+          ({ context: { groupingKey } }) => groupingKey,
           {
             element: (it) => it,
           },
         ),
-        mergeMap((data: GroupedObservable<string, SourceData<T>>) =>
-          from(
-            findAllDistinct(
-              this.subscriberRepository,
-              this.web2SubscriberRepository,
-            ),
-          ).pipe(
-            map((it) =>
-              this.dataSourceTransformationPipelines.map((pipeline) =>
-                pipeline(data, it),
-              ),
-            ),
-            mergeMap((it) => it),
+        mergeMap((data: GroupedObservable<string, Data<T, T>>) =>
+          this.dataSourceTransformationPipelines.map((pipeline) =>
+            pipeline(data.pipe()),
           ),
         ),
         mergeMap((it) => it),
@@ -80,5 +72,24 @@ export class BroadcastMonitor<T extends Object> implements Monitor<T> {
       .pipe(...Operators.FlowControl.onErrorRetry())
       .subscribe();
     this.subscriptions.push(monitorPipelineSubscription);
+  }
+
+  private async enrichWithContext(
+    origin: T,
+    groupingKey: string,
+  ): Promise<Data<T, T>> {
+    const subscribers = await findAllDistinct(
+      this.subscriberRepository,
+      this.web2SubscriberRepository,
+    );
+    return {
+      context: {
+        origin,
+        groupingKey,
+        subscribers,
+        trace: [],
+      },
+      value: origin,
+    };
   }
 }

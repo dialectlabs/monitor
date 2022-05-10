@@ -11,7 +11,7 @@ export type ResourceId = PublicKey;
  */
 export interface SourceData<T> {
   data: T;
-  resourceId: ResourceId;
+  groupingKey: string;
 }
 
 /**
@@ -27,9 +27,10 @@ export interface Data<V, T extends object> {
  * A holder for any context data that need to be preserved through all pipeline transformations
  */
 export interface Context<T extends object> {
-  resourceId: ResourceId;
   origin: T;
+  groupingKey: string;
   trace: Trace[];
+  subscribers: ResourceId[];
 }
 
 /**
@@ -52,6 +53,7 @@ export interface Notification {}
  * An event that is fired when something changes in subscriber state e.g. new subscriber is added
  */
 export interface SubscriberEvent {
+  resourceId: ResourceId;
   state: SubscriberState;
 }
 

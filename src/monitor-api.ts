@@ -23,7 +23,7 @@ export interface MonitorProps {
    * Monitoring service keypair used to sign transactions to send messages and discover subscribers
    */
   monitorKeypair?: Keypair;
-  
+
   /**
    * Allows to set custom subscriber repository
    */

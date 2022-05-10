@@ -1,5 +1,5 @@
 import { Observable } from 'rxjs';
-import { Data, ResourceId, SourceData, Notification } from './data-model';
+import { Data, Notification, ResourceId, SourceData } from './data-model';
 
 /**
  * An abstraction that represents a source of data, bound to specific type
@@ -19,14 +19,16 @@ export interface PollableDataSource<T extends object> {
  * Pushy data source delivers data asynchronously, which eliminates polling
  */
 export type PushyDataSource<T extends object> = Observable<SourceData<T>>;
+export type ContextEnrichedPushyDataSource<T extends object> = Observable<
+  Data<T, T>
+>;
 
 /**
  * A set of transformations that are executed on-top of unbound pushy data source
  * to generate a new notification
  */
-export type DataSourceTransformationPipeline<T extends Object, R> = (
-  dataSource: PushyDataSource<T>,
-  targets: ResourceId[],
+export type DataSourceTransformationPipeline<T extends object, R> = (
+  dataSource: ContextEnrichedPushyDataSource<T>,
 ) => Observable<R>;
 
 /**

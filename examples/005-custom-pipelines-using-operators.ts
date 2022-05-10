@@ -12,10 +12,12 @@ import {
 import { ConsoleNotificationSink } from './004-custom-notification-sink';
 import { DummySubscriberRepository } from './003-custom-subscriber-repository';
 import { Duration } from 'luxon';
+import { PublicKey } from '@solana/web3.js';
 
 type DataType = {
   cratio: number;
   healthRatio: number;
+  resourceId: PublicKey;
 };
 
 setPipeLogLevel(PipeLogLevel.INFO);
@@ -32,8 +34,9 @@ const monitor: Monitor<DataType> = Monitors.builder({
         data: {
           cratio: Math.random(),
           healthRatio: Math.random() * 10,
+          resourceId,
         },
-        resourceId,
+        groupingKey: resourceId.toBase58(),
       }),
     );
     return Promise.resolve(sourceData);
@@ -76,8 +79,8 @@ const monitor: Monitor<DataType> = Monitors.builder({
       message: `        notification ${value}`,
     }),
     consoleNotificationSink,
+    { dispatch: 'unicast', to: ({ origin: { resourceId } }) => resourceId },
   )
   .and()
-  .dispatch('unicast')
   .build();
 monitor.start();

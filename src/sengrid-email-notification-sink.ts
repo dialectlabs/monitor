@@ -2,8 +2,6 @@ import { Notification, ResourceId } from './data-model';
 import { NotificationSink } from './ports';
 import sgMail from '@sendgrid/mail';
 import { MailDataRequired } from '@sendgrid/helpers/classes/mail';
-import { PublicKey } from '@solana/web3.js';
-//import { Promise } from 'es6-promise';
 import { Web2SubscriberRepository } from './web-subscriber.repository';
 
 /**
@@ -29,17 +27,18 @@ export class SengridEmailNotificationSink
     const recipientEmails = await this.web2SubscriberRepository.findBy(
       recipients,
     );
-    console.log("sendgrid-notif-sink, recipients:\n");
+    console.log('sendgrid-notif-sink, recipients:\n');
     console.log(recipientEmails);
-    const emails: MailDataRequired[] = recipientEmails.filter(({email}) => email).map(({ email }) => ({
-      ...notification,
-      from: this.senderEmail,
-      to: email,
-    }));
+    const emails: MailDataRequired[] = recipientEmails
+      .filter(({ email }) => email)
+      .map(({ email }) => ({
+        ...notification,
+        from: this.senderEmail,
+        to: email,
+      }));
 
-    // TODO why was es6? verify non breaking...
     const results = await Promise.allSettled(await sgMail.send(emails));
-    
+
     const failedSends = results
       .filter((it) => it.status === 'rejected')
       .map((it) => it as PromiseRejectedResult);
@@ -51,7 +50,7 @@ export class SengridEmailNotificationSink
         ${failedSends.map((it) => it.reason)}
         `,
       );
-    };
+    }
 
     return;
   }

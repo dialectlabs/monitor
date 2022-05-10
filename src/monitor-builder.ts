@@ -6,7 +6,7 @@ import {
   TransformationPipeline,
 } from './ports';
 import { Monitor } from './monitor-api';
-import { Data, ResourceId, SubscriberEvent } from './data-model';
+import { Context, Data, ResourceId, SubscriberEvent } from './data-model';
 import { DialectNotification } from './dialect-notification-sink';
 import { EmailNotification } from './sengrid-email-notification-sink';
 import { SmsNotification } from './twilio-sms-notification-sink';
@@ -68,12 +68,27 @@ export interface Transformation<T extends object, V, R> {
  * Defines to which subscribers the notifications are send.
  * 1. Unicast sends notification to a single subscriber who owned the original data, provided in {@linkcode DefineDataSourceStep}
  */
-export type DispatchStrategy = 'unicast' | 'broadcast';
+export type DispatchStrategy<T extends object> =
+  | BroadcastDispatchStrategy
+  | UnicastDispatchStrategy<T>
+  | MulticastDispatchStrategy<T>;
+
+export type BroadcastDispatchStrategy = {
+  dispatch: 'broadcast';
+};
+
+export type UnicastDispatchStrategy<T extends object> = {
+  dispatch: 'unicast';
+  to: (ctx: Context<T>) => ResourceId;
+};
+
+export type MulticastDispatchStrategy<T extends object> = {
+  dispatch: 'multicast';
+  to: (ctx: Context<T>) => ResourceId[];
+};
 
 export interface AddTransformationsStep<T extends object> {
   transform<V, R>(transformation: Transformation<T, V, R>): NotifyStep<T, R>;
-
-  dispatch(strategy: DispatchStrategy): BuildStep<T>;
 
   notify(): AddSinksStep<T, T>;
 }
@@ -88,31 +103,33 @@ export interface NotifyStep<T extends object, R> {
 export interface AddSinksStep<T extends object, R> {
   dialectThread(
     adapter: (data: Data<R, T>) => DialectNotification,
-    recipientPredicate?: (data: Data<R, T>, recipient: ResourceId) => boolean,
+    dispatchStrategy: DispatchStrategy<T>,
   ): AddSinksStep<T, R>;
 
   email(
     adapter: (data: Data<R, T>) => EmailNotification,
-    recipientPredicate?: (data: Data<R, T>, recipient: ResourceId) => boolean,
+    dispatchStrategy: DispatchStrategy<T>,
   ): AddSinksStep<T, R>;
 
   sms(
     adapter: (data: Data<R, T>) => SmsNotification,
-    recipientPredicate?: (data: Data<R, T>, recipient: ResourceId) => boolean,
+    dispatchStrategy: DispatchStrategy<T>,
   ): AddSinksStep<T, R>;
 
   telegram(
     adapter: (data: Data<R, T>) => TelegramNotification,
-    recipientPredicate?: (data: Data<R, T>, recipient: ResourceId) => boolean,
+    dispatchStrategy: DispatchStrategy<T>,
   ): AddSinksStep<T, R>;
 
   custom<N>(
     adapter: (data: Data<R, T>) => N,
     sink: NotificationSink<N>,
-    recipientPredicate?: (data: Data<R, T>, recipient: ResourceId) => boolean,
+    dispatchStrategy: DispatchStrategy<T>,
   ): AddSinksStep<T, R>;
 
-  and(): AddTransformationsStep<T>;
+  also(): AddTransformationsStep<T>;
+
+  and(): BuildStep<T>;
 }
 
 export interface BuildStep<T extends object> {

@@ -1,12 +1,11 @@
 import { InMemorySubscriberRepository } from './in-memory-subscriber.repository';
 import { OnChainSubscriberRepository } from './on-chain-subscriber.repository';
 import { Duration } from 'luxon';
-import { UnicastMonitor } from './unicast-monitor';
 import {
   catchError,
-  concatMap,
   exhaustMap,
   from,
+  mergeMap,
   Observable,
   throwError,
   TimeoutError,
@@ -22,13 +21,13 @@ import {
 } from '../ports';
 import { Monitor, MonitorProps } from '../monitor-api';
 import { ResourceId, SourceData, SubscriberEvent } from '../data-model';
-import { BroadcastMonitor } from './broadcast-monitor';
 import { timeout } from 'rxjs/operators';
 import {
   NoopWeb2SubscriberRepository,
   Web2SubscriberRepository,
 } from '../web-subscriber.repository';
 import { findAllDistinct } from './subsbscriber-repository-utilts';
+import { DefaultMonitor } from './default-monitor';
 
 export class DefaultMonitorFactory implements MonitorFactory {
   private readonly subscriberRepository: SubscriberRepository;
@@ -69,7 +68,7 @@ export class DefaultMonitorFactory implements MonitorFactory {
     return Promise.all(this.shutdownHooks.map((it) => it()));
   }
 
-  createUnicastMonitor<T extends object>(
+  createDefaultMonitor<T extends object>(
     dataSource: DataSource<T>,
     datasourceTransformationPipelines: DataSourceTransformationPipeline<
       T,
@@ -77,55 +76,22 @@ export class DefaultMonitorFactory implements MonitorFactory {
     >[],
     pollInterval: Duration = Duration.fromObject({ seconds: 10 }),
   ): Monitor<T> {
-    const pushyDataSource = this.decorateWithPushyDataSource(
-      dataSource,
-      pollInterval,
-    );
-    const unicastMonitor = new UnicastMonitor<T>(
-      pushyDataSource,
-      datasourceTransformationPipelines,
-    );
-    this.shutdownHooks.push(() => unicastMonitor.stop());
-    return unicastMonitor;
-  }
-
-  private decorateWithPushyDataSource<T extends object>(
-    dataSource: DataSource<T>,
-    pollInterval: Duration,
-  ): PushyDataSource<T> {
-    if ('subscribe' in dataSource) {
-      return dataSource as PushyDataSource<T>;
-    }
-    return this.toPushyDataSource(
-      dataSource as PollableDataSource<T>,
-      pollInterval,
-      this.subscriberRepository,
-      this.web2SubscriberRepository,
-    );
-  }
-
-  createBroadcastMonitor<T extends object>(
-    dataSource: PollableDataSource<T>,
-    datasourceTransformationPipelines: DataSourceTransformationPipeline<
-      T,
-      any
-    >[],
-    pollInterval: Duration = Duration.fromObject({ seconds: 10 }),
-  ): Monitor<T> {
-    const pushyDataSource = this.toPushyDataSource(
-      dataSource,
-      pollInterval,
-      this.subscriberRepository,
-      this.web2SubscriberRepository,
-    );
-    const broadcastMonitor = new BroadcastMonitor<T>(
+    const pushyDataSource = !('subscribe' in dataSource)
+      ? this.toPushyDataSource(
+          dataSource as PollableDataSource<T>,
+          pollInterval,
+          this.subscriberRepository,
+          this.web2SubscriberRepository,
+        )
+      : dataSource;
+    const monitor = new DefaultMonitor<T>(
       pushyDataSource,
       datasourceTransformationPipelines,
       this.subscriberRepository,
       this.web2SubscriberRepository,
     );
-    this.shutdownHooks.push(() => broadcastMonitor.stop());
-    return broadcastMonitor;
+    this.shutdownHooks.push(() => monitor.stop());
+    return monitor;
   }
 
   createSubscriberEventMonitor(
@@ -140,26 +106,30 @@ export class DefaultMonitorFactory implements MonitorFactory {
       this.subscriberRepository.subscribe(
         (resourceId) =>
           subscriber.next({
-            resourceId,
+            groupingKey: resourceId.toBase58(),
             data: {
+              resourceId,
               state: 'added',
             },
           }),
         (resourceId) =>
           subscriber.next({
-            resourceId,
+            groupingKey: resourceId.toBase58(),
             data: {
+              resourceId,
               state: 'removed',
             },
           }),
       ),
     );
-    const unicastMonitor = new UnicastMonitor<SubscriberEvent>(
+    const monitor = new DefaultMonitor<SubscriberEvent>(
       dataSource,
       dataSourceTransformationPipelines,
+      this.subscriberRepository,
+      this.web2SubscriberRepository,
     );
-    this.shutdownHooks.push(() => unicastMonitor.stop());
-    return unicastMonitor;
+    this.shutdownHooks.push(() => monitor.stop());
+    return monitor;
   }
 
   private toPushyDataSource<T extends object>(
@@ -171,7 +141,7 @@ export class DefaultMonitorFactory implements MonitorFactory {
   ): PushyDataSource<T> {
     return timer(0, pollInterval.toMillis()).pipe(
       exhaustMap(() =>
-        findAllDistinct(subscriberRepository, web2SubscriberRepository),
+        from(findAllDistinct(subscriberRepository, web2SubscriberRepository)),
       ),
       exhaustMap((resources: ResourceId[]) => from(dataSource(resources))),
       timeout(pollTimeout.toMillis()),
@@ -185,7 +155,7 @@ export class DefaultMonitorFactory implements MonitorFactory {
         }
         return throwError(error);
       }),
-      concatMap((it) => it),
+      mergeMap((it) => it),
     );
   }
 }
