@@ -207,6 +207,8 @@ class AddTransformationsStepImpl<T extends object>
       this.dataSourceTransformationPipelines,
       this.monitorBuilderState.dialectNotificationSink,
       this.monitorBuilderState.emailNotificationSink,
+      this.monitorBuilderState.smsNotificationSink,
+      this.monitorBuilderState.telegramNotificationSink,
     );
   }
 
