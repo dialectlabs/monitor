@@ -1,22 +1,27 @@
 import { ResourceId } from '../data-model';
-import { PublicKey } from '@solana/web3.js';
+import { Keypair, PublicKey } from '@solana/web3.js';
 import {
   Web2Subscriber,
   Web2SubscriberRepository,
 } from '../web-subscriber.repository';
-import { DateTime } from 'luxon';
+import { DateTime, Duration } from 'luxon';
 import axios, { AxiosError } from 'axios';
+import nacl from 'tweetnacl';
 
 export class RestWeb2SubscriberRepository implements Web2SubscriberRepository {
   private readonly subscribersEndpoint;
+  private readonly tokenService: TokenService;
 
   constructor(
     private readonly serviceUrl: string,
-    private readonly monitorPublicKey: PublicKey,
+    private readonly monitorKeypair: Keypair,
   ) {
     this.subscribersEndpoint = `${
       this.serviceUrl
-    }/v0/dapps/${this.monitorPublicKey.toBase58()}/subscribers`;
+    }/v0/dapps/${this.monitorKeypair.publicKey.toBase58()}/subscribers`;
+    this.tokenService = new CachingTokenService(
+      new KeypairTokenService(monitorKeypair),
+    );
   }
 
   async findBy(resourceIds: ResourceId[]): Promise<Web2Subscriber[]> {
@@ -24,24 +29,17 @@ export class RestWeb2SubscriberRepository implements Web2SubscriberRepository {
     const filtered: Web2Subscriber[] = all.filter((web2Sub) =>
       resourceIds.find((it) => it.equals(web2Sub.resourceId)),
     );
-    // console.log('___findBy');
-    // console.log(filtered);
     return Promise.all(filtered);
   }
 
   async findAll(): Promise<Web2Subscriber[]> {
     const subscriberDtos = await this.fetchSubscribers();
-    // console.log('---finaAll()');
-    // console.log(this.monitorPublicKey);
-    // console.log(result.data);
-    // redo resourceId to Pubkey again on this side.
     const web2Subscribers: Web2Subscriber[] = subscriberDtos.map((it) => ({
       resourceId: new PublicKey(it.resourceId),
       email: it.email,
       telegramId: it.telegramId,
       smsNumber: it.smsNumber,
     }));
-    // console.log('^^^findAll()');
     return Promise.all(web2Subscribers);
   }
 
@@ -49,10 +47,7 @@ export class RestWeb2SubscriberRepository implements Web2SubscriberRepository {
     try {
       return (
         await axios.get<SubscriberDto[]>(this.subscribersEndpoint, {
-          auth: {
-            username: process.env.WEB2_SUBSCRIBER_SERVICE_BASIC_AUTH!,
-            password: '',
-          },
+          headers: { Authorization: `Bearer ${this.tokenService.get().token}` },
         })
       ).data;
     } catch (e) {
@@ -111,4 +106,58 @@ interface SubscriberDto {
   email?: string;
   telegramId?: string;
   smsNumber?: string;
+}
+
+interface Token {
+  token: string;
+  expiresAt: number;
+}
+
+export interface TokenService {
+  get(): Token;
+}
+
+export class KeypairTokenService implements TokenService {
+  constructor(
+    private readonly keypair: Keypair,
+    private readonly tokenTtl: Duration = Duration.fromObject({ minutes: 5 }),
+  ) {}
+
+  get(): Token {
+    const now = new Date().getTime();
+    const expiresAt = now + this.tokenTtl.toMillis();
+    const dateEncoded = new TextEncoder().encode(
+      btoa(JSON.stringify(expiresAt)),
+    );
+    const signature = nacl.sign.detached(dateEncoded, this.keypair.secretKey);
+    const base64Signature = btoa(
+      String.fromCharCode.apply(null, signature as unknown as number[]),
+    );
+    return {
+      token: `${expiresAt}.${base64Signature}`,
+      expiresAt: expiresAt,
+    };
+  }
+}
+
+export class CachingTokenService implements TokenService {
+  private token?: Token;
+
+  constructor(private readonly delegate: KeypairTokenService) {}
+
+  get(): Token {
+    if (!this.token || this.tokenExpiresSoon()) {
+      this.token = this.delegate.get();
+    }
+    return this.token;
+  }
+
+  private tokenExpiresSoon() {
+    const now = new Date().getTime();
+    const expirationDeltaMillis = 30 * 1000;
+    return (
+      this.token?.expiresAt &&
+      now + expirationDeltaMillis > this.token.expiresAt
+    );
+  }
 }
