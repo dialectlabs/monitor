@@ -52,7 +52,11 @@ export class RestWeb2SubscriberRepository implements Web2SubscriberRepository {
       ).data;
     } catch (e) {
       const err = e as AxiosError;
-      console.error('Failed to fetch subscribers', err.message);
+      console.error(
+        'Failed to fetch subscribers.',
+        err.message,
+        err.response?.data && err.response?.data,
+      );
       return [];
     }
   }
