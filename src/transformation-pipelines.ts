@@ -24,11 +24,13 @@ export type Trigger =
 export interface RisingEdgeTrigger {
   type: 'rising-edge';
   threshold: number;
+  limit?: number;
 }
 
 export interface FallingEdgeTrigger {
   type: 'falling-edge';
   threshold: number;
+  limit?: number;
 }
 
 export interface IncreaseTrigger {
@@ -51,9 +53,9 @@ export interface ThrottleTimeRateLimit {
 function createTriggerOperator<T extends object>(trigger: Trigger) {
   switch (trigger.type) {
     case 'falling-edge':
-      return Operators.Trigger.fallingEdge<T>(trigger.threshold);
+      return Operators.Trigger.fallingEdge<T>(trigger.threshold, trigger.limit);
     case 'rising-edge':
-      return Operators.Trigger.risingEdge<T>(trigger.threshold);
+      return Operators.Trigger.risingEdge<T>(trigger.threshold, trigger.limit);
     case 'increase':
       return Operators.Trigger.increase<T>(trigger.threshold);
     case 'decrease':

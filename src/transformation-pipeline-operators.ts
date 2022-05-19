@@ -116,6 +116,7 @@ export class Operators {
   static Trigger = class {
     static risingEdge<T extends object>(
       threshold: number,
+      limit?: number,
     ): [
       OperatorFunction<Data<number, T>, Data<number, T>[]>,
       OperatorFunction<Data<number, T>[], Data<number, T>[]>,
@@ -127,7 +128,7 @@ export class Operators {
           (it) =>
             it.length === 2 &&
             it[0].value <= threshold &&
-            threshold < it[1].value,
+            threshold < it[1].value && (!limit || it[1].value < limit),
         ),
         map(([_, snd]) => snd),
       ];
@@ -135,6 +136,7 @@ export class Operators {
 
     static fallingEdge<T extends object>(
       threshold: number,
+      limit?: number,
     ): [
       OperatorFunction<Data<number, T>, Data<number, T>[]>,
       OperatorFunction<Data<number, T>[], Data<number, T>[]>,
@@ -146,7 +148,7 @@ export class Operators {
           (data) =>
             data.length === 2 &&
             data[0].value >= threshold &&
-            threshold > data[1].value,
+            threshold > data[1].value && (!limit || data[1].value > limit),
         ),
         map(([_, snd]) => snd),
       ];
