@@ -69,8 +69,7 @@ export class MonitorsBuilderState<T extends object> {
       const postgresWeb2ResourceRepository: Web2SubscriberRepository =
         new RestWeb2SubscriberRepository(
           monitorProps.web2SubscriberRepositoryUrl,
-          monitorProps.monitorKeypair?.publicKey!, // TODO: handle this carefully
-          //new PublicKey("D2pyBevYb6dit1oCx6e8vCxFK9mBeYCRe8TTntk2Tm98"),
+          monitorProps.monitorKeypair!, // TODO: handle this carefully
         );
       monitorProps.web2SubscriberRepository =
         new InMemoryWeb2SubscriberRepository(
