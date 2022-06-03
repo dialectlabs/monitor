@@ -34,7 +34,7 @@ const createClients = async (n: number): Promise<void> => {
   const wallet = Wallet_.embedded(clients[0].secretKey);
   // configure anchor
   anchor.setProvider(
-    new anchor.Provider(connection, wallet, anchor.Provider.defaultOptions()),
+    new anchor.AnchorProvider(connection, wallet, anchor.AnchorProvider.defaultOptions()),
   );
   const program = new anchor.Program(
     idl as anchor.Idl,

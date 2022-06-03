@@ -1,6 +1,6 @@
 import { Connection, Keypair, PublicKey } from '@solana/web3.js';
 import { idl, Wallet_ } from '@dialectlabs/web3';
-import { Idl, Program, Provider } from '@project-serum/anchor';
+import { Idl, Program, AnchorProvider } from '@project-serum/anchor';
 import { Monitor, Monitors, Pipelines, ResourceId, SourceData } from '../src';
 import { Duration } from 'luxon';
 import { programs } from '@dialectlabs/web3/lib/es';
@@ -22,10 +22,10 @@ const wallet = Wallet_.embedded(MONITORING_SERVICE_KEYPAIR.secretKey);
 
 function getDialectProgram(): Program {
   const dialectConnection = new Connection(SOLANA_ENDPOINT, 'recent');
-  const dialectProvider = new Provider(
+  const dialectProvider = new AnchorProvider(
     dialectConnection,
     wallet,
-    Provider.defaultOptions(),
+    AnchorProvider.defaultOptions(),
   );
   return new Program(
     idl as Idl,
