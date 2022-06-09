@@ -45,6 +45,7 @@ The server implementation is provided below
 
 ```typescript
 import { Monitor, Monitors, Pipelines, ResourceId, SourceData } from '@dialectlabs/monitor';
+import { Dialect, NodeDialectWalletAdapter } from '@dialectlabs/sdk';
 import { Duration } from 'luxon';
 
 type DataType = {
@@ -53,8 +54,10 @@ type DataType = {
 };
 
 const monitor: Monitor<DataType> = Monitors.builder({
-  dialectProgram: // ... set a dialect program,
-  monitorKeypair: // ... set a keypair used to send notifications,
+  sdk: Dialect.sdk({
+    environment: 'local-development',
+    wallet: NodeDialectWalletAdapter.create(),
+  })
   // ... other configuration
 })
   .defineDataSource<DataType>()
@@ -106,8 +109,8 @@ Please follow the instructions in https://github.com/dialectlabs/protocol#local-
 ```bash
 export your_path=~/projects/dialect/keypairs/
 solana-keygen new --outfile ${your_path}/monitor-localnet-keypair.private
-solana-keygen pubkey ${your_path}/monitoring-service-dev-local-key.json > ${your_path}/monitoring-service-dev-local-key.pub
-solana -k ${your_path}/monitoring-service-dev-local-key.json airdrop 3
+solana-keygen pubkey ${your_path}/monitor-localnet-keypair.private > ${your_path}/monitor-localnet-keypair.public
+solana -k ${your_path}/monitor-localnet-keypair.public airdrop 3
 ```
 
 #### Step 2. Start server
