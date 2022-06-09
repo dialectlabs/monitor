@@ -14,8 +14,7 @@ import {
 } from '@dialectlabs/web3';
 
 const SOLANA_ENDPOINT = process.env.RPC_URL || 'http://localhost:8899';
-const MONITORING_SERVICE_PUBLIC_KEY = process.env
-  .MONITORING_SERVICE_PUBLIC_KEY as string;
+const PUBLIC_KEY = process.env.PUBLIC_KEY as string;
 
 // const DIALECT_PROGRAM_ADDRESS = new PublicKey(
 //   'BTHDR8UjttR3mX3PwT8MuEKDDzDYwqENYgPHH7QjaJ3y',
@@ -26,7 +25,7 @@ const connection = new web3.Connection(SOLANA_ENDPOINT, 'recent');
 
 const createClients = async (n: number): Promise<void> => {
   console.log(
-    `Creating ${n} monitoring service clients targeting ${MONITORING_SERVICE_PUBLIC_KEY}`,
+    `Creating ${n} monitoring service clients targeting ${PUBLIC_KEY}`,
   );
   const clients = Array(n)
     .fill(0)
@@ -51,7 +50,7 @@ const createClients = async (n: number): Promise<void> => {
       clients.map(async (owner) => {
         const members: Member[] = [
           {
-            publicKey: new PublicKey(MONITORING_SERVICE_PUBLIC_KEY),
+            publicKey: new PublicKey(PUBLIC_KEY),
             scopes: [false, true],
           },
           {

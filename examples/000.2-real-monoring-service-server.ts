@@ -1,38 +1,6 @@
-import { Connection, Keypair, PublicKey } from '@solana/web3.js';
-import { idl, Wallet_ } from '@dialectlabs/web3';
-import { Idl, Program, Provider } from '@project-serum/anchor';
 import { Monitor, Monitors, Pipelines, ResourceId, SourceData } from '../src';
 import { Duration } from 'luxon';
-import { programs } from '@dialectlabs/web3/lib/es';
-
-const SOLANA_ENDPOINT = process.env.RPC_URL || 'http://localhost:8899';
-const MONITORING_SERVICE_PRIVATE_KEY = process.env
-  .MONITORING_SERVICE_PRIVATE_KEY as string;
-
-const MONITORING_SERVICE_KEYPAIR: Keypair = Keypair.fromSecretKey(
-  new Uint8Array(JSON.parse(MONITORING_SERVICE_PRIVATE_KEY as string)),
-);
-
-// const DIALECT_PROGRAM_ADDRESS = new PublicKey(
-//   'BTHDR8UjttR3mX3PwT8MuEKDDzDYwqENYgPHH7QjaJ3y',
-// );
-const DIALECT_PROGRAM_ADDRESS = programs['localnet'].programAddress;
-
-const wallet = Wallet_.embedded(MONITORING_SERVICE_KEYPAIR.secretKey);
-
-function getDialectProgram(): Program {
-  const dialectConnection = new Connection(SOLANA_ENDPOINT, 'recent');
-  const dialectProvider = new Provider(
-    dialectConnection,
-    wallet,
-    Provider.defaultOptions(),
-  );
-  return new Program(
-    idl as Idl,
-    new PublicKey(DIALECT_PROGRAM_ADDRESS),
-    dialectProvider,
-  );
-}
+import { Dialect, NodeDialectWalletAdapter } from '@dialectlabs/sdk';
 
 type DataType = {
   cratio: number;
@@ -40,9 +8,13 @@ type DataType = {
   resourceId: ResourceId;
 };
 
+const sdk = Dialect.sdk({
+  environment: 'local-development',
+  wallet: NodeDialectWalletAdapter.create(),
+});
+
 const dataSourceMonitor: Monitor<DataType> = Monitors.builder({
-  dialectProgram: getDialectProgram(),
-  monitorKeypair: MONITORING_SERVICE_KEYPAIR,
+  sdk,
 })
   .defineDataSource<DataType>()
   .poll((subscribers: ResourceId[]) => {
