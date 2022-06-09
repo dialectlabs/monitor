@@ -19,18 +19,28 @@ export class InMemorySubscriberRepository implements SubscriberRepository {
 
   constructor(
     private readonly delegate: SubscriberRepository,
-    private readonly cacheInterval: Duration = Duration.fromObject({
-      minutes: 5,
+    private readonly cacheTtl: Duration = Duration.fromObject({
+      minutes: 1,
     }),
   ) {}
 
-  static decorate(other: SubscriberRepository) {
-    return new InMemorySubscriberRepository(other);
+  static decorate(
+    other: SubscriberRepository,
+    cacheTtl: Duration = Duration.fromObject({
+      minutes: 1,
+    }),
+  ) {
+    return new InMemorySubscriberRepository(other, cacheTtl);
   }
 
-  async findAll(): Promise<Subscriber[]> {
+  async findAll(resourceIds?: ResourceId[]): Promise<Subscriber[]> {
     await this.lazyInit();
-    return Array(...this.subscribers.values());
+    const subscribers = Array(...this.subscribers.values());
+    return resourceIds
+      ? subscribers.filter(({ resourceId }) =>
+          resourceIds.find((it) => it.equals(resourceId)),
+        )
+      : subscribers;
   }
 
   async findByResourceId(resourceId: ResourceId): Promise<Subscriber | null> {
@@ -42,10 +52,8 @@ export class InMemorySubscriberRepository implements SubscriberRepository {
     if (this.isInitialized) {
       return;
     }
-    console.log('Subscriber repository initialization started...');
     await this.initialize();
     this.isInitialized = true;
-    console.log('Subscriber repository initialization finished');
   }
 
   async subscribe(
@@ -64,7 +72,7 @@ export class InMemorySubscriberRepository implements SubscriberRepository {
       } catch (e) {
         console.error('Updating subscribers failed.', e);
       }
-    }, this.cacheInterval.toMillis());
+    }, this.cacheTtl.toMillis());
     return this.updateSubscribers();
   }
 
@@ -75,9 +83,9 @@ export class InMemorySubscriberRepository implements SubscriberRepository {
     );
     if (added.length > 0) {
       console.log(
-        `${added.length} subscribers added: ${JSON.stringify(
+        `${added.length} subscriber(s) added: ${JSON.stringify(
           added.slice(0, 3),
-        )}...`,
+        )}`,
       );
     }
     added.forEach((subscriber) => {
@@ -89,8 +97,8 @@ export class InMemorySubscriberRepository implements SubscriberRepository {
     );
     if (removed.length > 0) {
       console.log(
-        `${removed.length} subscribers removed: ${JSON.stringify(
-          added.slice(0, 3),
+        `${removed.length} subscriber(s) removed: ${JSON.stringify(
+          removed.slice(0, 3),
         )}...`,
       );
     }

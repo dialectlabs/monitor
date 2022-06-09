@@ -3,52 +3,27 @@ import { DefaultMonitorFactory } from './internal/default-monitor-factory';
 import { ChooseDataSourceStep } from './monitor-builder';
 import { MonitorFactory } from './monitor-factory';
 import { ChooseDataSourceStepImpl } from './internal/monitor-builder';
-import { Program } from '@project-serum/anchor';
-import { Keypair } from '@solana/web3.js';
+import { DialectSdk } from '@dialectlabs/sdk';
 import { SubscriberRepository } from './ports';
-import { Web2SubscriberRepository } from './web-subscriber.repository';
 
-/**
- * Please specify either
- * 1. dialectProgram + monitorKeypair to use on-chain bindings of internal components
- * 2. notificationSink + subscriberRepository to run w/o chain dependency
- */
-export interface MonitorProps {
-  /**
-   * Dialect program that will be used to interact with chain
-   */
-  dialectProgram?: Program;
+export type MonitorProps = GenericMonitorProps | DialectSdkMonitorProps;
 
-  /**
-   * Monitoring service keypair used to sign transactions to send messages and discover subscribers
-   */
-  monitorKeypair?: Keypair;
-
-  /**
-   * Allows to set custom subscriber repository
-   */
-  subscriberRepository?: SubscriberRepository;
-
-  /**
-   * Allows to set custom web2 subscriber repository
-   */
-  web2SubscriberRepositoryUrl?: string;
-
-  /**
-   * Allows to set custom web2 subscriber repository
-   */
-  web2SubscriberRepository?: Web2SubscriberRepository;
-
-  /**
-   * Allows to set sinks configuration to send notifications
-   */
+export interface GenericMonitorProps {
+  subscriberRepository: SubscriberRepository;
   sinks?: SinksConfiguration;
+}
+
+export interface DialectSdkMonitorProps {
+  sdk: DialectSdk;
+  subscriberRepository?: SubscriberRepository;
+  sinks?: Omit<SinksConfiguration, 'wallet'>;
 }
 
 export interface SinksConfiguration {
   email?: EmailSinkConfiguration;
   sms?: SmsSinkConfiguration;
   telegram?: TelegramSinkConfiguration;
+  wallet?: WalletSinkConfiguration;
   solflare?: SolflareSinkConfiguration;
 }
 
@@ -65,6 +40,10 @@ export interface SmsSinkConfiguration {
 
 export interface TelegramSinkConfiguration {
   telegramBotToken: string;
+}
+
+export interface WalletSinkConfiguration {
+  sdk: DialectSdk;
 }
 
 export interface SolflareSinkConfiguration {
@@ -126,9 +105,11 @@ export class Monitors<T extends object> {
   /**
    * A more low-level way to create monitors
    */
-  static factory(monitorProps: MonitorProps): MonitorFactory {
+  static factory(subscriberRepository: SubscriberRepository): MonitorFactory {
     if (!Monitors.factoryInstance) {
-      Monitors.factoryInstance = new DefaultMonitorFactory(monitorProps);
+      Monitors.factoryInstance = new DefaultMonitorFactory(
+        subscriberRepository,
+      );
     }
     return Monitors.factoryInstance;
   }

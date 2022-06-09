@@ -1,5 +1,3 @@
-import { InMemorySubscriberRepository } from './in-memory-subscriber.repository';
-import { DialectSdkSubscriberRepository } from './dialect-sdk-subscriber.repository';
 import { Duration } from 'luxon';
 import {
   catchError,
@@ -19,50 +17,15 @@ import {
   PushyDataSource,
   SubscriberRepository,
 } from '../ports';
-import { Monitor, MonitorProps } from '../monitor-api';
+import { Monitor } from '../monitor-api';
 import { ResourceId, SourceData, SubscriberEvent } from '../data-model';
 import { timeout } from 'rxjs/operators';
-import {
-  NoopWeb2SubscriberRepository,
-  Web2SubscriberRepository,
-} from '../web-subscriber.repository';
-import { findAllDistinct } from './subsbscriber-repository-utilts';
 import { DefaultMonitor } from './default-monitor';
 
 export class DefaultMonitorFactory implements MonitorFactory {
-  private readonly subscriberRepository: SubscriberRepository;
-  private readonly web2SubscriberRepository: Web2SubscriberRepository;
-
   private readonly shutdownHooks: (() => Promise<any>)[] = [];
 
-  constructor({
-    dialectProgram,
-    monitorKeypair,
-    subscriberRepository,
-    web2SubscriberRepository,
-  }: MonitorProps) {
-    if (dialectProgram && monitorKeypair) {
-      const onChainSubscriberRepository = new DialectSdkSubscriberRepository(
-        dialectProgram,
-        monitorKeypair,
-      );
-      this.shutdownHooks.push(() => onChainSubscriberRepository.tearDown());
-      this.subscriberRepository = InMemorySubscriberRepository.decorate(
-        onChainSubscriberRepository,
-      );
-    }
-    this.web2SubscriberRepository =
-      web2SubscriberRepository ?? new NoopWeb2SubscriberRepository();
-    if (subscriberRepository) {
-      this.subscriberRepository = subscriberRepository;
-    }
-    // @ts-ignore
-    if (!this.subscriberRepository) {
-      throw new Error(
-        'Please specify either dialectProgram & monitorKeypair or subscriberRepository',
-      );
-    }
-  }
+  constructor(private readonly subscriberRepository: SubscriberRepository) {}
 
   async shutdown() {
     return Promise.all(this.shutdownHooks.map((it) => it()));
@@ -81,14 +44,12 @@ export class DefaultMonitorFactory implements MonitorFactory {
           dataSource as PollableDataSource<T>,
           pollInterval,
           this.subscriberRepository,
-          this.web2SubscriberRepository,
         )
       : dataSource;
     const monitor = new DefaultMonitor<T>(
       pushyDataSource,
       datasourceTransformationPipelines,
       this.subscriberRepository,
-      this.web2SubscriberRepository,
     );
     this.shutdownHooks.push(() => monitor.stop());
     return monitor;
@@ -104,7 +65,7 @@ export class DefaultMonitorFactory implements MonitorFactory {
       SourceData<SubscriberEvent>
     >((subscriber) =>
       this.subscriberRepository.subscribe(
-        (resourceId) =>
+        ({ resourceId }) =>
           subscriber.next({
             groupingKey: resourceId.toBase58(),
             data: {
@@ -112,7 +73,7 @@ export class DefaultMonitorFactory implements MonitorFactory {
               state: 'added',
             },
           }),
-        (resourceId) =>
+        ({ resourceId }) =>
           subscriber.next({
             groupingKey: resourceId.toBase58(),
             data: {
@@ -126,7 +87,6 @@ export class DefaultMonitorFactory implements MonitorFactory {
       dataSource,
       dataSourceTransformationPipelines,
       this.subscriberRepository,
-      this.web2SubscriberRepository,
     );
     this.shutdownHooks.push(() => monitor.stop());
     return monitor;
@@ -136,12 +96,15 @@ export class DefaultMonitorFactory implements MonitorFactory {
     dataSource: PollableDataSource<T>,
     pollInterval: Duration,
     subscriberRepository: SubscriberRepository,
-    web2SubscriberRepository: Web2SubscriberRepository,
     pollTimeout: Duration = Duration.fromObject({ minutes: 5 }),
   ): PushyDataSource<T> {
     return timer(0, pollInterval.toMillis()).pipe(
       exhaustMap(() =>
-        from(findAllDistinct(subscriberRepository, web2SubscriberRepository)),
+        from(
+          subscriberRepository
+            .findAll()
+            .then((s) => s.map(({ resourceId }) => resourceId)),
+        ),
       ),
       exhaustMap((resources: ResourceId[]) => from(dataSource(resources))),
       timeout(pollTimeout.toMillis()),

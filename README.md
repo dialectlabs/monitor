@@ -104,8 +104,8 @@ Please follow the instructions in https://github.com/dialectlabs/protocol#local-
 #### Step 2. generate a new keypair for monitoring service and fund it
 
 ```bash
-export your_path=~/projects/dialect
-solana-keygen new --outfile ${your_path}/monitoring-service-dev-local-key.json
+export your_path=~/projects/dialect/keypairs/
+solana-keygen new --outfile ${your_path}/monitor-localnet-keypair.private
 solana-keygen pubkey ${your_path}/monitoring-service-dev-local-key.json > ${your_path}/monitoring-service-dev-local-key.pub
 solana -k ${your_path}/monitoring-service-dev-local-key.json airdrop 3
 ```
@@ -114,16 +114,16 @@ solana -k ${your_path}/monitoring-service-dev-local-key.json airdrop 3
 
 ```bash
 cd examples
-export your_path=~/projects/dialect
-MONITORING_SERVICE_PRIVATE_KEY=$(cat ${your_path}/monitoring-service-dev-local-key.json) ts-node ./000.2-real-monoring-service-server.ts
+export your_path=~/projects/dialect/keypairs
+PRIVATE_KEY=$(cat ${your_path}/monitor-localnet-keypair.private) ts-node ./000.2-real-monoring-service-server.ts
 ```
 
 #### Step 3. Start client
 
 ```bash
 cd examples
-export your_path=~/projects/dialect
-MONITORING_SERVICE_PUBLIC_KEY=$(solana address --keypair ${your_path}/monitoring-service-dev-local-key.json) ts-node ./000.1-real-monoring-service-client.ts
+export your_path=~/projects/dialect/keypairs
+PUBLIC_KEY=$(cat ${your_path}/monitor-localnet-keypair.public) ts-node ./000.1-real-monoring-service-client.ts
 ```
 
 #### Step 4. Look at client logs for notifications

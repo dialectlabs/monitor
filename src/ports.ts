@@ -1,5 +1,6 @@
 import { Observable } from 'rxjs';
 import { Data, Notification, ResourceId, SourceData } from './data-model';
+import { PublicKey } from '@solana/web3.js';
 
 /**
  * An abstraction that represents a source of data, bound to specific type
@@ -48,7 +49,7 @@ export interface SubscriberRepository {
   /**
    * Return all subscribers of the monitor
    */
-  findAll(): Promise<Subscriber[]>;
+  findAll(resourceIds?: ResourceId[]): Promise<Subscriber[]>;
 
   /**
    * Finds subscriber by resource id
@@ -69,6 +70,7 @@ export interface Subscriber {
   email?: string;
   telegramChatId?: string;
   phoneNumber?: string;
+  wallet?: PublicKey;
 }
 
 /**

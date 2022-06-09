@@ -9,4 +9,4 @@ export * from './sengrid-email-notification-sink';
 export * from './telegram-notification-sink';
 export * from './dialect-notification-sink';
 export * from './twilio-sms-notification-sink';
-export * from './web-subscriber.repository';
+export * from './dialect-sdk-subscriber.repository';

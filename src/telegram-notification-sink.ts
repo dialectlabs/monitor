@@ -1,7 +1,6 @@
 import { Notification, ResourceId } from './data-model';
-import { NotificationSink } from './ports';
+import { NotificationSink, SubscriberRepository } from './ports';
 import { Telegraf } from 'telegraf';
-import { Web2SubscriberRepository } from './web-subscriber.repository';
 
 /**
  * Telegram notification
@@ -17,13 +16,13 @@ export class TelegramNotificationSink
 
   constructor(
     private readonly telegramBotToken: string,
-    private readonly web2SubscriberRepository: Web2SubscriberRepository,
+    private readonly subscriberRepository: SubscriberRepository,
   ) {
     this.bot = new Telegraf(telegramBotToken);
   }
 
   async push(notification: TelegramNotification, recipients: ResourceId[]) {
-    const recipientTelegramNumbers = await this.web2SubscriberRepository.findBy(
+    const recipientTelegramNumbers = await this.subscriberRepository.findAll(
       recipients,
     );
     console.log('tg-notif-sink, recipients:\n');
@@ -31,10 +30,10 @@ export class TelegramNotificationSink
 
     const results = await Promise.allSettled(
       recipientTelegramNumbers
-        .filter(({ telegramId }) => telegramId)
-        .map(({ telegramId }) => {
+        .filter(({ telegramChatId }) => telegramChatId)
+        .map(({ telegramChatId }) => {
           this.bot.telegram
-            .sendMessage(telegramId!, notification.body)
+            .sendMessage(telegramChatId!, notification.body)
             .then(() => {});
         }),
     );

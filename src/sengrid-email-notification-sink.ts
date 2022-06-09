@@ -1,8 +1,7 @@
 import { Notification, ResourceId } from './data-model';
-import { NotificationSink } from './ports';
+import { NotificationSink, SubscriberRepository } from './ports';
 import sgMail from '@sendgrid/mail';
 import { MailDataRequired } from '@sendgrid/helpers/classes/mail';
-import { Web2SubscriberRepository } from './web-subscriber.repository';
 
 /**
  * Email notification
@@ -18,15 +17,13 @@ export class SengridEmailNotificationSink
   constructor(
     private readonly sengridApiKey: string,
     private readonly senderEmail: string,
-    private readonly web2SubscriberRepository: Web2SubscriberRepository,
+    private readonly subscriberRepository: SubscriberRepository,
   ) {
     sgMail.setApiKey(sengridApiKey);
   }
 
   async push(notification: EmailNotification, recipients: ResourceId[]) {
-    const recipientEmails = await this.web2SubscriberRepository.findBy(
-      recipients,
-    );
+    const recipientEmails = await this.subscriberRepository.findAll(recipients);
     console.log('sendgrid-notif-sink, recipients:\n');
     console.log(recipientEmails);
     const emails: MailDataRequired[] = recipientEmails
