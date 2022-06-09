@@ -1,5 +1,5 @@
 import { InMemorySubscriberRepository } from './in-memory-subscriber.repository';
-import { OnChainSubscriberRepository } from './on-chain-subscriber.repository';
+import { DialectSdkSubscriberRepository } from './dialect-sdk-subscriber.repository';
 import { Duration } from 'luxon';
 import {
   catchError,
@@ -42,7 +42,7 @@ export class DefaultMonitorFactory implements MonitorFactory {
     web2SubscriberRepository,
   }: MonitorProps) {
     if (dialectProgram && monitorKeypair) {
-      const onChainSubscriberRepository = new OnChainSubscriberRepository(
+      const onChainSubscriberRepository = new DialectSdkSubscriberRepository(
         dialectProgram,
         monitorKeypair,
       );

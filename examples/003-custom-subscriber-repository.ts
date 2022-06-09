@@ -2,7 +2,7 @@ import {
   ResourceId,
   SubscriberEventHandler,
   SubscriberRepository,
-  Web2Subscriber,
+  Subscriber,
   Web2SubscriberRepository,
 } from '../src';
 import { Keypair } from '@solana/web3.js';
@@ -43,11 +43,11 @@ export class DummySubscriberRepository implements SubscriberRepository {
 }
 
 export class DummyWeb2SubscriberRepository implements Web2SubscriberRepository {
-  async findAll(): Promise<Web2Subscriber[]> {
+  async findAll(): Promise<Subscriber[]> {
     return Promise.resolve([]);
   }
 
-  async findBy(resourceIds: ResourceId[]): Promise<Web2Subscriber[]> {
+  async findBy(resourceIds: ResourceId[]): Promise<Subscriber[]> {
     return Promise.resolve([]);
   }
 }

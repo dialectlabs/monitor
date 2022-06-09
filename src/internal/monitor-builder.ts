@@ -37,12 +37,9 @@ import {
   TelegramNotification,
   TelegramNotificationSink,
 } from '../telegram-notification-sink';
-import { OnChainSubscriberRepository } from './on-chain-subscriber.repository';
+import { DialectSdkSubscriberRepository } from './dialect-sdk-subscriber.repository';
 import { InMemorySubscriberRepository } from './in-memory-subscriber.repository';
-import {
-  InMemoryWeb2SubscriberRepository,
-  RestWeb2SubscriberRepository,
-} from './rest-web2-subscriber.repository';
+
 import {
   NoopWeb2SubscriberRepository,
   Web2SubscriberRepository,
@@ -88,7 +85,7 @@ export class MonitorsBuilderState<T extends object> {
 
     if (monitorProps.dialectProgram && monitorProps.monitorKeypair) {
       if (!monitorProps.subscriberRepository) {
-        const onChainSubscriberRepository = new OnChainSubscriberRepository(
+        const onChainSubscriberRepository = new DialectSdkSubscriberRepository(
           monitorProps.dialectProgram,
           monitorProps.monitorKeypair,
         );
