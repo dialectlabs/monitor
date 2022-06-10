@@ -13,6 +13,7 @@ import {
   Wallet_,
 } from '@dialectlabs/web3';
 
+// TODO: migrate to sdk
 const SOLANA_ENDPOINT = process.env.RPC_URL || 'http://localhost:8899';
 const PUBLIC_KEY = process.env.PUBLIC_KEY as string;
 

@@ -19,9 +19,7 @@ export class InMemorySubscriberRepository implements SubscriberRepository {
 
   constructor(
     private readonly delegate: SubscriberRepository,
-    private readonly cacheTtl: Duration = Duration.fromObject({
-      minutes: 1,
-    }),
+    private readonly cacheTtl: Duration,
   ) {}
 
   static decorate(
