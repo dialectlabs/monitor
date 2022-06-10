@@ -60,6 +60,7 @@ export class InMemorySubscriberRepository implements SubscriberRepository {
     onSubscriberAdded?: SubscriberEventHandler,
     onSubscriberRemoved?: SubscriberEventHandler,
   ) {
+    await this.lazyInit();
     onSubscriberAdded && this.onSubscriberAddedHandlers.push(onSubscriberAdded);
     onSubscriberRemoved &&
       this.onSubscriberRemovedHandlers.push(onSubscriberRemoved);
@@ -90,7 +91,7 @@ export class InMemorySubscriberRepository implements SubscriberRepository {
     }
     added.forEach((subscriber) => {
       this.onSubscriberAddedHandlers.forEach((it) => it(subscriber));
-      this.subscribers.set(subscriber.toString(), subscriber);
+      this.subscribers.set(subscriber.resourceId.toBase58(), subscriber);
     });
     const removed = Array.from(this.subscribers.values()).filter(
       (s1) => !subscribers.find((s2) => s2.resourceId.equals(s1.resourceId)),
@@ -104,7 +105,7 @@ export class InMemorySubscriberRepository implements SubscriberRepository {
     }
     removed.forEach((subscriber) => {
       this.onSubscriberRemovedHandlers.forEach((it) => it(subscriber));
-      this.subscribers.delete(subscriber.toString());
+      this.subscribers.delete(subscriber.resourceId.toBase58());
     });
   }
 }

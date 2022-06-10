@@ -484,7 +484,7 @@ class BuildStepImpl<T extends object> implements BuildStep<T> {
     const { dataSourceTransformationPipelines } = addTransformationsStep;
     if (!dataSourceTransformationPipelines) {
       throw new Error(
-        'Expected [dataSourceTransformationPipelines, dispatchStrategy] to be defined',
+        'Expected [dataSourceTransformationPipelines] to be defined',
       );
     }
     return Monitors.factory(subscriberRepository).createSubscriberEventMonitor(
