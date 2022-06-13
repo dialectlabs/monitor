@@ -29,7 +29,7 @@ export class DialectSdkSubscriberRepository implements SubscriberRepository {
     const subscribers = _(dappAddresses)
       .filter(({ enabled }) => enabled)
       .map((it) => ({
-        resourceId: it.address.walletPublicKey,
+        resourceId: it.address.wallet.publicKey,
         ...(it.address.type === AddressType.Email && {
           email: it.address.value,
         }),
