@@ -27,7 +27,7 @@ export class DialectSdkSubscriberRepository implements SubscriberRepository {
     const dapp = await this.sdk.dapps.find();
     const dappAddresses = await dapp.dappAddresses.findAll();
     const subscribers = _(dappAddresses)
-      .filter(({ enabled }) => enabled)
+      .filter(({ enabled, address: { verified } }) => enabled && verified)
       .map((it) => ({
         resourceId: it.address.wallet.publicKey,
         ...(it.address.type === AddressType.Email && {
