@@ -19,7 +19,7 @@ export class SolflareNotificationSink
     private readonly solcastEndpoint: string = 'https://api.solana.cloud/v1',
   ) {
     console.log(
-      `olflare-notif-sink init, solcast endpoint: ${this.solcastEndpoint}`,
+      `solflare-notif-sink init, solcast endpoint: ${this.solcastEndpoint}`,
     );
   }
 
