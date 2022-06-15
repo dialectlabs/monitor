@@ -2,6 +2,10 @@
 
 ## [UNRELEASED]
 
+## [2.3.0] - 2022-06-16
+
+- Add Solflare notification sink.
+
 ## [2.2.0] - 2022-05-26
 
 - Switch to Bearer authN based on dApp signed token for requests targeting dialect web2 services.
