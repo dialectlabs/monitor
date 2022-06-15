@@ -6,7 +6,7 @@ import {
   Thread,
   ThreadMemberScope,
 } from '@dialectlabs/sdk';
-import { sleep } from '../../protocol';
+import { sleep } from '@dialectlabs/web3';
 
 const createClients = async (n: number): Promise<void> => {
   const monitoringServicePublicKey = new PublicKey(process.env.PUBLIC_KEY!);
