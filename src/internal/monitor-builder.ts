@@ -47,6 +47,10 @@ import {
   NoopWeb2SubscriberRepository,
   Web2SubscriberRepository,
 } from '../web-subscriber.repository';
+import {
+  SolflareNotification,
+  SolflareNotificationSink,
+} from '../solflare-notification-sink';
 
 /**
  * A set of factory methods to create monitors
@@ -60,6 +64,7 @@ export class MonitorsBuilderState<T extends object> {
   emailNotificationSink?: SengridEmailNotificationSink;
   smsNotificationSink?: TwilioSmsNotificationSink;
   telegramNotificationSink?: TelegramNotificationSink;
+  solflareNotificationSink?: SolflareNotificationSink;
 
   constructor(readonly monitorProps: MonitorProps) {
     if (
@@ -120,6 +125,12 @@ export class MonitorsBuilderState<T extends object> {
       this.telegramNotificationSink = new TelegramNotificationSink(
         sinks.telegram.telegramBotToken,
         web2SubscriberRepository,
+      );
+    }
+    if (sinks?.solflare) {
+      this.solflareNotificationSink = new SolflareNotificationSink(
+        sinks.solflare.apiKey,
+        sinks.solflare.apiUrl,
       );
     }
   }
@@ -208,6 +219,7 @@ class AddTransformationsStepImpl<T extends object>
       this.monitorBuilderState.emailNotificationSink,
       this.monitorBuilderState.smsNotificationSink,
       this.monitorBuilderState.telegramNotificationSink,
+      this.monitorBuilderState.solflareNotificationSink,
     );
   }
 
@@ -269,6 +281,7 @@ class NotifyStepImpl<T extends object, R> implements NotifyStep<T, R> {
       this.monitorBuilderState.emailNotificationSink,
       this.monitorBuilderState.smsNotificationSink,
       this.monitorBuilderState.telegramNotificationSink,
+      this.monitorBuilderState.solflareNotificationSink,
     );
   }
 }
@@ -286,6 +299,7 @@ class AddSinksStepImpl<T extends object, R> implements AddSinksStep<T, R> {
     private readonly emailNotificationSink?: SengridEmailNotificationSink,
     private readonly smsNotificationSink?: TwilioSmsNotificationSink,
     private readonly telegramNotificationSink?: TelegramNotificationSink,
+    private readonly solflareNotificationSink?: SolflareNotificationSink,
   ) {}
 
   also(): AddTransformationsStep<T> {
@@ -356,6 +370,22 @@ class AddSinksStepImpl<T extends object, R> implements AddSinksStep<T, R> {
     return this.custom(
       adapter,
       this.telegramNotificationSink,
+      dispatchStrategy,
+    );
+  }
+
+  solflare(
+    adapter: (data: Data<R, T>) => SolflareNotification,
+    dispatchStrategy: DispatchStrategy<T>,
+  ): AddSinksStep<T, R> {
+    if (!this.solflareNotificationSink) {
+      throw new Error(
+        'Solflare notification sink must be initialized before using',
+      );
+    }
+    return this.custom(
+      adapter,
+      this.solflareNotificationSink,
       dispatchStrategy,
     );
   }

@@ -49,6 +49,7 @@ export interface SinksConfiguration {
   email?: EmailSinkConfiguration;
   sms?: SmsSinkConfiguration;
   telegram?: TelegramSinkConfiguration;
+  solflare?: SolflareSinkConfiguration;
 }
 
 export interface EmailSinkConfiguration {
@@ -64,6 +65,11 @@ export interface SmsSinkConfiguration {
 
 export interface TelegramSinkConfiguration {
   telegramBotToken: string;
+}
+
+export interface SolflareSinkConfiguration {
+  apiKey: string;
+  apiUrl?: string;
 }
 
 /**
