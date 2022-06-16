@@ -1,6 +1,7 @@
 import { PublicKey } from '@solana/web3.js';
 
 import {
+  AddressType,
   Dialect,
   NodeDialectWalletAdapter,
   Thread,
@@ -15,17 +16,36 @@ const createClients = async (n: number): Promise<void> => {
   );
   const clients = Array(n)
     .fill(0)
-    .map(() =>
-      Dialect.sdk({
-        environment: 'local-development',
-        wallet: NodeDialectWalletAdapter.create(),
-      }),
-    );
+    .map(() => {
+      const wallet = NodeDialectWalletAdapter.create();
+      return {
+        wallet,
+        sdk: Dialect.sdk({
+          environment: 'local-development',
+          wallet: wallet,
+        }),
+      };
+    });
+
+  const addresses = await Promise.all(
+    clients.map(async ({ wallet, sdk }) => {
+      const address = await sdk.wallet.addresses.create({
+        dappPublicKey: monitoringServicePublicKey,
+        type: AddressType.Wallet,
+        value: wallet.publicKey.toBase58(),
+        enabled: true,
+      });
+      return {
+        sdk: sdk,
+        address,
+      };
+    }),
+  );
 
   let threadsByAddress: Record<string, { thread: Thread }> = Object.fromEntries(
     await Promise.all(
-      clients.map(async (client) => {
-        const thread = await client.threads.create({
+      clients.map(async ({ sdk }) => {
+        const thread = await sdk.threads.create({
           me: { scopes: [ThreadMemberScope.WRITE, ThreadMemberScope.ADMIN] },
           otherMembers: [
             {
@@ -35,7 +55,7 @@ const createClients = async (n: number): Promise<void> => {
           ],
           encrypted: false,
         });
-        return [thread.address.toBase58(), { owner: client, thread }];
+        return [thread.address.toBase58(), { owner: sdk, thread }];
       }),
     ),
   );
@@ -44,6 +64,11 @@ const createClients = async (n: number): Promise<void> => {
     const dialectAccounts = Object.values(threadsByAddress);
     console.log(`Deleting dialects for ${dialectAccounts.length} clients`);
     await Promise.all(dialectAccounts.map(({ thread }) => thread.delete()));
+    await Promise.all(
+      addresses.map(({ address, sdk }) =>
+        sdk.wallet.addresses.delete({ addressId: address.address.id }),
+      ),
+    );
     console.log(`Deleted dialects for ${dialectAccounts.length} clients`);
     process.exit(0);
   });
@@ -59,9 +84,11 @@ const createClients = async (n: number): Promise<void> => {
         );
         if (filtered.length > 0) {
           console.log(
-            `Got ${filtered.length} new messages for ${
-              thread.me
-            }: ${filtered.map((it) => it.text)}`,
+            `Got ${
+              filtered.length
+            } new messages for ${thread.me.publicKey.toBase58()}: ${filtered.map(
+              (it) => it.text,
+            )}`,
           );
         }
         return messages;
@@ -73,7 +100,7 @@ const createClients = async (n: number): Promise<void> => {
 };
 
 const main = async (): Promise<void> => {
-  await createClients(1);
+  await createClients(2);
 };
 
 main();
