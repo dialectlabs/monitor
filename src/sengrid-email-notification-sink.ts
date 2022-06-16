@@ -31,7 +31,7 @@ export class SengridEmailNotificationSink
       .map(({ email }) => ({
         ...notification,
         from: this.senderEmail,
-        to: email,
+        to: email!,
       }));
 
     const results = await Promise.allSettled(await sgMail.send(emails));

@@ -67,10 +67,10 @@ export interface SubscriberRepository {
 
 export interface Subscriber {
   resourceId: ResourceId;
-  email?: string;
-  telegramChatId?: string;
-  phoneNumber?: string;
-  wallet?: PublicKey;
+  email?: string | null;
+  telegramChatId?: string | null;
+  phoneNumber?: string | null;
+  wallet?: PublicKey | null;
 }
 
 /**
