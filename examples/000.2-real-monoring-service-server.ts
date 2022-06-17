@@ -51,6 +51,28 @@ const dataSourceMonitor: Monitor<DataType> = Monitors.builder({
       to: ({ origin: { resourceId } }) => resourceId,
     },
   )
+  .also()
+  .transform<number, number>({
+    keys: ['cratio'],
+    pipelines: [
+      Pipelines.threshold({
+        type: 'rising-edge',
+        threshold: 0.5,
+      }),
+    ],
+  })
+  .notify()
+  .dialectThread(
+    ({ value }) => {
+      return {
+        message: `Your cratio = ${value} above warning threshold`,
+      };
+    },
+    {
+      dispatch: 'unicast',
+      to: ({ origin: { resourceId } }) => resourceId,
+    },
+  )
   .and()
   .build();
 dataSourceMonitor.start();

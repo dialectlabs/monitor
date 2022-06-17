@@ -10,3 +10,4 @@ export * from './telegram-notification-sink';
 export * from './dialect-notification-sink';
 export * from './twilio-sms-notification-sink';
 export * from './dialect-sdk-subscriber.repository';
+export * from './utils/client';
