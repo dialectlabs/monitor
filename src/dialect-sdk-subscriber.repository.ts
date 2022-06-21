@@ -6,7 +6,7 @@ import {
 } from './ports';
 import { ResourceId } from './data-model';
 import _ from 'lodash';
-import { AddressType, DialectSdk } from '@dialectlabs/sdk';
+import { AddressType, DialectSdk, IllegalStateError } from '@dialectlabs/sdk';
 
 export class DialectSdkSubscriberRepository implements SubscriberRepository {
   constructor(private sdk: DialectSdk) {}
@@ -25,6 +25,13 @@ export class DialectSdkSubscriberRepository implements SubscriberRepository {
 
   async findAll(resourceIds?: ResourceId[]): Promise<Subscriber[]> {
     const dapp = await this.sdk.dapps.find();
+    if (!dapp) {
+      throw new IllegalStateError(
+        `Dapp ${this.sdk.info.wallet.publicKey?.toBase58()} not registerd in dialect cloud ${
+          this.sdk.info.config.dialectCloud?.url
+        }`,
+      );
+    }
     const dappAddresses = await dapp.dappAddresses.findAll();
     const subscribers = _(dappAddresses)
       .filter(({ enabled, address: { verified } }) => enabled && verified)
@@ -34,7 +41,7 @@ export class DialectSdkSubscriberRepository implements SubscriberRepository {
           email: it.address.value,
         }),
         ...(it.address.type === AddressType.Telegram && {
-          telegramChatId: it.telegramChatId,
+          telegramChatId: it.channelId,
         }),
         ...(it.address.type === AddressType.PhoneNumber && {
           phoneNumber: it.address.value,

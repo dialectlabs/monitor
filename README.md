@@ -126,7 +126,9 @@ PRIVATE_KEY=$(cat ${your_path}/monitor-localnet-keypair.private) ts-node ./000.2
 ```bash
 cd examples
 export your_path=~/projects/dialect/keypairs
-PUBLIC_KEY=$(cat ${your_path}/monitor-localnet-keypair.public) ts-node ./000.1-real-monoring-service-client.ts
+DAPP_PUBLIC_KEY=$(cat ${your_path}/monitor-localnet-keypair.public) \
+DAPP_PRIVATE_KEY=$(cat ${your_path}/monitor-localnet-keypair.private) \
+ts-node ./000.1-real-monoring-service-client.ts
 ```
 
 #### Step 4. Look at client logs for notifications

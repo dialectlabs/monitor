@@ -10,6 +10,24 @@ import {
 } from '@dialectlabs/sdk';
 import { sleep } from '@dialectlabs/web3';
 
+export async function createDappIfAbsent(config: Config) {
+  const sdk = Dialect.sdk(config);
+  const dapp = await sdk.dapps.find();
+  if (!dapp) {
+    console.log(
+      `Dapp ${sdk.wallet.publicKey.toBase58()} not registered in ${
+        sdk.info.config.dialectCloud?.url
+      }, creating it`,
+    );
+    return sdk.dapps.create();
+  }
+  console.log(
+    `Dapp ${dapp.publicKey.toBase58()} already registered in ${
+      sdk.info.config.dialectCloud?.url
+    }`,
+  );
+}
+
 export async function createClient(
   config: Omit<Config, 'wallet'>,
   dappPublicKey: PublicKey,
@@ -25,15 +43,18 @@ export async function createClient(
     const program = sdk.info.solana.dialectProgram;
     const fromAirdropSignature =
       await program.provider.connection.requestAirdrop(
-        new PublicKey(wallet),
+        new PublicKey(wallet.publicKey.toBase58()),
         3 * LAMPORTS_PER_SOL,
       );
     await program.provider.connection.confirmTransaction(fromAirdropSignature);
   }
-  const dappAddress = await sdk.wallet.addresses.create({
-    dappPublicKey,
+  const address = await sdk.wallet.addresses.create({
     type: AddressType.Wallet,
     value: wallet.publicKey.toBase58(),
+  });
+  await sdk.wallet.dappAddresses.create({
+    addressId: address.id,
+    dappPublicKey,
     enabled: true,
   });
   console.log(
@@ -54,7 +75,10 @@ export async function createClient(
       thread.backend
     } thread for members: [${wallet.publicKey.toBase58()}, ${dappPublicKey}]`,
   );
+  let isInterrupted = false;
   process.on('SIGINT', async () => {
+    console.log('Cleaning created resources');
+    isInterrupted = true;
     console.log(
       `Deleting ${
         thread.backend
@@ -62,11 +86,12 @@ export async function createClient(
     );
     await thread.delete();
     console.log(`Deleting address for ${wallet.publicKey.toBase58()}`);
-    await sdk.wallet.addresses.delete({ addressId: dappAddress.address.id });
+    await sdk.wallet.addresses.delete({ addressId: address.id });
+    console.log('Please wait');
     // process.exit(0);
   });
   let lastMessageTimestamp = thread.updatedAt;
-  while (true) {
+  while (!isInterrupted) {
     const messages = await thread.messages();
     const newMessages = messages.filter(
       (it) => it.timestamp.getTime() > lastMessageTimestamp.getTime(),
