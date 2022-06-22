@@ -96,9 +96,11 @@ export class InMemorySubscriberRepository implements SubscriberRepository {
     );
     if (removed.length > 0) {
       console.log(
-        `${removed.length} subscriber(s) removed: ${JSON.stringify(
-          removed.slice(0, 3),
-        )}...`,
+        `${added.length} subscriber(s) removed: ${JSON.stringify(
+          added,
+          null,
+          2,
+        )}`,
       );
     }
     removed.forEach((subscriber) => {
