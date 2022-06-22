@@ -1,27 +1,42 @@
 import { ResourceId } from '../data-model';
-import { SubscriberEventHandler, SubscriberRepository } from '../ports';
+import {
+  Subscriber,
+  SubscriberEventHandler,
+  SubscriberRepository,
+} from '../ports';
 import { Duration } from 'luxon';
 
 export class InMemorySubscriberRepository implements SubscriberRepository {
-  private readonly subscribers: Map<String, ResourceId> = new Map<
+  private readonly subscribers: Map<String, Subscriber> = new Map<
     String,
-    ResourceId
+    Subscriber
   >();
+
+  private readonly onSubscriberAddedHandlers: SubscriberEventHandler[] = [];
+  private readonly onSubscriberRemovedHandlers: SubscriberEventHandler[] = [];
 
   private isInitialized = false;
 
-  constructor(private readonly delegate: SubscriberRepository) {}
+  constructor(
+    private readonly delegate: SubscriberRepository,
+    private readonly cacheTtl: Duration,
+  ) {}
 
-  static decorate(other: SubscriberRepository) {
-    return new InMemorySubscriberRepository(other);
+  static decorate(other: SubscriberRepository, cacheTtl: Duration) {
+    return new InMemorySubscriberRepository(other, cacheTtl);
   }
 
-  async findAll(): Promise<ResourceId[]> {
+  async findAll(resourceIds?: ResourceId[]): Promise<Subscriber[]> {
     await this.lazyInit();
-    return Array(...this.subscribers.values());
+    const subscribers = Array(...this.subscribers.values());
+    return resourceIds
+      ? subscribers.filter(({ resourceId }) =>
+          resourceIds.find((it) => it.equals(resourceId)),
+        )
+      : subscribers;
   }
 
-  async findByResourceId(resourceId: ResourceId): Promise<ResourceId | null> {
+  async findByResourceId(resourceId: ResourceId): Promise<Subscriber | null> {
     await this.lazyInit();
     return Promise.resolve(this.subscribers.get(resourceId.toString()) ?? null);
   }
@@ -30,17 +45,18 @@ export class InMemorySubscriberRepository implements SubscriberRepository {
     if (this.isInitialized) {
       return;
     }
-    console.log('Subscriber repository initialization started...');
     await this.initialize();
     this.isInitialized = true;
-    console.log('Subscriber repository initialization finished');
   }
 
   async subscribe(
     onSubscriberAdded?: SubscriberEventHandler,
     onSubscriberRemoved?: SubscriberEventHandler,
   ) {
-    return this.delegate.subscribe(onSubscriberAdded, onSubscriberRemoved);
+    await this.lazyInit();
+    onSubscriberAdded && this.onSubscriberAddedHandlers.push(onSubscriberAdded);
+    onSubscriberRemoved &&
+      this.onSubscriberRemovedHandlers.push(onSubscriberRemoved);
   }
 
   private async initialize() {
@@ -48,41 +64,48 @@ export class InMemorySubscriberRepository implements SubscriberRepository {
       try {
         await this.updateSubscribers();
       } catch (e) {
-        console.log('Updating subscribers failed.', e);
+        console.error('Updating subscribers failed.', e);
       }
-    }, Duration.fromObject({ minutes: 5 }).toMillis());
-    return Promise.all([
-      this.subscribeToSubscriberEvents(),
-      this.updateSubscribers(),
-    ]);
-  }
-
-  private async subscribeToSubscriberEvents() {
-    this.delegate.subscribe(
-      (subscriber) => this.subscribers.set(subscriber.toString(), subscriber),
-      (resourceId) => this.subscribers.delete(resourceId.toString()),
-    );
+    }, this.cacheTtl.toMillis());
+    return this.updateSubscribers();
   }
 
   private async updateSubscribers() {
     const subscribers = await this.delegate.findAll();
     const added = subscribers.filter(
-      (it) => !this.subscribers.has(it.toBase58()),
+      (it) => !this.subscribers.has(it.resourceId.toBase58()),
     );
+    subscribers.forEach((subscriber) => {
+      this.subscribers.set(subscriber.resourceId.toBase58(), subscriber);
+    });
     if (added.length > 0) {
-      console.log(`Subscribers added: ${JSON.stringify(added)}`);
+      console.log(
+        `${added.length} subscriber(s) added: ${JSON.stringify(
+          added,
+          null,
+          2,
+        )}`,
+      );
     }
-    added.forEach((subscriber) =>
-      this.subscribers.set(subscriber.toString(), subscriber),
-    );
+    added.forEach((subscriber) => {
+      this.onSubscriberAddedHandlers.forEach((it) => it(subscriber));
+      this.subscribers.set(subscriber.resourceId.toBase58(), subscriber);
+    });
     const removed = Array.from(this.subscribers.values()).filter(
-      (s1) => !subscribers.find((s2) => s2.equals(s1)),
+      (s1) => !subscribers.find((s2) => s2.resourceId.equals(s1.resourceId)),
     );
     if (removed.length > 0) {
-      console.log(`Subscribers removed: ${JSON.stringify(removed)}`);
+      console.log(
+        `${added.length} subscriber(s) removed: ${JSON.stringify(
+          added,
+          null,
+          2,
+        )}`,
+      );
     }
-    removed.forEach((subscriber) =>
-      this.subscribers.delete(subscriber.toString()),
-    );
+    removed.forEach((subscriber) => {
+      this.onSubscriberRemovedHandlers.forEach((it) => it(subscriber));
+      this.subscribers.delete(subscriber.resourceId.toBase58());
+    });
   }
 }

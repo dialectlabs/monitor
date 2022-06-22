@@ -1,13 +1,8 @@
 import { NotificationSink, SubscriberRepository } from './ports';
-import { getDialectAccount } from './internal/dialect-extensions';
 import { Notification, ResourceId } from './data-model';
-import { Program } from '@project-serum/anchor';
-import { Keypair } from '@solana/web3.js';
-import { sendMessage } from '@dialectlabs/web3';
+import { DialectSdk } from '@dialectlabs/sdk';
+import { compact } from 'lodash';
 
-/**
- * Dialect web3 notification
- */
 export interface DialectNotification extends Notification {
   message: string;
 }
@@ -16,31 +11,26 @@ export class DialectNotificationSink
   implements NotificationSink<DialectNotification>
 {
   constructor(
-    private readonly dialectProgram: Program,
-    private readonly monitorKeypair: Keypair,
+    private readonly sdk: DialectSdk,
     private readonly subscriberRepository: SubscriberRepository,
   ) {}
 
   async push({ message }: DialectNotification, recipients: ResourceId[]) {
-    const allSubscribers = await this.subscriberRepository.findAll();
-    const subscriberPkToSubscriber = Object.fromEntries(
-      allSubscribers.map((it) => [it.toBase58(), it]),
-    );
-    const recipientsFiltered = recipients.filter(
-      (it) => !!subscriberPkToSubscriber[it.toBase58()],
+    const subscribersOnly = await this.subscriberRepository.findAll(recipients);
+    const subscribersWithEnabledWalletNotifications = compact(
+      subscribersOnly.map((it) => it.wallet),
     );
     const results = await Promise.allSettled(
-      recipientsFiltered.map(async (it) => {
-        const dialectAccount = await getDialectAccount(this.dialectProgram, [
-          this.monitorKeypair.publicKey,
-          it,
-        ]);
-        return sendMessage(
-          this.dialectProgram,
-          dialectAccount,
-          this.monitorKeypair,
-          message,
-        );
+      subscribersWithEnabledWalletNotifications.map(async (it) => {
+        const thread = await this.sdk.threads.find({
+          otherMembers: [it],
+        });
+        if (!thread) {
+          throw new Error(
+            `Cannot send notification for subscriber ${it}, thread does not exist`,
+          );
+        }
+        return thread.send({ text: message });
       }),
     );
     const failedSends = results

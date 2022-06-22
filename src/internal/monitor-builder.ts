@@ -9,13 +9,14 @@ import {
   NotifyStep,
   Transformation,
 } from '../monitor-builder';
-import { Data, ResourceId, SubscriberEvent } from '../data-model';
+import { Data, SubscriberEvent } from '../data-model';
 import {
   ContextEnrichedPushyDataSource,
   DataSourceTransformationPipeline,
   NotificationSink,
   PollableDataSource,
   PushyDataSource,
+  SubscriberRepository,
 } from '../ports';
 import { Duration } from 'luxon';
 import { exhaustMap, from, Observable } from 'rxjs';
@@ -37,16 +38,8 @@ import {
   TelegramNotification,
   TelegramNotificationSink,
 } from '../telegram-notification-sink';
-import { OnChainSubscriberRepository } from './on-chain-subscriber.repository';
+import { DialectSdkSubscriberRepository } from '../dialect-sdk-subscriber.repository';
 import { InMemorySubscriberRepository } from './in-memory-subscriber.repository';
-import {
-  InMemoryWeb2SubscriberRepository,
-  RestWeb2SubscriberRepository,
-} from './rest-web2-subscriber.repository';
-import {
-  NoopWeb2SubscriberRepository,
-  Web2SubscriberRepository,
-} from '../web-subscriber.repository';
 import {
   SolflareNotification,
   SolflareNotificationSink,
@@ -66,49 +59,20 @@ export class MonitorsBuilderState<T extends object> {
   telegramNotificationSink?: TelegramNotificationSink;
   solflareNotificationSink?: SolflareNotificationSink;
 
-  constructor(readonly monitorProps: MonitorProps) {
-    if (
-      monitorProps.web2SubscriberRepositoryUrl &&
-      !monitorProps.web2SubscriberRepository
-    ) {
-      const postgresWeb2ResourceRepository: Web2SubscriberRepository =
-        new RestWeb2SubscriberRepository(
-          monitorProps.web2SubscriberRepositoryUrl,
-          monitorProps.monitorKeypair!, // TODO: handle this carefully
-        );
-      monitorProps.web2SubscriberRepository =
-        new InMemoryWeb2SubscriberRepository(
-          monitorProps.monitorKeypair?.publicKey!,
-          postgresWeb2ResourceRepository,
-        );
-    }
-    const web2SubscriberRepository =
-      monitorProps.web2SubscriberRepository ??
-      new NoopWeb2SubscriberRepository();
+  readonly subscriberRepository: SubscriberRepository;
 
-    if (monitorProps.dialectProgram && monitorProps.monitorKeypair) {
-      if (!monitorProps.subscriberRepository) {
-        const onChainSubscriberRepository = new OnChainSubscriberRepository(
-          monitorProps.dialectProgram,
-          monitorProps.monitorKeypair,
-        );
-        monitorProps.subscriberRepository =
-          InMemorySubscriberRepository.decorate(onChainSubscriberRepository);
-      }
+  constructor(monitorProps: MonitorProps) {
+    this.subscriberRepository =
+      MonitorsBuilderState.createSubscriberRepository(monitorProps);
+    this.dialectNotificationSink =
+      this.createDialectNotificationSink(monitorProps);
 
-      // TODO inspect
-      this.dialectNotificationSink = new DialectNotificationSink(
-        monitorProps.dialectProgram,
-        monitorProps.monitorKeypair,
-        monitorProps.subscriberRepository,
-      );
-    }
     const sinks = monitorProps?.sinks;
     if (sinks?.email) {
       this.emailNotificationSink = new SengridEmailNotificationSink(
         sinks.email.apiToken,
         sinks.email.senderEmail,
-        web2SubscriberRepository,
+        this.subscriberRepository,
       );
     }
     if (sinks?.sms) {
@@ -118,13 +82,13 @@ export class MonitorsBuilderState<T extends object> {
           password: sinks.sms.twilioPassword,
         },
         sinks.sms.senderSmsNumber,
-        web2SubscriberRepository,
+        this.subscriberRepository,
       );
     }
     if (sinks?.telegram) {
       this.telegramNotificationSink = new TelegramNotificationSink(
         sinks.telegram.telegramBotToken,
-        web2SubscriberRepository,
+        this.subscriberRepository,
       );
     }
     if (sinks?.solflare) {
@@ -133,6 +97,53 @@ export class MonitorsBuilderState<T extends object> {
         sinks.solflare.apiUrl,
       );
     }
+  }
+
+  private createDialectNotificationSink(monitorProps: MonitorProps) {
+    if ('sdk' in monitorProps) {
+      return new DialectNotificationSink(
+        monitorProps.sdk,
+        this.subscriberRepository,
+      );
+    } else {
+      const sdk = monitorProps.sinks?.wallet?.sdk;
+      return sdk && new DialectNotificationSink(sdk, this.subscriberRepository);
+    }
+  }
+
+  private static createSubscriberRepository(monitorProps: MonitorProps) {
+    if ('sdk' in monitorProps) {
+      const { sdk, subscriberRepository } = monitorProps;
+      return subscriberRepository
+        ? MonitorsBuilderState.decorateIfNeeded(
+            monitorProps,
+            subscriberRepository,
+          )
+        : InMemorySubscriberRepository.decorate(
+            new DialectSdkSubscriberRepository(sdk),
+            monitorProps.subscribersCacheTTL ??
+              Duration.fromObject({ minutes: 1 }),
+          );
+    } else {
+      const { subscriberRepository } = monitorProps;
+      return MonitorsBuilderState.decorateIfNeeded(
+        monitorProps,
+        subscriberRepository,
+      );
+    }
+  }
+
+  private static decorateIfNeeded(
+    monitorProps: MonitorProps,
+    subscriberRepository: SubscriberRepository | InMemorySubscriberRepository,
+  ) {
+    return subscriberRepository instanceof InMemorySubscriberRepository
+      ? subscriberRepository
+      : InMemorySubscriberRepository.decorate(
+          subscriberRepository,
+          monitorProps.subscribersCacheTTL ??
+            Duration.fromObject({ minutes: 1 }),
+        );
   }
 }
 
@@ -325,11 +336,7 @@ class AddSinksStepImpl<T extends object, R> implements AddSinksStep<T, R> {
     dispatchStrategy: DispatchStrategy<T>,
   ) {
     const sinkWriter: (data: Data<R, T>) => Promise<void> = (data) => {
-      const toBeNotified = this.selectResources(
-        dispatchStrategy,
-        data.context.subscribers,
-        data,
-      );
+      const toBeNotified = this.selectResources(dispatchStrategy, data);
       return sink!.push(adapter(data), toBeNotified);
     };
     this.sinkWriters.push(sinkWriter);
@@ -425,12 +432,11 @@ class AddSinksStepImpl<T extends object, R> implements AddSinksStep<T, R> {
 
   private selectResources(
     dispatchStrategy: DispatchStrategy<T>,
-    resources: ResourceId[],
     { context }: Data<R, T>,
   ) {
     switch (dispatchStrategy.dispatch) {
       case 'broadcast': {
-        return resources;
+        return context.subscribers.map(({ resourceId }) => resourceId);
       }
       case 'unicast': {
         return [dispatchStrategy.to(context)];
@@ -447,13 +453,13 @@ class BuildStepImpl<T extends object> implements BuildStep<T> {
 
   build(): Monitor<T> {
     const {
-      monitorProps,
+      subscriberRepository,
       chooseDataSourceStep,
       defineDataSourceStep,
       addTransformationsStep,
     } = this.monitorBuilderState;
 
-    if (!monitorProps || !chooseDataSourceStep || !addTransformationsStep) {
+    if (!chooseDataSourceStep || !addTransformationsStep) {
       throw new Error(
         'Expected [monitorProps, chooseDataSourceStep, addTransformationsStep] to be defined',
       );
@@ -466,13 +472,13 @@ class BuildStepImpl<T extends object> implements BuildStep<T> {
         return this.createUserDefinedMonitor(
           defineDataSourceStep,
           addTransformationsStep,
-          monitorProps,
+          subscriberRepository,
         );
       }
       case 'subscriber-events': {
         return this.buildSubscriberEventMonitor(
           addTransformationsStep,
-          monitorProps,
+          subscriberRepository,
         );
       }
       default: {
@@ -485,15 +491,15 @@ class BuildStepImpl<T extends object> implements BuildStep<T> {
 
   private buildSubscriberEventMonitor(
     addTransformationsStep: AddTransformationsStepImpl<T>,
-    monitorProps: MonitorProps,
+    subscriberRepository: SubscriberRepository,
   ) {
     const { dataSourceTransformationPipelines } = addTransformationsStep;
     if (!dataSourceTransformationPipelines) {
       throw new Error(
-        'Expected [dataSourceTransformationPipelines, dispatchStrategy] to be defined',
+        'Expected [dataSourceTransformationPipelines] to be defined',
       );
     }
-    return Monitors.factory(monitorProps).createSubscriberEventMonitor(
+    return Monitors.factory(subscriberRepository).createSubscriberEventMonitor(
       dataSourceTransformationPipelines as unknown as DataSourceTransformationPipeline<
         SubscriberEvent,
         any
@@ -504,7 +510,7 @@ class BuildStepImpl<T extends object> implements BuildStep<T> {
   private createUserDefinedMonitor(
     defineDataSourceStep: DefineDataSourceStepImpl<T>,
     addTransformationsStep: AddTransformationsStepImpl<T>,
-    monitorProps: MonitorProps,
+    subscriberRepository: SubscriberRepository,
   ) {
     const { dataSourceStrategy } = defineDataSourceStep;
     switch (dataSourceStrategy) {
@@ -512,13 +518,13 @@ class BuildStepImpl<T extends object> implements BuildStep<T> {
         return this.createForPollable(
           defineDataSourceStep,
           addTransformationsStep,
-          monitorProps,
+          subscriberRepository,
         );
       case 'push':
         return this.createForPushy(
           defineDataSourceStep,
           addTransformationsStep,
-          monitorProps,
+          subscriberRepository,
         );
       default:
         throw new Error('Expected data source strategy to be defined');
@@ -528,7 +534,7 @@ class BuildStepImpl<T extends object> implements BuildStep<T> {
   private createForPollable(
     defineDataSourceStep: DefineDataSourceStepImpl<T>,
     addTransformationsStep: AddTransformationsStepImpl<T>,
-    monitorProps: MonitorProps,
+    subscriberRepository: SubscriberRepository,
   ) {
     const { pollableDataSource, pollInterval } = defineDataSourceStep;
     const { dataSourceTransformationPipelines } = addTransformationsStep;
@@ -541,7 +547,7 @@ class BuildStepImpl<T extends object> implements BuildStep<T> {
         'Expected [pollableDataSource, pollInterval, dataSourceTransformationPipelines] to be defined',
       );
     }
-    return Monitors.factory(monitorProps).createDefaultMonitor<T>(
+    return Monitors.factory(subscriberRepository).createDefaultMonitor<T>(
       pollableDataSource,
       dataSourceTransformationPipelines,
       pollInterval,
@@ -551,7 +557,7 @@ class BuildStepImpl<T extends object> implements BuildStep<T> {
   private createForPushy(
     defineDataSourceStep: DefineDataSourceStepImpl<T>,
     addTransformationsStep: AddTransformationsStepImpl<T>,
-    monitorProps: MonitorProps,
+    subscriberRepository: SubscriberRepository,
   ) {
     const { pushyDataSource } = defineDataSourceStep;
     const { dataSourceTransformationPipelines } = addTransformationsStep;
@@ -560,7 +566,7 @@ class BuildStepImpl<T extends object> implements BuildStep<T> {
         'Expected [pushyDataSource, dataSourceTransformationPipelines] to be defined',
       );
     }
-    return Monitors.factory(monitorProps).createDefaultMonitor<T>(
+    return Monitors.factory(subscriberRepository).createDefaultMonitor<T>(
       pushyDataSource,
       dataSourceTransformationPipelines,
       Duration.fromObject({ seconds: 1 }), // TODO: make optional

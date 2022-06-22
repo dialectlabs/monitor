@@ -1,30 +1,35 @@
 import {
   ResourceId,
+  Subscriber,
   SubscriberEventHandler,
   SubscriberRepository,
-  Web2Subscriber,
-  Web2SubscriberRepository,
 } from '../src';
 import { Keypair } from '@solana/web3.js';
 
 export class DummySubscriberRepository implements SubscriberRepository {
-  private readonly subscribers: ResourceId[] = [];
+  private readonly subscribers: Subscriber[] = [];
   private readonly onSubscriberAddedHandlers: SubscriberEventHandler[] = [];
   private readonly onSubscriberRemovedHandlers: SubscriberEventHandler[] = [];
 
   constructor(size: number = 2) {
     this.subscribers = Array(size)
       .fill(0)
-      .map(() => new Keypair().publicKey);
+      .map(() => {
+        const resourceId = new Keypair().publicKey;
+        return {
+          resourceId,
+          wallet: resourceId,
+        };
+      });
   }
 
-  findAll(): Promise<ResourceId[]> {
+  findAll(): Promise<Subscriber[]> {
     return Promise.resolve(this.subscribers);
   }
 
-  findByResourceId(resourceId: ResourceId): Promise<ResourceId | null> {
+  findByResourceId(resourceId: ResourceId): Promise<Subscriber | null> {
     return Promise.resolve(
-      this.subscribers.find((it) => it.equals(resourceId)) ?? null,
+      this.subscribers.find((it) => it.resourceId.equals(resourceId)) ?? null,
     );
   }
 
@@ -36,18 +41,8 @@ export class DummySubscriberRepository implements SubscriberRepository {
     this.onSubscriberRemovedHandlers.push(onSubscriberRemoved);
   }
 
-  addNewSubscriber(resourceId: ResourceId) {
-    this.subscribers.push(resourceId);
-    this.onSubscriberAddedHandlers.forEach((it) => it(resourceId));
-  }
-}
-
-export class DummyWeb2SubscriberRepository implements Web2SubscriberRepository {
-  async findAll(): Promise<Web2Subscriber[]> {
-    return Promise.resolve([]);
-  }
-
-  async findBy(resourceIds: ResourceId[]): Promise<Web2Subscriber[]> {
-    return Promise.resolve([]);
+  addNewSubscriber(subscriber: Subscriber) {
+    this.subscribers.push(subscriber);
+    this.onSubscriberAddedHandlers.forEach((it) => it(subscriber));
   }
 }

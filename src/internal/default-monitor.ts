@@ -13,8 +13,6 @@ import {
 import { Monitor } from '../monitor-api';
 import { Data } from '../data-model';
 import { Operators } from '../transformation-pipeline-operators';
-import { Web2SubscriberRepository } from '../web-subscriber.repository';
-import { findAllDistinct } from './subsbscriber-repository-utilts';
 
 export class DefaultMonitor<T extends Object> implements Monitor<T> {
   private started = false;
@@ -28,7 +26,6 @@ export class DefaultMonitor<T extends Object> implements Monitor<T> {
       any
     >[],
     private readonly subscriberRepository: SubscriberRepository,
-    private readonly web2SubscriberRepository: Web2SubscriberRepository,
   ) {}
 
   async start() {
@@ -78,10 +75,7 @@ export class DefaultMonitor<T extends Object> implements Monitor<T> {
     origin: T,
     groupingKey: string,
   ): Promise<Data<T, T>> {
-    const subscribers = await findAllDistinct(
-      this.subscriberRepository,
-      this.web2SubscriberRepository,
-    );
+    const subscribers = await this.subscriberRepository.findAll();
     return {
       context: {
         origin,

@@ -7,12 +7,18 @@ import {
 import { Keypair } from '@solana/web3.js';
 import { DummySubscriberRepository } from './003-custom-subscriber-repository';
 import { ConsoleNotificationSink } from './004-custom-notification-sink';
+import { InMemorySubscriberRepository } from '../src/internal/in-memory-subscriber.repository';
+import { Duration } from 'luxon';
 
+// TODO: fixme
 const dummySubscriberRepository = new DummySubscriberRepository();
 const consoleNotificationSink =
   new ConsoleNotificationSink<DialectNotification>();
 const monitor = Monitors.builder({
-  subscriberRepository: dummySubscriberRepository,
+  subscriberRepository: InMemorySubscriberRepository.decorate(
+    dummySubscriberRepository,
+    Duration.fromMillis(1),
+  ),
 })
   .subscriberEvents()
   .transform<SubscriberState, SubscriberState>({
@@ -39,5 +45,7 @@ monitor.start();
 const pk = new Keypair().publicKey;
 
 setTimeout(() => {
-  dummySubscriberRepository.addNewSubscriber(pk);
-}, 100);
+  dummySubscriberRepository.addNewSubscriber({
+    resourceId: pk,
+  });
+}, 200);

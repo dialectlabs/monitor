@@ -1,4 +1,5 @@
 import { PublicKey } from '@solana/web3.js';
+import { Subscriber } from './ports';
 
 /**
  * A reference to any on-chain resource i.e.g user or a dApp, just an alias to PublicKey
@@ -30,7 +31,7 @@ export interface Context<T extends object> {
   origin: T;
   groupingKey: string;
   trace: Trace[];
-  subscribers: ResourceId[];
+  subscribers: Subscriber[];
 }
 
 /**

@@ -3,6 +3,7 @@ import {
   catchError,
   concatMap,
   filter,
+  mergeMap,
   MonoTypeOperatorFunction,
   Observable,
   OperatorFunction,
@@ -10,6 +11,7 @@ import {
   scan,
   throttleTime,
   throwError,
+  timer,
   toArray,
   windowTime,
 } from 'rxjs';
@@ -128,7 +130,8 @@ export class Operators {
           (it) =>
             it.length === 2 &&
             it[0].value <= threshold &&
-            threshold < it[1].value && (!limit || it[1].value < limit),
+            threshold < it[1].value &&
+            (!limit || it[1].value < limit),
         ),
         map(([_, snd]) => snd),
       ];
@@ -148,7 +151,8 @@ export class Operators {
           (data) =>
             data.length === 2 &&
             data[0].value >= threshold &&
-            threshold > data[1].value && (!limit || data[1].value > limit),
+            threshold > data[1].value &&
+            (!limit || data[1].value > limit),
         ),
         map(([_, snd]) => snd),
       ];
@@ -214,7 +218,7 @@ export class Operators {
       return [
         catchError((it) => {
           console.error(it);
-          return throwError(it);
+          return timer(1000).pipe(mergeMap(() => throwError(it)));
         }),
         retry(),
       ];

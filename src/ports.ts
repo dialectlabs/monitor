@@ -1,5 +1,6 @@
 import { Observable } from 'rxjs';
 import { Data, Notification, ResourceId, SourceData } from './data-model';
+import { PublicKey } from '@solana/web3.js';
 
 /**
  * An abstraction that represents a source of data, bound to specific type
@@ -39,7 +40,7 @@ export type TransformationPipeline<V, T extends object, R> = (
   upstream: Observable<Data<V, T>>,
 ) => Observable<Data<R, T>>;
 
-export type SubscriberEventHandler = (subscriber: ResourceId) => any;
+export type SubscriberEventHandler = (subscriber: Subscriber) => any;
 
 /**
  * Repository containing all subscribers, also provides subscribe semantics to get updates
@@ -48,12 +49,12 @@ export interface SubscriberRepository {
   /**
    * Return all subscribers of the monitor
    */
-  findAll(): Promise<ResourceId[]>;
+  findAll(resourceIds?: ResourceId[]): Promise<Subscriber[]>;
 
   /**
    * Finds subscriber by resource id
    */
-  findByResourceId(resourceId: ResourceId): Promise<ResourceId | null>;
+  findByResourceId(resourceId: ResourceId): Promise<Subscriber | null>;
 
   /**
    * Can be used to set handlers to react if set of subscribers is changed
@@ -62,6 +63,14 @@ export interface SubscriberRepository {
     onSubscriberAdded?: SubscriberEventHandler,
     onSubscriberRemoved?: SubscriberEventHandler,
   ): any;
+}
+
+export interface Subscriber {
+  resourceId: ResourceId;
+  email?: string | null;
+  telegramChatId?: string | null;
+  phoneNumber?: string | null;
+  wallet?: PublicKey | null;
 }
 
 /**

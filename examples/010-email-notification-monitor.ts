@@ -6,10 +6,7 @@ import {
   ResourceId,
   SourceData,
 } from '../src';
-import {
-  DummySubscriberRepository,
-  DummyWeb2SubscriberRepository,
-} from './003-custom-subscriber-repository';
+import { DummySubscriberRepository } from './003-custom-subscriber-repository';
 import { ConsoleNotificationSink } from './004-custom-notification-sink';
 import { Observable } from 'rxjs';
 import { Keypair } from '@solana/web3.js';
@@ -27,7 +24,6 @@ const consoleNotificationSink =
 
 const monitor: Monitor<DataType> = Monitors.builder({
   subscriberRepository: new DummySubscriberRepository(1),
-  web2SubscriberRepository: new DummyWeb2SubscriberRepository(),
   sinks: {
     email: {
       senderEmail: 'hello@dialect.to',

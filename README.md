@@ -45,6 +45,7 @@ The server implementation is provided below
 
 ```typescript
 import { Monitor, Monitors, Pipelines, ResourceId, SourceData } from '@dialectlabs/monitor';
+import { Dialect, NodeDialectWalletAdapter } from '@dialectlabs/sdk';
 import { Duration } from 'luxon';
 
 type DataType = {
@@ -53,8 +54,10 @@ type DataType = {
 };
 
 const monitor: Monitor<DataType> = Monitors.builder({
-  dialectProgram: // ... set a dialect program,
-  monitorKeypair: // ... set a keypair used to send notifications,
+  sdk: Dialect.sdk({
+    environment: 'local-development',
+    wallet: NodeDialectWalletAdapter.create(),
+  })
   // ... other configuration
 })
   .defineDataSource<DataType>()
@@ -104,26 +107,28 @@ Please follow the instructions in https://github.com/dialectlabs/protocol#local-
 #### Step 2. generate a new keypair for monitoring service and fund it
 
 ```bash
-export your_path=~/projects/dialect
-solana-keygen new --outfile ${your_path}/monitoring-service-dev-local-key.json
-solana-keygen pubkey ${your_path}/monitoring-service-dev-local-key.json > ${your_path}/monitoring-service-dev-local-key.pub
-solana -k ${your_path}/monitoring-service-dev-local-key.json airdrop 3
+export your_path=~/projects/dialect/keypairs/
+solana-keygen new --outfile ${your_path}/monitor-localnet-keypair.private
+solana-keygen pubkey ${your_path}/monitor-localnet-keypair.private > ${your_path}/monitor-localnet-keypair.public
+solana -k ${your_path}/monitor-localnet-keypair.public airdrop 3
 ```
 
 #### Step 2. Start server
 
 ```bash
 cd examples
-export your_path=~/projects/dialect
-MONITORING_SERVICE_PRIVATE_KEY=$(cat ${your_path}/monitoring-service-dev-local-key.json) ts-node ./000.2-real-monoring-service-server.ts
+export your_path=~/projects/dialect/keypairs
+DIALECT_SDK_CREDENTIALS=$(cat ${your_path}/monitor-localnet-keypair.private) ts-node ./000.2-real-monoring-service-server.ts
 ```
 
 #### Step 3. Start client
 
 ```bash
 cd examples
-export your_path=~/projects/dialect
-MONITORING_SERVICE_PUBLIC_KEY=$(solana address --keypair ${your_path}/monitoring-service-dev-local-key.json) ts-node ./000.1-real-monoring-service-client.ts
+export your_path=~/projects/dialect/keypairs
+DAPP_PUBLIC_KEY=$(cat ${your_path}/monitor-localnet-keypair.public) \
+DAPP_PRIVATE_KEY=$(cat ${your_path}/monitor-localnet-keypair.private) \
+ts-node ./000.1-real-monoring-service-client.ts
 ```
 
 #### Step 4. Look at client logs for notifications

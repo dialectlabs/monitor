@@ -1,7 +1,6 @@
 import { Notification, ResourceId } from './data-model';
-import { NotificationSink } from './ports';
+import { NotificationSink, SubscriberRepository } from './ports';
 import { Twilio } from 'twilio';
-import { Web2SubscriberRepository } from './web-subscriber.repository';
 
 /**
  * Sms notification
@@ -18,24 +17,24 @@ export class TwilioSmsNotificationSink
   constructor(
     private readonly twilioAccount: { username: string; password: string },
     private readonly senderSmsNumber: string,
-    private readonly web2SubscriberRepository: Web2SubscriberRepository,
+    private readonly subscriberRepository: SubscriberRepository,
   ) {
     this.twilio = new Twilio(twilioAccount.username, twilioAccount.password);
   }
 
   async push(notification: SmsNotification, recipients: ResourceId[]) {
-    const recipientSmSNumbers = await this.web2SubscriberRepository.findBy(
+    const recipientSmSNumbers = await this.subscriberRepository.findAll(
       recipients,
     );
     console.log('sms-notif-sink, recipients:\n');
     console.log(recipientSmSNumbers);
     const results = await Promise.allSettled(
       recipientSmSNumbers
-        .filter(({ smsNumber }) => smsNumber)
-        .map(({ smsNumber }) => {
+        .filter(({ phoneNumber }) => phoneNumber)
+        .map(({ phoneNumber }) => {
           this.twilio.messages
             .create({
-              to: smsNumber!,
+              to: phoneNumber!,
               from: this.senderSmsNumber,
               body: notification.body,
             })
