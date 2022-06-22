@@ -2,6 +2,11 @@
 
 ## [UNRELEASED]
 
+## [3.0.0] - 2022-06-22
+
+- Migrate to Dialect SDK for all underlying API calls and monitor initialization.
+- Add monitor client that can be used to emulate subscribers and auto-register dapp in Dialect.
+
 ## [2.3.0] - 2022-06-16
 
 - Add Solflare notification sink.
