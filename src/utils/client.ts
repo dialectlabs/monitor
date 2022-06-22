@@ -3,14 +3,14 @@ import { LAMPORTS_PER_SOL, PublicKey } from '@solana/web3.js';
 import {
   AddressType,
   Backend,
-  Config,
+  ConfigProps,
   Dialect,
   NodeDialectWalletAdapter,
   ThreadMemberScope,
 } from '@dialectlabs/sdk';
 import { sleep } from '@dialectlabs/web3';
 
-export async function createDappIfAbsent(config: Config) {
+export async function createDappIfAbsent(config: ConfigProps) {
   const sdk = Dialect.sdk(config);
   const dapp = await sdk.dapps.find();
   if (!dapp) {
@@ -29,7 +29,7 @@ export async function createDappIfAbsent(config: Config) {
 }
 
 export async function createClient(
-  config: Omit<Config, 'wallet'>,
+  config: Omit<ConfigProps, 'wallet'>,
   dappPublicKey: PublicKey,
 ): Promise<void> {
   const wallet = NodeDialectWalletAdapter.create();

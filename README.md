@@ -118,7 +118,7 @@ solana -k ${your_path}/monitor-localnet-keypair.public airdrop 3
 ```bash
 cd examples
 export your_path=~/projects/dialect/keypairs
-PRIVATE_KEY=$(cat ${your_path}/monitor-localnet-keypair.private) ts-node ./000.2-real-monoring-service-server.ts
+DIALECT_SDK_CREDENTIALS=$(cat ${your_path}/monitor-localnet-keypair.private) ts-node ./000.2-real-monoring-service-server.ts
 ```
 
 #### Step 3. Start client
