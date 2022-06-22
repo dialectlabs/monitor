@@ -109,29 +109,41 @@ export class MonitorsBuilderState<T extends object> {
       const sdk = monitorProps.sinks?.wallet?.sdk;
       return sdk && new DialectNotificationSink(sdk, this.subscriberRepository);
     }
-
   }
 
   private static createSubscriberRepository(monitorProps: MonitorProps) {
     if ('sdk' in monitorProps) {
       const { sdk, subscriberRepository } = monitorProps;
       return subscriberRepository
-        ? MonitorsBuilderState.decorateIfNeeded(subscriberRepository)
+        ? MonitorsBuilderState.decorateIfNeeded(
+            monitorProps,
+            subscriberRepository,
+          )
         : InMemorySubscriberRepository.decorate(
             new DialectSdkSubscriberRepository(sdk),
+            monitorProps.subscribersCacheTTL ??
+              Duration.fromObject({ minutes: 1 }),
           );
     } else {
       const { subscriberRepository } = monitorProps;
-      return MonitorsBuilderState.decorateIfNeeded(subscriberRepository);
+      return MonitorsBuilderState.decorateIfNeeded(
+        monitorProps,
+        subscriberRepository,
+      );
     }
   }
 
   private static decorateIfNeeded(
+    monitorProps: MonitorProps,
     subscriberRepository: SubscriberRepository | InMemorySubscriberRepository,
   ) {
     return subscriberRepository instanceof InMemorySubscriberRepository
       ? subscriberRepository
-      : InMemorySubscriberRepository.decorate(subscriberRepository);
+      : InMemorySubscriberRepository.decorate(
+          subscriberRepository,
+          monitorProps.subscribersCacheTTL ??
+            Duration.fromObject({ minutes: 1 }),
+        );
   }
 }
 

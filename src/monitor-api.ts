@@ -5,17 +5,20 @@ import { MonitorFactory } from './monitor-factory';
 import { ChooseDataSourceStepImpl } from './internal/monitor-builder';
 import { DialectSdk } from '@dialectlabs/sdk';
 import { SubscriberRepository } from './ports';
+import { Duration } from 'luxon';
 
 export type MonitorProps = GenericMonitorProps | DialectSdkMonitorProps;
 
 export interface GenericMonitorProps {
   subscriberRepository: SubscriberRepository;
+  subscribersCacheTTL?: Duration;
   sinks?: SinksConfiguration;
 }
 
 export interface DialectSdkMonitorProps {
   sdk: DialectSdk;
   subscriberRepository?: SubscriberRepository;
+  subscribersCacheTTL?: Duration;
   sinks?: Omit<SinksConfiguration, 'wallet'>;
 }
 
@@ -68,8 +71,6 @@ export interface Monitor<T extends object> {
  */
 export class Monitors<T extends object> {
   private static factoryInstance: DefaultMonitorFactory;
-
-  private constructor() {}
 
   /**
    * A rich builder that guides developer on monitor creation step

@@ -22,12 +22,7 @@ export class InMemorySubscriberRepository implements SubscriberRepository {
     private readonly cacheTtl: Duration,
   ) {}
 
-  static decorate(
-    other: SubscriberRepository,
-    cacheTtl: Duration = Duration.fromObject({
-      minutes: 1,
-    }),
-  ) {
+  static decorate(other: SubscriberRepository, cacheTtl: Duration) {
     return new InMemorySubscriberRepository(other, cacheTtl);
   }
 
@@ -80,10 +75,15 @@ export class InMemorySubscriberRepository implements SubscriberRepository {
     const added = subscribers.filter(
       (it) => !this.subscribers.has(it.resourceId.toBase58()),
     );
+    subscribers.forEach((subscriber) => {
+      this.subscribers.set(subscriber.resourceId.toBase58(), subscriber);
+    });
     if (added.length > 0) {
       console.log(
         `${added.length} subscriber(s) added: ${JSON.stringify(
-          added.slice(0, 3),
+          added,
+          null,
+          2,
         )}`,
       );
     }

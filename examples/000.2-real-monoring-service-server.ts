@@ -15,6 +15,7 @@ const sdk = Dialect.sdk({
 
 const dataSourceMonitor: Monitor<DataType> = Monitors.builder({
   sdk,
+  subscribersCacheTTL: Duration.fromObject({ seconds: 5 }),
 })
   .defineDataSource<DataType>()
   .poll((subscribers: ResourceId[]) => {

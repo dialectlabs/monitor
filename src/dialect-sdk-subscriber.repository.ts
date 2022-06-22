@@ -6,9 +6,16 @@ import {
 } from './ports';
 import { ResourceId } from './data-model';
 import _ from 'lodash';
-import { AddressType, DialectSdk, IllegalStateError } from '@dialectlabs/sdk';
+import {
+  AddressType,
+  Dapp,
+  DialectSdk,
+  IllegalStateError,
+} from '@dialectlabs/sdk';
 
 export class DialectSdkSubscriberRepository implements SubscriberRepository {
+  dapp: Dapp | null = null;
+
   constructor(private sdk: DialectSdk) {}
 
   subscribe(
@@ -24,14 +31,7 @@ export class DialectSdkSubscriberRepository implements SubscriberRepository {
   }
 
   async findAll(resourceIds?: ResourceId[]): Promise<Subscriber[]> {
-    const dapp = await this.sdk.dapps.find();
-    if (!dapp) {
-      throw new IllegalStateError(
-        `Dapp ${this.sdk.info.wallet.publicKey?.toBase58()} not registerd in dialect cloud ${
-          this.sdk.info.config.dialectCloud?.url
-        }`,
-      );
-    }
+    const dapp = await this.lookupDapp();
     const dappAddresses = await dapp.dappAddresses.findAll();
     const subscribers = _(dappAddresses)
       .filter(({ enabled, address: { verified } }) => enabled && verified)
@@ -67,5 +67,20 @@ export class DialectSdkSubscriberRepository implements SubscriberRepository {
           resourceIds.find((it) => it.equals(resourceId)),
         )
       : subscribers;
+  }
+
+  private async lookupDapp() {
+    if (!this.dapp) {
+      const dapp = await this.sdk.dapps.find();
+      if (!dapp) {
+        throw new IllegalStateError(
+          `Dapp ${this.sdk.info.wallet.publicKey?.toBase58()} not registered in dialect cloud ${
+            this.sdk.info.config.dialectCloud.url
+          }`,
+        );
+      }
+      this.dapp = dapp;
+    }
+    return this.dapp;
   }
 }
