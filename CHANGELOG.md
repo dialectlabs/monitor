@@ -2,6 +2,10 @@
 
 ## [UNRELEASED]
 
+## [3.0.1] - 2022-06-22
+
+- Bump sdk dependency to 0.1.4.
+
 ## [3.0.0] - 2022-06-22
 
 - Migrate to Dialect SDK for all underlying API calls and monitor initialization.
