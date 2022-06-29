@@ -8,7 +8,7 @@ const main = async (): Promise<void> => {
     const dappKeyPair: Keypair = Keypair.fromSecretKey(
       new Uint8Array(JSON.parse(dappPrivateKeyFromEnv)),
     );
-    await createDappIfAbsent({
+    await createDappIfAbsent('Monitoring service client', {
       wallet: NodeDialectWalletAdapter.create(dappKeyPair),
       environment: 'local-development',
       backends: [Backend.DialectCloud],

@@ -2,6 +2,10 @@
 
 ## [UNRELEASED]
 
+## [3.0.2] - 2022-06-22
+
+- Bump sdk dependency to 0.2.0.
+
 ## [3.0.1] - 2022-06-22
 
 - Bump sdk dependency to 0.1.4.

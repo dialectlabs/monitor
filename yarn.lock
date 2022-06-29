@@ -312,10 +312,10 @@
   dependencies:
     "@cspotcode/source-map-consumer" "0.8.0"
 
-"@dialectlabs/sdk@^0.1.14":
-  version "0.1.14"
-  resolved "https://registry.yarnpkg.com/@dialectlabs/sdk/-/sdk-0.1.14.tgz#baf5ceec27b46ff3f189784e15e987ab5c77d828"
-  integrity sha512-ErmVhqjgATmYIFCFvv+7VkrhF6VtxKGSiNhNELHCym651IpR7Tr5VlLV33DDNfgJAoIO0Pq9JMwD2Kw7g5WXJg==
+"@dialectlabs/sdk@^0.2.0":
+  version "0.2.0"
+  resolved "https://registry.yarnpkg.com/@dialectlabs/sdk/-/sdk-0.2.0.tgz#1facfb87b784d7252010d0382d517c2ebd6213be"
+  integrity sha512-/OLj8QARDdqzaBnDTVtm5n8tAWowyEp+2jFrkGu4YbaGF1Jl1p7rcE+OIHUIj9XAW5omlrxTi7pLu+X/Ho3IPw==
   dependencies:
     "@dialectlabs/web3" "^0.3.2"
     "@project-serum/anchor" "0.23.0"

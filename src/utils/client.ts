@@ -10,8 +10,8 @@ import {
 } from '@dialectlabs/sdk';
 import { sleep } from '@dialectlabs/web3';
 
-export async function createDappIfAbsent(config: ConfigProps) {
-  const sdk = Dialect.sdk(config);
+export async function createDappIfAbsent(name: string, sdkConfig: ConfigProps) {
+  const sdk = Dialect.sdk(sdkConfig);
   const dapp = await sdk.dapps.find();
   if (!dapp) {
     console.log(
@@ -19,7 +19,9 @@ export async function createDappIfAbsent(config: ConfigProps) {
         sdk.info.config.dialectCloud?.url
       }, creating it`,
     );
-    return sdk.dapps.create();
+    return sdk.dapps.create({
+      name,
+    });
   }
   console.log(
     `Dapp ${dapp.publicKey.toBase58()} already registered in ${
