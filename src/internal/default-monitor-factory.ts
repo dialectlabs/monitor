@@ -96,8 +96,12 @@ export class DefaultMonitorFactory implements MonitorFactory {
     dataSource: PollableDataSource<T>,
     pollInterval: Duration,
     subscriberRepository: SubscriberRepository,
-    pollTimeout: Duration = Duration.fromObject({ minutes: 5 }),
   ): PushyDataSource<T> {
+    const pollTimeoutMs = Math.max(
+      Duration.fromObject({ minutes: 10 }).toMillis(),
+      3 * pollInterval.toMillis(),
+    );
+    const pollTimeout = Duration.fromObject({ milliseconds: pollTimeoutMs });
     return timer(0, pollInterval.toMillis()).pipe(
       exhaustMap(() =>
         from(
