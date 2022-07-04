@@ -70,7 +70,7 @@ export async function createClient(
         scopes: [ThreadMemberScope.WRITE],
       },
     ],
-    encrypted: true,
+    encrypted: false,
   });
   console.log(
     `Created ${
