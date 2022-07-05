@@ -72,7 +72,47 @@ export interface Diff<E> {
 /**
  * A set of commonly-used pipelines
  */
+
+export interface Change<T> {
+  prev: T;
+  current: T;
+}
+
 export class Pipelines {
+  static change<T extends object, E extends object>(
+    compareBy: (e1: E, e2: E) => boolean,
+    rateLimit?: RateLimit,
+  ): TransformationPipeline<E, T, Change<E>> {
+    return Pipelines.createNew<E, T, Change<E>>((upstream) =>
+      upstream
+        .pipe(Operators.Window.fixedSizeSliding(2))
+        .pipe(Operators.Transform.filter((it) => it.length === 2))
+        .pipe(
+          Operators.Transform.filter(
+            ([d1, d2]) => !compareBy(d1.value, d2.value),
+          ),
+        )
+        .pipe(
+          Operators.Transform.map(([d1, d2]) => {
+            const change: Change<E> = {
+              prev: d1.value,
+              current: d2.value,
+            };
+            const data: Data<Change<E>, T> = {
+              value: change,
+              context: d2.context,
+            };
+            return data;
+          }),
+        )
+        .pipe(
+          rateLimit
+            ? Operators.FlowControl.rateLimit(rateLimit.timeSpan)
+            : Operators.Transform.identity(),
+        ),
+    );
+  }
+
   static added<T extends object, E extends object>(
     compareBy: (e1: E, e2: E) => boolean,
     rateLimit?: RateLimit,
