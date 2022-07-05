@@ -104,7 +104,11 @@ Please follow the instructions below to run the example
 
 Please follow the instructions in https://github.com/dialectlabs/protocol#local-development
 
-#### Step 2. generate a new keypair for monitoring service and fund it
+#### Step 2. Run data service
+
+Please follow the instructions in https://github.com/dialectlabs/data-service
+
+#### Step 3. generate a new keypair for monitoring service and fund it
 
 ```bash
 export your_path=~/projects/dialect/keypairs/
@@ -113,7 +117,7 @@ solana-keygen pubkey ${your_path}/monitor-localnet-keypair.private > ${your_path
 solana -k ${your_path}/monitor-localnet-keypair.public airdrop 3
 ```
 
-#### Step 2. Start server
+#### Step 4. Start server
 
 ```bash
 cd examples
@@ -121,7 +125,7 @@ export your_path=~/projects/dialect/keypairs
 DIALECT_SDK_CREDENTIALS=$(cat ${your_path}/monitor-localnet-keypair.private) ts-node ./000.2-real-monoring-service-server.ts
 ```
 
-#### Step 3. Start client
+#### Step 5. Start client
 
 ```bash
 cd examples
@@ -131,7 +135,7 @@ DAPP_PRIVATE_KEY=$(cat ${your_path}/monitor-localnet-keypair.private) \
 ts-node ./000.1-real-monoring-service-client.ts
 ```
 
-#### Step 4. Look at client logs for notifications
+#### Step 6. Look at client logs for notifications
 
 When both client and server are started, server will start polling data and notifying subscribers
 
