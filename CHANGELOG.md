@@ -2,6 +2,10 @@
 
 ## [UNRELEASED]
 
+## [3.1.0] - 2022-07-06
+
+- Add pipeline for tracking change of arbitrary value based on user-provided comparator.
+
 ## [3.0.3] - 2022-06-22
 
 - Increase poll timeout threshold for larger poll intervals.
