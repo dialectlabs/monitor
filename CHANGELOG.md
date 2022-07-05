@@ -2,6 +2,10 @@
 
 ## [UNRELEASED]
 
+## [3.0.3] - 2022-06-22
+
+- Increase poll timeout threshold for larger poll intervals.
+
 ## [3.0.2] - 2022-06-22
 
 - Bump sdk dependency to 0.2.0.
