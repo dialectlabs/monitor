@@ -44,6 +44,7 @@ import {
   SolflareNotification,
   SolflareNotificationSink,
 } from '../solflare-notification-sink';
+import { DialectCloudNotification, DialectCloudNotificationSink } from '../dialect-cloud-notification-sink';
 
 /**
  * A set of factory methods to create monitors
@@ -54,6 +55,7 @@ export class MonitorsBuilderState<T extends object> {
   addTransformationsStep?: AddTransformationsStepImpl<T>;
 
   dialectNotificationSink?: DialectNotificationSink;
+  dialectCloudNotificationSink?: DialectCloudNotificationSink;
   emailNotificationSink?: SengridEmailNotificationSink;
   smsNotificationSink?: TwilioSmsNotificationSink;
   telegramNotificationSink?: TelegramNotificationSink;
@@ -66,6 +68,8 @@ export class MonitorsBuilderState<T extends object> {
       MonitorsBuilderState.createSubscriberRepository(monitorProps);
     this.dialectNotificationSink =
       this.createDialectNotificationSink(monitorProps);
+    this.dialectCloudNotificationSink =
+        this.createDialectCloudNotificationSink(monitorProps);
 
     const sinks = monitorProps?.sinks;
     if (sinks?.email) {
@@ -108,6 +112,17 @@ export class MonitorsBuilderState<T extends object> {
     } else {
       const sdk = monitorProps.sinks?.wallet?.sdk;
       return sdk && new DialectNotificationSink(sdk, this.subscriberRepository);
+    }
+  }
+
+  private createDialectCloudNotificationSink(monitorProps: MonitorProps) {
+    if ('sdk' in monitorProps) {
+      return new DialectCloudNotificationSink(
+        monitorProps.sdk,
+      );
+    } else {
+      const sdk = monitorProps.sinks?.wallet?.sdk;
+      return sdk && new DialectCloudNotificationSink(sdk,);
     }
   }
 
@@ -227,12 +242,25 @@ class AddTransformationsStepImpl<T extends object>
       this,
       this.dataSourceTransformationPipelines,
       this.monitorBuilderState.dialectNotificationSink,
+      this.monitorBuilderState.dialectCloudNotificationSink,
       this.monitorBuilderState.emailNotificationSink,
       this.monitorBuilderState.smsNotificationSink,
       this.monitorBuilderState.telegramNotificationSink,
       this.monitorBuilderState.solflareNotificationSink,
     );
   }
+
+  // TODO a notifyAll() step which skips AddSinksStep and passes notification to data-service
+  //   or notifyInDataService()
+  //   or notifyWithDialectCloud(useDialectKeys: boolean) -- if false, will seach for dapp's api tokens
+  //         we could do a simple "whitelist" check inside of data-service to prevent abuse
+  //         in readme we must say contact Dialect for whitelist to use dialect api tokens (Sendgrid, Twilio, Tg, etc)
+  // In this scenario, it should not be absolutely necessary for sinks to have been configured
+  //   although, they should still be allowed to if notify() is also used by developer
+
+  // OR, could just make a new sink which passes the message to data-service
+  //     dialectCloudNotificationSink(useDialectKeys: boolean)
+  //       if !useDialectKeys, SDK will look for dapps keys for sinks (Sendgrid, Twilio, Tg bot)
 
   transform<V, R>(transformation: Transformation<T, V, R>): NotifyStep<T, R> {
     const dataSourceTransformationPipelines: DataSourceTransformationPipeline<
@@ -289,6 +317,7 @@ class NotifyStepImpl<T extends object, R> implements NotifyStep<T, R> {
       this.addTransformationsStep,
       this.dataSourceTransformationPipelines,
       this.monitorBuilderState.dialectNotificationSink,
+      this.monitorBuilderState.dialectCloudNotificationSink,
       this.monitorBuilderState.emailNotificationSink,
       this.monitorBuilderState.smsNotificationSink,
       this.monitorBuilderState.telegramNotificationSink,
@@ -307,6 +336,7 @@ class AddSinksStepImpl<T extends object, R> implements AddSinksStep<T, R> {
       Data<R, T>
     >[],
     private readonly dialectNotificationSink?: DialectNotificationSink,
+    private readonly dialectCloudNotificationSink?: DialectCloudNotificationSink,
     private readonly emailNotificationSink?: SengridEmailNotificationSink,
     private readonly smsNotificationSink?: TwilioSmsNotificationSink,
     private readonly telegramNotificationSink?: TelegramNotificationSink,
@@ -328,6 +358,18 @@ class AddSinksStepImpl<T extends object, R> implements AddSinksStep<T, R> {
       );
     }
     return this.custom(adapter, this.dialectNotificationSink, dispatchStrategy);
+  }
+
+  dialectCloud(
+    adapter: (data: Data<R, T>) => DialectCloudNotification,
+    dispatchStrategy: DispatchStrategy<T>,
+  ): AddSinksStep<T, R> {
+    if (!this.dialectCloudNotificationSink) {
+      throw new Error(
+        'Dialect Cloud notification sink must be initialized before using',
+      );
+    }
+    return this.custom(adapter, this.dialectCloudNotificationSink, dispatchStrategy);
   }
 
   custom<N>(
