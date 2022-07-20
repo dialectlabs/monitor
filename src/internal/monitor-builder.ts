@@ -44,7 +44,10 @@ import {
   SolflareNotification,
   SolflareNotificationSink,
 } from '../solflare-notification-sink';
-import { DialectCloudNotification, DialectCloudNotificationSink } from '../dialect-cloud-notification-sink';
+import {
+  DialectCloudNotification,
+  DialectCloudNotificationSink,
+} from '../dialect-cloud-notification-sink';
 
 /**
  * A set of factory methods to create monitors
@@ -69,7 +72,7 @@ export class MonitorsBuilderState<T extends object> {
     this.dialectNotificationSink =
       this.createDialectNotificationSink(monitorProps);
     this.dialectCloudNotificationSink =
-        this.createDialectCloudNotificationSink(monitorProps);
+      this.createDialectCloudNotificationSink(monitorProps);
 
     const sinks = monitorProps?.sinks;
     if (sinks?.email) {
@@ -117,12 +120,10 @@ export class MonitorsBuilderState<T extends object> {
 
   private createDialectCloudNotificationSink(monitorProps: MonitorProps) {
     if ('sdk' in monitorProps) {
-      return new DialectCloudNotificationSink(
-        monitorProps.sdk,
-      );
+      return new DialectCloudNotificationSink(monitorProps.sdk);
     } else {
       const sdk = monitorProps.sinks?.wallet?.sdk;
-      return sdk && new DialectCloudNotificationSink(sdk,);
+      return sdk && new DialectCloudNotificationSink(sdk);
     }
   }
 
@@ -369,7 +370,11 @@ class AddSinksStepImpl<T extends object, R> implements AddSinksStep<T, R> {
         'Dialect Cloud notification sink must be initialized before using',
       );
     }
-    return this.custom(adapter, this.dialectCloudNotificationSink, dispatchStrategy);
+    return this.custom(
+      adapter,
+      this.dialectCloudNotificationSink,
+      dispatchStrategy,
+    );
   }
 
   custom<N>(
@@ -379,7 +384,7 @@ class AddSinksStepImpl<T extends object, R> implements AddSinksStep<T, R> {
   ) {
     const sinkWriter: (data: Data<R, T>) => Promise<void> = (data) => {
       const toBeNotified = this.selectResources(dispatchStrategy, data);
-      return sink!.push(adapter(data), toBeNotified);
+      return sink!.push(adapter(data), toBeNotified, dispatchStrategy.dispatch);
     };
     this.sinkWriters.push(sinkWriter);
     return this;

@@ -75,19 +75,27 @@ export type DispatchStrategy<T extends object> =
   | UnicastDispatchStrategy<T>
   | MulticastDispatchStrategy<T>;
 
-export type BroadcastDispatchStrategy = {
-  dispatch: 'broadcast';
-};
+export type DispatchType = 'broadcast' | 'unicast' | 'multicast';
 
-export type UnicastDispatchStrategy<T extends object> = {
+export interface BaseDispatchStrategy {
+  dispatch: DispatchType;
+}
+
+export interface BroadcastDispatchStrategy extends BaseDispatchStrategy {
+  dispatch: 'broadcast';
+}
+
+export interface UnicastDispatchStrategy<T extends object>
+  extends BaseDispatchStrategy {
   dispatch: 'unicast';
   to: (ctx: Context<T>) => ResourceId;
-};
+}
 
-export type MulticastDispatchStrategy<T extends object> = {
+export interface MulticastDispatchStrategy<T extends object>
+  extends BaseDispatchStrategy {
   dispatch: 'multicast';
   to: (ctx: Context<T>) => ResourceId[];
-};
+}
 
 export interface AddTransformationsStep<T extends object> {
   transform<V, R>(transformation: Transformation<T, V, R>): NotifyStep<T, R>;

@@ -1,28 +1,30 @@
-import { NotificationSink, SubscriberRepository } from './ports';
+import { NotificationSink } from './ports';
 import { Notification, ResourceId } from './data-model';
 import { DialectSdk, IllegalStateError } from '@dialectlabs/sdk';
+import { DispatchType } from './monitor-builder';
 
 export interface DialectCloudNotification extends Notification {
   title: string;
   message: string;
-  dispatchType: 'unicast' | 'multicast' | 'broadcast';
 }
 
 export class DialectCloudNotificationSink
   implements NotificationSink<DialectCloudNotification>
 {
-  constructor(
-    private readonly sdk: DialectSdk,
-  ) {}
+  constructor(private readonly sdk: DialectSdk) {}
 
-  async push({ title, message, dispatchType }: DialectCloudNotification, recipients: ResourceId[]) {
+  async push(
+    { title, message }: DialectCloudNotification,
+    recipients: ResourceId[],
+    dispatchType: DispatchType,
+  ) {
+    // TODO: add error handling
     const dapp = await this.sdk.dapps.find();
     if (!dapp) {
       throw new IllegalStateError(
         "Dapp doesn't exist in Dialect Cloud, please create dapp in Dialect Cloud to use cloud notification sink.",
       );
     }
-    
     if (dispatchType === 'unicast') {
       await dapp.messages.send({
         title: title,
@@ -45,7 +47,6 @@ export class DialectCloudNotificationSink
         `Dialect Cloud notification sink does not support this dispatch type: ${dispatchType}.`,
       );
     }
-
     return;
   }
 }

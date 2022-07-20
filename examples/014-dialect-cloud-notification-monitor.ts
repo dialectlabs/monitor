@@ -10,7 +10,12 @@ import { DummySubscriberRepository } from './003-custom-subscriber-repository';
 import { ConsoleNotificationSink } from './004-custom-notification-sink';
 import { Observable } from 'rxjs';
 import { Keypair } from '@solana/web3.js';
-import { Dialect, Environment, NodeDialectWalletAdapter, SolanaNetwork } from '@dialectlabs/sdk';
+import {
+  Dialect,
+  Environment,
+  NodeDialectWalletAdapter,
+  SolanaNetwork,
+} from '@dialectlabs/sdk';
 
 type DataType = {
   cratio: number;
@@ -71,7 +76,6 @@ const monitor: Monitor<DataType> = Monitors.builder({
     ({ value }) => ({
       title: 'dApp cratio warning',
       message: `Your cratio = ${value} above warning threshold`,
-      dispatchType: 'unicast',
     }),
     { dispatch: 'unicast', to: ({ origin }) => origin.resourceId },
   )
@@ -79,7 +83,6 @@ const monitor: Monitor<DataType> = Monitors.builder({
     ({ value }) => ({
       title: 'dApp cratio warning',
       message: `Your cratio = ${value} above warning threshold`,
-      dispatchType: 'multicast',
     }),
     { dispatch: 'multicast', to: ({ origin }) => [origin.resourceId] },
   )
@@ -87,7 +90,6 @@ const monitor: Monitor<DataType> = Monitors.builder({
     ({ value }) => ({
       title: 'dApp cratio warning',
       message: `Your cratio = ${value} above warning threshold`,
-      dispatchType: 'broadcast',
     }),
     { dispatch: 'broadcast' },
   )

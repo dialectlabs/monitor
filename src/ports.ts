@@ -1,6 +1,7 @@
 import { Observable } from 'rxjs';
 import { Data, Notification, ResourceId, SourceData } from './data-model';
 import { PublicKey } from '@solana/web3.js';
+import { DispatchType } from './monitor-builder';
 
 /**
  * An abstraction that represents a source of data, bound to specific type
@@ -77,5 +78,9 @@ export interface Subscriber {
  * An interface that abstracts the destination where events are sent/persisted
  */
 export interface NotificationSink<N extends Notification> {
-  push(notification: N, recipients: ResourceId[]): Promise<any>;
+  push(
+    notification: N,
+    recipients: ResourceId[],
+    dispatchType: DispatchType,
+  ): Promise<any>;
 }
