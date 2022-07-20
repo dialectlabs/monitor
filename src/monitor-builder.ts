@@ -12,7 +12,7 @@ import { EmailNotification } from './sengrid-email-notification-sink';
 import { SmsNotification } from './twilio-sms-notification-sink';
 import { TelegramNotification } from './telegram-notification-sink';
 import { SolflareNotification } from './solflare-notification-sink';
-import { DialectCloudNotification } from './dialect-cloud-notification-sink';
+import { DialectSdkNotification } from './dialect-sdk-notification-sink';
 
 export interface ChooseDataSourceStep {
   /**
@@ -116,8 +116,8 @@ export interface AddSinksStep<T extends object, R> {
     dispatchStrategy: DispatchStrategy<T>,
   ): AddSinksStep<T, R>;
 
-  dialectCloud(
-    adapter: (data: Data<R, T>) => DialectCloudNotification,
+  dialectSdk(
+    adapter: (data: Data<R, T>) => DialectSdkNotification,
     dispatchStrategy: DispatchStrategy<T>,
   ): AddSinksStep<T, R>;
 

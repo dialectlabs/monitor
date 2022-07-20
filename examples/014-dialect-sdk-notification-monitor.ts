@@ -72,21 +72,21 @@ const monitor: Monitor<DataType> = Monitors.builder({
     ],
   })
   .notify()
-  .dialectCloud(
+  .dialectSdk(
     ({ value }) => ({
       title: 'dApp cratio warning',
       message: `Your cratio = ${value} above warning threshold`,
     }),
     { dispatch: 'unicast', to: ({ origin }) => origin.resourceId },
   )
-  .dialectCloud(
+  .dialectSdk(
     ({ value }) => ({
       title: 'dApp cratio warning',
       message: `Your cratio = ${value} above warning threshold`,
     }),
     { dispatch: 'multicast', to: ({ origin }) => [origin.resourceId] },
   )
-  .dialectCloud(
+  .dialectSdk(
     ({ value }) => ({
       title: 'dApp cratio warning',
       message: `Your cratio = ${value} above warning threshold`,
