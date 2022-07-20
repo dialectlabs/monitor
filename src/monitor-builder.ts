@@ -94,11 +94,19 @@ export interface AddTransformationsStep<T extends object> {
   notify(): AddSinksStep<T, T>;
 }
 
+export interface NotifyStepProps {
+  notificationType: NotificationTypeProps;
+}
+
+export interface NotificationTypeProps {
+  id: string;
+}
+
 export interface NotifyStep<T extends object, R> {
   /**
    * Finish adding transformations and configure how to dispatch notifications
    */
-  notify(): AddSinksStep<T, R>;
+  notify(props?: NotifyStepProps): AddSinksStep<T, R>;
 }
 
 export interface AddSinksStep<T extends object, R> {

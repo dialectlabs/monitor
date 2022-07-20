@@ -7,6 +7,7 @@ import {
   DispatchStrategy,
   KeysMatching,
   NotifyStep,
+  NotifyStepProps,
   Transformation,
 } from '../monitor-builder';
 import { Data, SubscriberEvent } from '../data-model';
@@ -284,7 +285,7 @@ class NotifyStepImpl<T extends object, R> implements NotifyStep<T, R> {
     private readonly monitorBuilderState: MonitorsBuilderState<T>,
   ) {}
 
-  notify(): AddSinksStep<T, R> {
+  notify(props?: NotifyStepProps): AddSinksStep<T, R> {
     return new AddSinksStepImpl(
       this.addTransformationsStep,
       this.dataSourceTransformationPipelines,
