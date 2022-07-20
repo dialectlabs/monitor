@@ -72,6 +72,16 @@ export interface Subscriber {
   telegramChatId?: string | null;
   phoneNumber?: string | null;
   wallet?: PublicKey | null;
+  notificationSubscriptions?: SubscriberNotificationSubscription[];
+}
+
+export interface SubscriberNotificationSubscription {
+  notificationTypeId: string;
+  config: NotificationConfig;
+}
+
+export interface NotificationConfig {
+  enabled: boolean;
 }
 
 /**
