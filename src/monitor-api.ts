@@ -19,14 +19,14 @@ export interface DialectSdkMonitorProps {
   sdk: DialectSdk;
   subscriberRepository?: SubscriberRepository;
   subscribersCacheTTL?: Duration;
-  sinks?: Omit<SinksConfiguration, 'wallet'>;
+  sinks?: Omit<SinksConfiguration, 'dialectThread' | 'dialectSdk'>;
 }
 
 export interface SinksConfiguration {
   email?: EmailSinkConfiguration;
   sms?: SmsSinkConfiguration;
   telegram?: TelegramSinkConfiguration;
-  wallet?: WalletSinkConfiguration;
+  dialect?: DialectSinksConfiguration;
   solflare?: SolflareSinkConfiguration;
 }
 
@@ -45,7 +45,7 @@ export interface TelegramSinkConfiguration {
   telegramBotToken: string;
 }
 
-export interface WalletSinkConfiguration {
+export interface DialectSinksConfiguration {
   sdk: DialectSdk;
 }
 

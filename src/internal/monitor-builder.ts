@@ -114,7 +114,7 @@ export class MonitorsBuilderState<T extends object> {
         this.subscriberRepository,
       );
     } else {
-      const sdk = monitorProps.sinks?.wallet?.sdk;
+      const sdk = monitorProps.sinks?.dialect?.sdk;
       return sdk && new DialectNotificationSink(sdk, this.subscriberRepository);
     }
   }
@@ -123,7 +123,7 @@ export class MonitorsBuilderState<T extends object> {
     if ('sdk' in monitorProps) {
       return new DialectSdkNotificationSink(monitorProps.sdk);
     } else {
-      const sdk = monitorProps.sinks?.wallet?.sdk;
+      const sdk = monitorProps.sinks?.dialect?.sdk;
       return sdk && new DialectSdkNotificationSink(sdk);
     }
   }
