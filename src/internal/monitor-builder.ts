@@ -45,6 +45,10 @@ import {
   SolflareNotification,
   SolflareNotificationSink,
 } from '../solflare-notification-sink';
+import {
+  DialectSdkNotification,
+  DialectSdkNotificationSink,
+} from '../dialect-sdk-notification-sink';
 
 /**
  * A set of factory methods to create monitors
@@ -55,6 +59,7 @@ export class MonitorsBuilderState<T extends object> {
   addTransformationsStep?: AddTransformationsStepImpl<T>;
 
   dialectNotificationSink?: DialectNotificationSink;
+  dialectSdkNotificationSink?: DialectSdkNotificationSink;
   emailNotificationSink?: SengridEmailNotificationSink;
   smsNotificationSink?: TwilioSmsNotificationSink;
   telegramNotificationSink?: TelegramNotificationSink;
@@ -67,6 +72,8 @@ export class MonitorsBuilderState<T extends object> {
       MonitorsBuilderState.createSubscriberRepository(monitorProps);
     this.dialectNotificationSink =
       this.createDialectNotificationSink(monitorProps);
+    this.dialectSdkNotificationSink =
+      this.createDialectSdkNotificationSink(monitorProps);
 
     const sinks = monitorProps?.sinks;
     if (sinks?.email) {
@@ -109,6 +116,15 @@ export class MonitorsBuilderState<T extends object> {
     } else {
       const sdk = monitorProps.sinks?.wallet?.sdk;
       return sdk && new DialectNotificationSink(sdk, this.subscriberRepository);
+    }
+  }
+
+  private createDialectSdkNotificationSink(monitorProps: MonitorProps) {
+    if ('sdk' in monitorProps) {
+      return new DialectSdkNotificationSink(monitorProps.sdk);
+    } else {
+      const sdk = monitorProps.sinks?.wallet?.sdk;
+      return sdk && new DialectSdkNotificationSink(sdk);
     }
   }
 
@@ -228,6 +244,7 @@ class AddTransformationsStepImpl<T extends object>
       this,
       this.dataSourceTransformationPipelines,
       this.monitorBuilderState.dialectNotificationSink,
+      this.monitorBuilderState.dialectSdkNotificationSink,
       this.monitorBuilderState.emailNotificationSink,
       this.monitorBuilderState.smsNotificationSink,
       this.monitorBuilderState.telegramNotificationSink,
@@ -290,6 +307,7 @@ class NotifyStepImpl<T extends object, R> implements NotifyStep<T, R> {
       this.addTransformationsStep,
       this.dataSourceTransformationPipelines,
       this.monitorBuilderState.dialectNotificationSink,
+      this.monitorBuilderState.dialectSdkNotificationSink,
       this.monitorBuilderState.emailNotificationSink,
       this.monitorBuilderState.smsNotificationSink,
       this.monitorBuilderState.telegramNotificationSink,
@@ -308,6 +326,7 @@ class AddSinksStepImpl<T extends object, R> implements AddSinksStep<T, R> {
       Data<R, T>
     >[],
     private readonly dialectNotificationSink?: DialectNotificationSink,
+    private readonly dialectSdkNotificationSink?: DialectSdkNotificationSink,
     private readonly emailNotificationSink?: SengridEmailNotificationSink,
     private readonly smsNotificationSink?: TwilioSmsNotificationSink,
     private readonly telegramNotificationSink?: TelegramNotificationSink,
@@ -331,6 +350,22 @@ class AddSinksStepImpl<T extends object, R> implements AddSinksStep<T, R> {
     return this.custom(adapter, this.dialectNotificationSink, dispatchStrategy);
   }
 
+  dialectSdk(
+    adapter: (data: Data<R, T>) => DialectSdkNotification,
+    dispatchStrategy: DispatchStrategy<T>,
+  ): AddSinksStep<T, R> {
+    if (!this.dialectSdkNotificationSink) {
+      throw new Error(
+        'Dialect Cloud notification sink must be initialized before using',
+      );
+    }
+    return this.custom(
+      adapter,
+      this.dialectSdkNotificationSink,
+      dispatchStrategy,
+    );
+  }
+
   custom<N>(
     adapter: (data: Data<R, T>) => N,
     sink: NotificationSink<N>,
@@ -338,7 +373,7 @@ class AddSinksStepImpl<T extends object, R> implements AddSinksStep<T, R> {
   ) {
     const sinkWriter: (data: Data<R, T>) => Promise<void> = (data) => {
       const toBeNotified = this.selectResources(dispatchStrategy, data);
-      return sink!.push(adapter(data), toBeNotified);
+      return sink!.push(adapter(data), toBeNotified, dispatchStrategy.dispatch);
     };
     this.sinkWriters.push(sinkWriter);
     return this;

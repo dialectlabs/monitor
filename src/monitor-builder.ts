@@ -12,6 +12,7 @@ import { EmailNotification } from './sengrid-email-notification-sink';
 import { SmsNotification } from './twilio-sms-notification-sink';
 import { TelegramNotification } from './telegram-notification-sink';
 import { SolflareNotification } from './solflare-notification-sink';
+import { DialectSdkNotification } from './dialect-sdk-notification-sink';
 
 export interface ChooseDataSourceStep {
   /**
@@ -74,19 +75,27 @@ export type DispatchStrategy<T extends object> =
   | UnicastDispatchStrategy<T>
   | MulticastDispatchStrategy<T>;
 
-export type BroadcastDispatchStrategy = {
-  dispatch: 'broadcast';
-};
+export type DispatchType = 'broadcast' | 'unicast' | 'multicast';
 
-export type UnicastDispatchStrategy<T extends object> = {
+export interface BaseDispatchStrategy {
+  dispatch: DispatchType;
+}
+
+export interface BroadcastDispatchStrategy extends BaseDispatchStrategy {
+  dispatch: 'broadcast';
+}
+
+export interface UnicastDispatchStrategy<T extends object>
+  extends BaseDispatchStrategy {
   dispatch: 'unicast';
   to: (ctx: Context<T>) => ResourceId;
-};
+}
 
-export type MulticastDispatchStrategy<T extends object> = {
+export interface MulticastDispatchStrategy<T extends object>
+  extends BaseDispatchStrategy {
   dispatch: 'multicast';
   to: (ctx: Context<T>) => ResourceId[];
-};
+}
 
 export interface AddTransformationsStep<T extends object> {
   transform<V, R>(transformation: Transformation<T, V, R>): NotifyStep<T, R>;
@@ -112,6 +121,11 @@ export interface NotifyStep<T extends object, R> {
 export interface AddSinksStep<T extends object, R> {
   dialectThread(
     adapter: (data: Data<R, T>) => DialectNotification,
+    dispatchStrategy: DispatchStrategy<T>,
+  ): AddSinksStep<T, R>;
+
+  dialectSdk(
+    adapter: (data: Data<R, T>) => DialectSdkNotification,
     dispatchStrategy: DispatchStrategy<T>,
   ): AddSinksStep<T, R>;
 

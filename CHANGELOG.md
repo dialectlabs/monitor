@@ -2,6 +2,8 @@
 
 ## [UNRELEASED]
 
+- Add dialect sdk sink for destination agnostic notification sending.
+
 ## [3.1.0] - 2022-07-06
 
 - Add pipeline for tracking change of arbitrary value based on user-provided comparator.
