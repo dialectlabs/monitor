@@ -7,7 +7,7 @@ import {
 } from './ports';
 import { Monitor } from './monitor-api';
 import { Context, Data, ResourceId, SubscriberEvent } from './data-model';
-import { DialectNotification } from './dialect-notification-sink';
+import { DialectNotification } from './dialect-thread-notification-sink';
 import { EmailNotification } from './sengrid-email-notification-sink';
 import { SmsNotification } from './twilio-sms-notification-sink';
 import { TelegramNotification } from './telegram-notification-sink';

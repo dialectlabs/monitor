@@ -7,7 +7,7 @@ export interface DialectNotification extends Notification {
   message: string;
 }
 
-export class DialectNotificationSink
+export class DialectThreadNotificationSink
   implements NotificationSink<DialectNotification>
 {
   constructor(

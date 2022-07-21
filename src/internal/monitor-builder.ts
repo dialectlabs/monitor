@@ -25,8 +25,8 @@ import { map } from 'rxjs/operators';
 import { Monitor, MonitorProps, Monitors } from '../monitor-api';
 import {
   DialectNotification,
-  DialectNotificationSink,
-} from '../dialect-notification-sink';
+  DialectThreadNotificationSink,
+} from '../dialect-thread-notification-sink';
 import {
   EmailNotification,
   SengridEmailNotificationSink,
@@ -57,7 +57,7 @@ export class MonitorsBuilderState<T extends object> {
   defineDataSourceStep?: DefineDataSourceStepImpl<T>;
   addTransformationsStep?: AddTransformationsStepImpl<T>;
 
-  dialectNotificationSink?: DialectNotificationSink;
+  dialectNotificationSink?: DialectThreadNotificationSink;
   dialectSdkNotificationSink?: DialectSdkNotificationSink;
   emailNotificationSink?: SengridEmailNotificationSink;
   smsNotificationSink?: TwilioSmsNotificationSink;
@@ -79,7 +79,7 @@ export class MonitorsBuilderState<T extends object> {
     readonly subscriberRepository: SubscriberRepository,
   ) {
     this.dialectNotificationSink =
-      this.createDialectNotificationSink(monitorProps);
+      this.createDialectThreadNotificationSink(monitorProps);
     this.dialectSdkNotificationSink =
       this.createDialectSdkNotificationSink(monitorProps);
     const sinks = monitorProps?.sinks;
@@ -114,15 +114,17 @@ export class MonitorsBuilderState<T extends object> {
     }
   }
 
-  private createDialectNotificationSink(monitorProps: MonitorProps) {
+  private createDialectThreadNotificationSink(monitorProps: MonitorProps) {
     if ('sdk' in monitorProps) {
-      return new DialectNotificationSink(
+      return new DialectThreadNotificationSink(
         monitorProps.sdk,
         this.subscriberRepository,
       );
     } else {
       const sdk = monitorProps.sinks?.dialect?.sdk;
-      return sdk && new DialectNotificationSink(sdk, this.subscriberRepository);
+      return (
+        sdk && new DialectThreadNotificationSink(sdk, this.subscriberRepository)
+      );
     }
   }
 
@@ -299,7 +301,7 @@ class AddSinksStepImpl<T extends object, R> implements AddSinksStep<T, R> {
       T,
       Data<R, T>
     >[],
-    private readonly dialectNotificationSink?: DialectNotificationSink,
+    private readonly dialectNotificationSink?: DialectThreadNotificationSink,
     private readonly dialectSdkNotificationSink?: DialectSdkNotificationSink,
     private readonly emailNotificationSink?: SengridEmailNotificationSink,
     private readonly smsNotificationSink?: TwilioSmsNotificationSink,
