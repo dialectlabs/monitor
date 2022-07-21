@@ -14,7 +14,7 @@ import {
 } from '@dialectlabs/sdk';
 
 export class DialectSdkSubscriberRepository implements SubscriberRepository {
-  dapp: Dapp | null = null;
+  private dapp: Dapp | null = null;
 
   constructor(private sdk: DialectSdk) {}
 
