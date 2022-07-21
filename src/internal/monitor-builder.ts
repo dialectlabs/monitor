@@ -39,8 +39,6 @@ import {
   TelegramNotification,
   TelegramNotificationSink,
 } from '../telegram-notification-sink';
-import { DialectSdkSubscriberRepository } from '../dialect-sdk-subscriber.repository';
-import { InMemorySubscriberRepository } from './in-memory-subscriber.repository';
 import {
   SolflareNotification,
   SolflareNotificationSink,
@@ -49,6 +47,7 @@ import {
   DialectSdkNotification,
   DialectSdkNotificationSink,
 } from '../dialect-sdk-notification-sink';
+import { SubscriberRepositoryFactory } from './subscriber-repository-factory';
 
 /**
  * A set of factory methods to create monitors
@@ -65,16 +64,24 @@ export class MonitorsBuilderState<T extends object> {
   telegramNotificationSink?: TelegramNotificationSink;
   solflareNotificationSink?: SolflareNotificationSink;
 
-  readonly subscriberRepository: SubscriberRepository;
+  static create<T extends object>(monitorProps: MonitorProps) {
+    const subscriberRepositoryFactory = new SubscriberRepositoryFactory(
+      monitorProps,
+    );
+    return new MonitorsBuilderState<T>(
+      monitorProps,
+      subscriberRepositoryFactory.create(),
+    );
+  }
 
-  constructor(monitorProps: MonitorProps) {
-    this.subscriberRepository =
-      MonitorsBuilderState.createSubscriberRepository(monitorProps);
+  constructor(
+    monitorProps: MonitorProps,
+    readonly subscriberRepository: SubscriberRepository,
+  ) {
     this.dialectNotificationSink =
       this.createDialectNotificationSink(monitorProps);
     this.dialectSdkNotificationSink =
       this.createDialectSdkNotificationSink(monitorProps);
-
     const sinks = monitorProps?.sinks;
     if (sinks?.email) {
       this.emailNotificationSink = new SengridEmailNotificationSink(
@@ -127,41 +134,6 @@ export class MonitorsBuilderState<T extends object> {
       return sdk && new DialectSdkNotificationSink(sdk);
     }
   }
-
-  private static createSubscriberRepository(monitorProps: MonitorProps) {
-    if ('sdk' in monitorProps) {
-      const { sdk, subscriberRepository } = monitorProps;
-      return subscriberRepository
-        ? MonitorsBuilderState.decorateIfNeeded(
-            monitorProps,
-            subscriberRepository,
-          )
-        : InMemorySubscriberRepository.decorate(
-            new DialectSdkSubscriberRepository(sdk),
-            monitorProps.subscribersCacheTTL ??
-              Duration.fromObject({ minutes: 1 }),
-          );
-    } else {
-      const { subscriberRepository } = monitorProps;
-      return MonitorsBuilderState.decorateIfNeeded(
-        monitorProps,
-        subscriberRepository,
-      );
-    }
-  }
-
-  private static decorateIfNeeded(
-    monitorProps: MonitorProps,
-    subscriberRepository: SubscriberRepository | InMemorySubscriberRepository,
-  ) {
-    return subscriberRepository instanceof InMemorySubscriberRepository
-      ? subscriberRepository
-      : InMemorySubscriberRepository.decorate(
-          subscriberRepository,
-          monitorProps.subscribersCacheTTL ??
-            Duration.fromObject({ minutes: 1 }),
-        );
-  }
 }
 
 type DataSourceType = 'user-defined' | 'subscriber-events';
@@ -173,7 +145,7 @@ export class ChooseDataSourceStepImpl implements ChooseDataSourceStep {
 
   subscriberEvents(): AddTransformationsStep<SubscriberEvent> {
     this.dataSourceType = 'subscriber-events';
-    const monitorsBuilderState = new MonitorsBuilderState<SubscriberEvent>(
+    const monitorsBuilderState = MonitorsBuilderState.create<SubscriberEvent>(
       this.monitorProps,
     );
     monitorsBuilderState.chooseDataSourceStep = this;
@@ -184,7 +156,9 @@ export class ChooseDataSourceStepImpl implements ChooseDataSourceStep {
 
   defineDataSource<T extends object>(): DefineDataSourceStep<T> {
     this.dataSourceType = 'user-defined';
-    const monitorsBuilderState = new MonitorsBuilderState<T>(this.monitorProps);
+    const monitorsBuilderState = MonitorsBuilderState.create<T>(
+      this.monitorProps,
+    );
     monitorsBuilderState.chooseDataSourceStep = this;
     return new DefineDataSourceStepImpl<T>(monitorsBuilderState);
   }
