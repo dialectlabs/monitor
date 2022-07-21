@@ -83,6 +83,10 @@ export class DialectSdkSubscriberRepository implements SubscriberRepository {
 
   private async findNotificationTypeSubscribers() {
     const dapp = await this.lookupDapp();
+    const notificationTypes = await dapp.notificationTypes.findAll();
+    if (notificationTypes.length === 0) {
+      return [];
+    }
     const dappNotificationSubscriptions =
       await dapp.notificationSubscriptions.findAll();
     const subscribers: Subscriber[] = _(dappNotificationSubscriptions)
