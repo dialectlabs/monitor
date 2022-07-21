@@ -39,7 +39,7 @@ export class DialectSdkNotificationSink
           message: message,
         });
       } else {
-        throw new IllegalStateError(
+        console.error(
           `Dialect SDK notification sink does not support this dispatch type: ${dispatchType}.`,
         );
       }
