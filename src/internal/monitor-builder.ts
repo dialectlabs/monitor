@@ -6,8 +6,8 @@ import {
   DefineDataSourceStep,
   DispatchStrategy,
   KeysMatching,
+  NotificationMetadata,
   NotifyStep,
-  NotifyStepProps,
   Transformation,
 } from '../monitor-builder';
 import { Data, SubscriberEvent } from '../data-model';
@@ -209,16 +209,16 @@ class AddTransformationsStepImpl<T extends object>
     monitorBuilderState.addTransformationsStep = this;
   }
 
-  notify(): AddSinksStep<T, T> {
+  notify(metadata?: NotificationMetadata): AddSinksStep<T, T> {
     const identityTransformation: DataSourceTransformationPipeline<
       T,
       Data<T, T>
     > = (dataSource) => dataSource;
-    // > = (dataSource) => dataSource.pipe(tap(console.log(t)));
     this.dataSourceTransformationPipelines.push(identityTransformation);
     return new AddSinksStepImpl(
       this,
       this.dataSourceTransformationPipelines,
+      metadata,
       this.monitorBuilderState.dialectNotificationSink,
       this.monitorBuilderState.dialectSdkNotificationSink,
       this.monitorBuilderState.emailNotificationSink,
@@ -278,10 +278,11 @@ class NotifyStepImpl<T extends object, R> implements NotifyStep<T, R> {
     private readonly monitorBuilderState: MonitorsBuilderState<T>,
   ) {}
 
-  notify(props?: NotifyStepProps): AddSinksStep<T, R> {
+  notify(metadata?: NotificationMetadata): AddSinksStep<T, R> {
     return new AddSinksStepImpl(
       this.addTransformationsStep,
       this.dataSourceTransformationPipelines,
+      metadata,
       this.monitorBuilderState.dialectNotificationSink,
       this.monitorBuilderState.dialectSdkNotificationSink,
       this.monitorBuilderState.emailNotificationSink,
@@ -301,6 +302,7 @@ class AddSinksStepImpl<T extends object, R> implements AddSinksStep<T, R> {
       T,
       Data<R, T>
     >[],
+    private readonly notificationMetadata?: NotificationMetadata,
     private readonly dialectNotificationSink?: DialectThreadNotificationSink,
     private readonly dialectSdkNotificationSink?: DialectSdkNotificationSink,
     private readonly emailNotificationSink?: SengridEmailNotificationSink,
@@ -349,7 +351,10 @@ class AddSinksStepImpl<T extends object, R> implements AddSinksStep<T, R> {
   ) {
     const sinkWriter: (data: Data<R, T>) => Promise<void> = (data) => {
       const toBeNotified = this.selectResources(dispatchStrategy, data);
-      return sink!.push(adapter(data), toBeNotified, dispatchStrategy.dispatch);
+      return sink!.push(adapter(data), toBeNotified, {
+        dispatchType: dispatchStrategy.dispatch,
+        notificationMetadata: this.notificationMetadata,
+      });
     };
     this.sinkWriters.push(sinkWriter);
     return this;

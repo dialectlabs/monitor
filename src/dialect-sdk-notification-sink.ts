@@ -1,7 +1,6 @@
-import { NotificationSink } from './ports';
+import { NotificationSink, NotificationSinkMetadata } from './ports';
 import { Notification, ResourceId } from './data-model';
 import { Dapp, DialectSdk, IllegalStateError } from '@dialectlabs/sdk';
-import { DispatchType } from './monitor-builder';
 
 export interface DialectSdkNotification extends Notification {
   title: string;
@@ -18,7 +17,7 @@ export class DialectSdkNotificationSink
   async push(
     { title, message }: DialectSdkNotification,
     recipients: ResourceId[],
-    dispatchType: DispatchType,
+    { dispatchType }: NotificationSinkMetadata,
   ) {
     try {
       const dapp = await this.lookupDapp();

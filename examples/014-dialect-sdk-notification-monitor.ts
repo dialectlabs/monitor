@@ -71,7 +71,7 @@ const monitor: Monitor<DataType> = Monitors.builder({
       }),
     ],
   })
-  .notify({ notificationType: { id: 'fdsf' } })
+  .notify()
   .dialectSdk(
     ({ value }) => ({
       title: 'dApp cratio warning',

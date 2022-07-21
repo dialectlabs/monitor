@@ -1,7 +1,7 @@
 import { Observable } from 'rxjs';
 import { Data, Notification, ResourceId, SourceData } from './data-model';
 import { PublicKey } from '@solana/web3.js';
-import { DispatchType } from './monitor-builder';
+import { DispatchType, NotificationMetadata } from './monitor-builder';
 
 /**
  * An abstraction that represents a source of data, bound to specific type
@@ -77,7 +77,7 @@ export interface Subscriber {
 
 export interface SubscriberNotificationSubscription {
   notificationType: NotificationType;
-  config: NotificationConfig;
+  config: SubscriptionConfig;
 }
 
 export interface NotificationType {
@@ -87,10 +87,14 @@ export interface NotificationType {
   tags: string[];
 }
 
-export interface NotificationConfig {
+export interface SubscriptionConfig {
   enabled: boolean;
 }
 
+export interface NotificationSinkMetadata {
+  dispatchType: DispatchType;
+  notificationMetadata?: NotificationMetadata;
+}
 /**
  * An interface that abstracts the destination where events are sent/persisted
  */
@@ -98,6 +102,6 @@ export interface NotificationSink<N extends Notification> {
   push(
     notification: N,
     recipients: ResourceId[],
-    dispatchType: DispatchType,
+    metadata: NotificationSinkMetadata,
   ): Promise<any>;
 }
