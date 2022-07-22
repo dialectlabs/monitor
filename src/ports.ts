@@ -53,11 +53,6 @@ export interface SubscriberRepository {
   findAll(resourceIds?: ResourceId[]): Promise<Subscriber[]>;
 
   /**
-   * Finds subscriber by resource id
-   */
-  findByResourceId(resourceId: ResourceId): Promise<Subscriber | null>;
-
-  /**
    * Can be used to set handlers to react if set of subscribers is changed
    */
   subscribe(

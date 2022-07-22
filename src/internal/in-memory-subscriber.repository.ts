@@ -36,11 +36,6 @@ export class InMemorySubscriberRepository implements SubscriberRepository {
       : subscribers;
   }
 
-  async findByResourceId(resourceId: ResourceId): Promise<Subscriber | null> {
-    await this.lazyInit();
-    return Promise.resolve(this.subscribers.get(resourceId.toString()) ?? null);
-  }
-
   private async lazyInit() {
     if (this.isInitialized) {
       return;

@@ -26,11 +26,6 @@ export class DialectSdkSubscriberRepository implements SubscriberRepository {
     throw new Error('Method not implemented.');
   }
 
-  async findByResourceId(resourceId: ResourceId): Promise<Subscriber | null> {
-    const subscribers = await this.findAll();
-    return subscribers.find((it) => it.resourceId.equals(resourceId)) ?? null;
-  }
-
   async findAll(resourceIds?: ResourceId[]): Promise<Subscriber[]> {
     const addressSubscribers = await this.findAddressSubscribers();
     const notificationSubscribers =
