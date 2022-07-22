@@ -20,7 +20,10 @@ export class DefaultNotificationTypeEligibilityPredicate extends NotificationTyp
     if (!notificationSubscriptions) {
       return true;
     }
-    if (notificationSubscriptions && !metadata?.type) {
+    if (notificationSubscriptions?.length > 0 && !metadata?.type?.id) {
+      console.warn(
+        `Notification type id must be explicitly set and match dapp notification types configuration. Skipping some notifications...`,
+      );
       return false;
     }
     return Boolean(
