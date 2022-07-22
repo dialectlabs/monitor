@@ -77,9 +77,7 @@ export interface SubscriberNotificationSubscription {
 
 export interface NotificationType {
   id: string;
-  name: string;
   humanReadableId: string;
-  tags: string[];
 }
 
 export interface SubscriptionConfig {
