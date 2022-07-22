@@ -1,7 +1,12 @@
 import { Notification, ResourceId } from './data-model';
-import { NotificationSink, SubscriberRepository } from './ports';
+import {
+  NotificationSink,
+  NotificationSinkMetadata,
+  SubscriberRepository,
+} from './ports';
 import sgMail from '@sendgrid/mail';
 import { MailDataRequired } from '@sendgrid/helpers/classes/mail';
+import { NotificationTypeEligibilityPredicate } from './internal/notification-type-eligibility-predicate';
 
 /**
  * Email notification
@@ -18,16 +23,27 @@ export class SengridEmailNotificationSink
     private readonly sengridApiKey: string,
     private readonly senderEmail: string,
     private readonly subscriberRepository: SubscriberRepository,
+    private readonly notificationTypeEligibilityPredicate: NotificationTypeEligibilityPredicate,
   ) {
     sgMail.setApiKey(sengridApiKey);
   }
 
-  async push(notification: EmailNotification, recipients: ResourceId[]) {
+  async push(
+    notification: EmailNotification,
+    recipients: ResourceId[],
+    { notificationMetadata }: NotificationSinkMetadata,
+  ) {
     const recipientEmails = await this.subscriberRepository.findAll(recipients);
     console.log('sendgrid-notif-sink, recipients:\n');
     console.log(recipientEmails);
     const emails: MailDataRequired[] = recipientEmails
-      .filter(({ email }) => email)
+      .filter(({ email }) => Boolean(email))
+      .filter((it) =>
+        this.notificationTypeEligibilityPredicate.isEligible(
+          it,
+          notificationMetadata,
+        ),
+      )
       .map(({ email }) => ({
         ...notification,
         from: this.senderEmail,

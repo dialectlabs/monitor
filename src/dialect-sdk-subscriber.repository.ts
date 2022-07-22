@@ -5,7 +5,6 @@ import {
   SubscriberNotificationSubscription,
   SubscriberRepository,
 } from './ports';
-import { ResourceId } from './data-model';
 import _ from 'lodash';
 import {
   AddressType,
@@ -26,18 +25,15 @@ export class DialectSdkSubscriberRepository implements SubscriberRepository {
     throw new Error('Method not implemented.');
   }
 
-  async findAll(resourceIds?: ResourceId[]): Promise<Subscriber[]> {
+  async findAll(): Promise<Subscriber[]> {
     const addressSubscribers = await this.findAddressSubscribers();
     const notificationSubscribers =
       await this.findNotificationTypeSubscribers();
-    const merged = _.values(
+    return _.values(
       _.merge(
         _.keyBy(addressSubscribers, (it) => it.resourceId.toBase58()),
         _.keyBy(notificationSubscribers, (it) => it.resourceId.toBase58()),
       ),
-    );
-    return merged.filter(({ resourceId }) =>
-      !resourceIds ? true : resourceIds.find((it) => it.equals(resourceId)),
     );
   }
 

@@ -1,7 +1,12 @@
-import { NotificationSink, SubscriberRepository } from './ports';
+import {
+  NotificationSink,
+  NotificationSinkMetadata,
+  SubscriberRepository,
+} from './ports';
 import { Notification, ResourceId } from './data-model';
 import { DialectSdk } from '@dialectlabs/sdk';
 import { compact } from 'lodash';
+import { NotificationTypeEligibilityPredicate } from './internal/notification-type-eligibility-predicate';
 
 export interface DialectNotification extends Notification {
   message: string;
@@ -13,15 +18,27 @@ export class DialectThreadNotificationSink
   constructor(
     private readonly sdk: DialectSdk,
     private readonly subscriberRepository: SubscriberRepository,
+    private readonly notificationTypeEligibilityPredicate: NotificationTypeEligibilityPredicate,
   ) {}
 
-  async push({ message }: DialectNotification, recipients: ResourceId[]) {
-    const subscribersOnly = await this.subscriberRepository.findAll(recipients);
-    const subscribersWithEnabledWalletNotifications = compact(
-      subscribersOnly.map((it) => it.wallet),
+  async push(
+    { message }: DialectNotification,
+    recipients: ResourceId[],
+    { notificationMetadata }: NotificationSinkMetadata,
+  ) {
+    const subscribers = await this.subscriberRepository.findAll(recipients);
+    const wallets = compact(
+      subscribers
+        .filter((it) =>
+          this.notificationTypeEligibilityPredicate.isEligible(
+            it,
+            notificationMetadata,
+          ),
+        )
+        .map((it) => it.wallet),
     );
     const results = await Promise.allSettled(
-      subscribersWithEnabledWalletNotifications.map(async (it) => {
+      wallets.map(async (it) => {
         const thread = await this.sdk.threads.find({
           otherMembers: [it],
         });
