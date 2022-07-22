@@ -48,11 +48,15 @@ import {
   DialectSdkNotificationSink,
 } from '../dialect-sdk-notification-sink';
 import { SubscriberRepositoryFactory } from './subscriber-repository-factory';
+import { NotificationTypeEligibilityPredicate } from './notification-type-eligibility-predicate';
 
 /**
  * A set of factory methods to create monitors
  */
 export class MonitorsBuilderState<T extends object> {
+  private readonly notificationTypeEligibilityPredicate: NotificationTypeEligibilityPredicate =
+    NotificationTypeEligibilityPredicate.create();
+
   chooseDataSourceStep?: ChooseDataSourceStepImpl;
   defineDataSourceStep?: DefineDataSourceStepImpl<T>;
   addTransformationsStep?: AddTransformationsStepImpl<T>;
@@ -88,6 +92,7 @@ export class MonitorsBuilderState<T extends object> {
         sinks.email.apiToken,
         sinks.email.senderEmail,
         this.subscriberRepository,
+        this.notificationTypeEligibilityPredicate,
       );
     }
     if (sinks?.sms) {
@@ -98,12 +103,14 @@ export class MonitorsBuilderState<T extends object> {
         },
         sinks.sms.senderSmsNumber,
         this.subscriberRepository,
+        this.notificationTypeEligibilityPredicate,
       );
     }
     if (sinks?.telegram) {
       this.telegramNotificationSink = new TelegramNotificationSink(
         sinks.telegram.telegramBotToken,
         this.subscriberRepository,
+        this.notificationTypeEligibilityPredicate,
       );
     }
     if (sinks?.solflare) {
@@ -119,11 +126,17 @@ export class MonitorsBuilderState<T extends object> {
       return new DialectThreadNotificationSink(
         monitorProps.sdk,
         this.subscriberRepository,
+        this.notificationTypeEligibilityPredicate,
       );
     } else {
       const sdk = monitorProps.sinks?.dialect?.sdk;
       return (
-        sdk && new DialectThreadNotificationSink(sdk, this.subscriberRepository)
+        sdk &&
+        new DialectThreadNotificationSink(
+          sdk,
+          this.subscriberRepository,
+          this.notificationTypeEligibilityPredicate,
+        )
       );
     }
   }
