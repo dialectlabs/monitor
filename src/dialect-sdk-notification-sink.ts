@@ -17,7 +17,7 @@ export class DialectSdkNotificationSink
   async push(
     { title, message }: DialectSdkNotification,
     recipients: ResourceId[],
-    { dispatchType }: NotificationSinkMetadata,
+    { dispatchType, notificationMetadata }: NotificationSinkMetadata,
   ) {
     try {
       const dapp = await this.lookupDapp();
@@ -26,17 +26,20 @@ export class DialectSdkNotificationSink
           title: title,
           message: message,
           recipient: recipients[0],
+          notificationTypeId: notificationMetadata?.type.id,
         });
       } else if (dispatchType === 'multicast') {
         await dapp.messages.send({
           title: title,
           message: message,
           recipients: recipients,
+          notificationTypeId: notificationMetadata?.type.id,
         });
       } else if (dispatchType === 'broadcast') {
         await dapp.messages.send({
           title: title,
           message: message,
+          notificationTypeId: notificationMetadata?.type.id,
         });
       } else {
         console.error(
