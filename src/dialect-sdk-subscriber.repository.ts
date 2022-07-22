@@ -37,10 +37,10 @@ export class DialectSdkSubscriberRepository implements SubscriberRepository {
     );
   }
 
-  private async findAddressSubscribers() {
+  private async findAddressSubscribers(): Promise<Subscriber[]> {
     const dapp = await this.lookupDapp();
     const dappAddresses = await dapp.dappAddresses.findAll();
-    const subscribers: Subscriber[] = _(dappAddresses)
+    return _(dappAddresses)
       .filter(({ enabled, address: { verified } }) => enabled && verified)
       .map((it) => ({
         resourceId: it.address.wallet.publicKey,
@@ -69,10 +69,9 @@ export class DialectSdkSubscriberRepository implements SubscriberRepository {
       }))
       .values()
       .value();
-    return subscribers;
   }
 
-  private async findNotificationTypeSubscribers() {
+  private async findNotificationTypeSubscribers(): Promise<Subscriber[]> {
     const dapp = await this.lookupDapp();
     const notificationTypes = await dapp.notificationTypes.findAll();
     if (notificationTypes.length === 0) {
@@ -80,11 +79,14 @@ export class DialectSdkSubscriberRepository implements SubscriberRepository {
     }
     const dappNotificationSubscriptions =
       await dapp.notificationSubscriptions.findAll();
-    const subscribers: Subscriber[] = _(dappNotificationSubscriptions)
+    return _(dappNotificationSubscriptions)
       .flatMap(({ subscriptions, notificationType }) =>
         subscriptions.map((subscription) => {
           const notificationSubscription: SubscriberNotificationSubscription = {
-            notificationType,
+            notificationType: {
+              id: notificationType.id,
+              humanReadableId: notificationType.humanReadableId,
+            },
             config: subscription.config,
           };
           return {
@@ -93,18 +95,18 @@ export class DialectSdkSubscriberRepository implements SubscriberRepository {
           };
         }),
       )
-      .filter((it) => it.subscription.config.enabled)
       .groupBy('resourceId')
       .mapValues((s, resourceId) => {
         const subscriber: Subscriber = {
           resourceId: new PublicKey(resourceId),
-          notificationSubscriptions: s.map((it) => it.subscription),
+          notificationSubscriptions: s
+            .filter((it) => it.subscription.config.enabled)
+            .map((it) => it.subscription),
         };
         return subscriber;
       })
       .values()
       .value();
-    return subscribers;
   }
 
   private async lookupDapp() {
