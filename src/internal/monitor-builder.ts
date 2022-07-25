@@ -143,10 +143,15 @@ export class MonitorsBuilderState<T extends object> {
 
   private createDialectSdkNotificationSink(monitorProps: MonitorProps) {
     if ('sdk' in monitorProps) {
-      return new DialectSdkNotificationSink(monitorProps.sdk);
+      return new DialectSdkNotificationSink(
+        monitorProps.sdk,
+        this.subscriberRepository,
+      );
     } else {
       const sdk = monitorProps.sinks?.dialect?.sdk;
-      return sdk && new DialectSdkNotificationSink(sdk);
+      return (
+        sdk && new DialectSdkNotificationSink(sdk, this.subscriberRepository)
+      );
     }
   }
 }

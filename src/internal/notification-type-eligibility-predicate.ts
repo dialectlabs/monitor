@@ -26,7 +26,7 @@ export class DefaultNotificationTypeEligibilityPredicate extends NotificationTyp
       );
       return false;
     }
-    return Boolean(
+    const found = Boolean(
       notificationSubscriptions.find(
         (subscription) =>
           subscription.notificationType.id === metadata?.type.id ||
@@ -34,5 +34,15 @@ export class DefaultNotificationTypeEligibilityPredicate extends NotificationTyp
             metadata?.type.id?.toLowerCase(),
       ),
     );
+    if (!found && metadata?.type.id) {
+      console.warn(
+        `Unknown notification type ${
+          metadata.type.id
+        }, must be one of [${notificationSubscriptions.map(
+          (it) => it.notificationType.humanReadableId,
+        )}]`,
+      );
+    }
+    return found;
   }
 }

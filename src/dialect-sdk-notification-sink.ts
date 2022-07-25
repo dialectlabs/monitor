@@ -1,6 +1,11 @@
-import { NotificationSink, NotificationSinkMetadata } from './ports';
+import {
+  NotificationSink,
+  NotificationSinkMetadata,
+  SubscriberRepository,
+} from './ports';
 import { Notification, ResourceId } from './data-model';
 import { Dapp, DialectSdk, IllegalStateError } from '@dialectlabs/sdk';
+import { NotificationMetadata } from './monitor-builder';
 
 export interface DialectSdkNotification extends Notification {
   title: string;
@@ -12,7 +17,10 @@ export class DialectSdkNotificationSink
 {
   private dapp: Dapp | null = null;
 
-  constructor(private readonly sdk: DialectSdk) {}
+  constructor(
+    private readonly sdk: DialectSdk,
+    private readonly subscriberRepository: SubscriberRepository,
+  ) {}
 
   async push(
     { title, message }: DialectSdkNotification,
@@ -20,26 +28,29 @@ export class DialectSdkNotificationSink
     { dispatchType, notificationMetadata }: NotificationSinkMetadata,
   ) {
     try {
+      const notificationTypeId = await this.tryResolveNotificationTypeId(
+        notificationMetadata,
+      );
       const dapp = await this.lookupDapp();
       if (dispatchType === 'unicast') {
         await dapp.messages.send({
           title: title,
           message: message,
           recipient: recipients[0],
-          notificationTypeId: notificationMetadata?.type.id,
+          notificationTypeId,
         });
       } else if (dispatchType === 'multicast') {
         await dapp.messages.send({
           title: title,
           message: message,
           recipients: recipients,
-          notificationTypeId: notificationMetadata?.type.id,
+          notificationTypeId,
         });
       } else if (dispatchType === 'broadcast') {
         await dapp.messages.send({
           title: title,
           message: message,
-          notificationTypeId: notificationMetadata?.type.id,
+          notificationTypeId,
         });
       } else {
         console.error(
@@ -47,9 +58,40 @@ export class DialectSdkNotificationSink
         );
       }
     } catch (e) {
-      console.error(`Failed to send dialect sdk notification ${e}`);
+      console.error(
+        `Failed to send dialect sdk notification, reason: ${JSON.stringify(e)}`,
+      );
     }
     return;
+  }
+
+  private tryResolveNotificationTypeId(
+    notificationMetadata?: NotificationMetadata,
+  ) {
+    const notificationTypeId = notificationMetadata?.type.id;
+    if (notificationTypeId) {
+      return this.resolveNotificationTypeId(notificationTypeId);
+    }
+  }
+
+  private async resolveNotificationTypeId(notificationTypeId: string) {
+    const subscribers = await this.subscriberRepository.findAll();
+    const availableNotificationTypes = subscribers
+      .flatMap((it) => it.notificationSubscriptions ?? [])
+      .map((it) => it.notificationType);
+    const notificationType = availableNotificationTypes.find(
+      (it) =>
+        it.humanReadableId.toLowerCase() === notificationTypeId.toLowerCase() ||
+        it.id === notificationTypeId,
+    );
+    if (availableNotificationTypes.length > 0 && !notificationType) {
+      throw new IllegalStateError(
+        `Unknown notification type ${notificationTypeId}, must be one of [${availableNotificationTypes.map(
+          (it) => it.humanReadableId,
+        )}]`,
+      );
+    }
+    return notificationType?.id;
   }
 
   private async lookupDapp() {
