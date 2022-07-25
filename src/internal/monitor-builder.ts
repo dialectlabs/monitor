@@ -6,8 +6,8 @@ import {
   DefineDataSourceStep,
   DispatchStrategy,
   KeysMatching,
+  NotificationMetadata,
   NotifyStep,
-  NotifyStepProps,
   Transformation,
 } from '../monitor-builder';
 import { Data, SubscriberEvent } from '../data-model';
@@ -25,8 +25,8 @@ import { map } from 'rxjs/operators';
 import { Monitor, MonitorProps, Monitors } from '../monitor-api';
 import {
   DialectNotification,
-  DialectNotificationSink,
-} from '../dialect-notification-sink';
+  DialectThreadNotificationSink,
+} from '../dialect-thread-notification-sink';
 import {
   EmailNotification,
   SengridEmailNotificationSink,
@@ -39,8 +39,6 @@ import {
   TelegramNotification,
   TelegramNotificationSink,
 } from '../telegram-notification-sink';
-import { DialectSdkSubscriberRepository } from '../dialect-sdk-subscriber.repository';
-import { InMemorySubscriberRepository } from './in-memory-subscriber.repository';
 import {
   SolflareNotification,
   SolflareNotificationSink,
@@ -49,38 +47,52 @@ import {
   DialectSdkNotification,
   DialectSdkNotificationSink,
 } from '../dialect-sdk-notification-sink';
+import { SubscriberRepositoryFactory } from './subscriber-repository-factory';
+import { NotificationTypeEligibilityPredicate } from './notification-type-eligibility-predicate';
 
 /**
  * A set of factory methods to create monitors
  */
 export class MonitorsBuilderState<T extends object> {
+  private readonly notificationTypeEligibilityPredicate: NotificationTypeEligibilityPredicate =
+    NotificationTypeEligibilityPredicate.create();
+
   chooseDataSourceStep?: ChooseDataSourceStepImpl;
   defineDataSourceStep?: DefineDataSourceStepImpl<T>;
   addTransformationsStep?: AddTransformationsStepImpl<T>;
 
-  dialectNotificationSink?: DialectNotificationSink;
+  dialectNotificationSink?: DialectThreadNotificationSink;
   dialectSdkNotificationSink?: DialectSdkNotificationSink;
   emailNotificationSink?: SengridEmailNotificationSink;
   smsNotificationSink?: TwilioSmsNotificationSink;
   telegramNotificationSink?: TelegramNotificationSink;
   solflareNotificationSink?: SolflareNotificationSink;
 
-  readonly subscriberRepository: SubscriberRepository;
+  static create<T extends object>(monitorProps: MonitorProps) {
+    const subscriberRepositoryFactory = new SubscriberRepositoryFactory(
+      monitorProps,
+    );
+    return new MonitorsBuilderState<T>(
+      monitorProps,
+      subscriberRepositoryFactory.create(),
+    );
+  }
 
-  constructor(monitorProps: MonitorProps) {
-    this.subscriberRepository =
-      MonitorsBuilderState.createSubscriberRepository(monitorProps);
+  constructor(
+    monitorProps: MonitorProps,
+    readonly subscriberRepository: SubscriberRepository,
+  ) {
     this.dialectNotificationSink =
-      this.createDialectNotificationSink(monitorProps);
+      this.createDialectThreadNotificationSink(monitorProps);
     this.dialectSdkNotificationSink =
       this.createDialectSdkNotificationSink(monitorProps);
-
     const sinks = monitorProps?.sinks;
     if (sinks?.email) {
       this.emailNotificationSink = new SengridEmailNotificationSink(
         sinks.email.apiToken,
         sinks.email.senderEmail,
         this.subscriberRepository,
+        this.notificationTypeEligibilityPredicate,
       );
     }
     if (sinks?.sms) {
@@ -91,12 +103,14 @@ export class MonitorsBuilderState<T extends object> {
         },
         sinks.sms.senderSmsNumber,
         this.subscriberRepository,
+        this.notificationTypeEligibilityPredicate,
       );
     }
     if (sinks?.telegram) {
       this.telegramNotificationSink = new TelegramNotificationSink(
         sinks.telegram.telegramBotToken,
         this.subscriberRepository,
+        this.notificationTypeEligibilityPredicate,
       );
     }
     if (sinks?.solflare) {
@@ -107,60 +121,38 @@ export class MonitorsBuilderState<T extends object> {
     }
   }
 
-  private createDialectNotificationSink(monitorProps: MonitorProps) {
+  private createDialectThreadNotificationSink(monitorProps: MonitorProps) {
     if ('sdk' in monitorProps) {
-      return new DialectNotificationSink(
+      return new DialectThreadNotificationSink(
         monitorProps.sdk,
         this.subscriberRepository,
+        this.notificationTypeEligibilityPredicate,
       );
     } else {
-      const sdk = monitorProps.sinks?.wallet?.sdk;
-      return sdk && new DialectNotificationSink(sdk, this.subscriberRepository);
+      const sdk = monitorProps.sinks?.dialect?.sdk;
+      return (
+        sdk &&
+        new DialectThreadNotificationSink(
+          sdk,
+          this.subscriberRepository,
+          this.notificationTypeEligibilityPredicate,
+        )
+      );
     }
   }
 
   private createDialectSdkNotificationSink(monitorProps: MonitorProps) {
     if ('sdk' in monitorProps) {
-      return new DialectSdkNotificationSink(monitorProps.sdk);
+      return new DialectSdkNotificationSink(
+        monitorProps.sdk,
+        this.subscriberRepository,
+      );
     } else {
-      const sdk = monitorProps.sinks?.wallet?.sdk;
-      return sdk && new DialectSdkNotificationSink(sdk);
-    }
-  }
-
-  private static createSubscriberRepository(monitorProps: MonitorProps) {
-    if ('sdk' in monitorProps) {
-      const { sdk, subscriberRepository } = monitorProps;
-      return subscriberRepository
-        ? MonitorsBuilderState.decorateIfNeeded(
-            monitorProps,
-            subscriberRepository,
-          )
-        : InMemorySubscriberRepository.decorate(
-            new DialectSdkSubscriberRepository(sdk),
-            monitorProps.subscribersCacheTTL ??
-              Duration.fromObject({ minutes: 1 }),
-          );
-    } else {
-      const { subscriberRepository } = monitorProps;
-      return MonitorsBuilderState.decorateIfNeeded(
-        monitorProps,
-        subscriberRepository,
+      const sdk = monitorProps.sinks?.dialect?.sdk;
+      return (
+        sdk && new DialectSdkNotificationSink(sdk, this.subscriberRepository)
       );
     }
-  }
-
-  private static decorateIfNeeded(
-    monitorProps: MonitorProps,
-    subscriberRepository: SubscriberRepository | InMemorySubscriberRepository,
-  ) {
-    return subscriberRepository instanceof InMemorySubscriberRepository
-      ? subscriberRepository
-      : InMemorySubscriberRepository.decorate(
-          subscriberRepository,
-          monitorProps.subscribersCacheTTL ??
-            Duration.fromObject({ minutes: 1 }),
-        );
   }
 }
 
@@ -173,7 +165,7 @@ export class ChooseDataSourceStepImpl implements ChooseDataSourceStep {
 
   subscriberEvents(): AddTransformationsStep<SubscriberEvent> {
     this.dataSourceType = 'subscriber-events';
-    const monitorsBuilderState = new MonitorsBuilderState<SubscriberEvent>(
+    const monitorsBuilderState = MonitorsBuilderState.create<SubscriberEvent>(
       this.monitorProps,
     );
     monitorsBuilderState.chooseDataSourceStep = this;
@@ -184,7 +176,9 @@ export class ChooseDataSourceStepImpl implements ChooseDataSourceStep {
 
   defineDataSource<T extends object>(): DefineDataSourceStep<T> {
     this.dataSourceType = 'user-defined';
-    const monitorsBuilderState = new MonitorsBuilderState<T>(this.monitorProps);
+    const monitorsBuilderState = MonitorsBuilderState.create<T>(
+      this.monitorProps,
+    );
     monitorsBuilderState.chooseDataSourceStep = this;
     return new DefineDataSourceStepImpl<T>(monitorsBuilderState);
   }
@@ -233,16 +227,16 @@ class AddTransformationsStepImpl<T extends object>
     monitorBuilderState.addTransformationsStep = this;
   }
 
-  notify(): AddSinksStep<T, T> {
+  notify(metadata?: NotificationMetadata): AddSinksStep<T, T> {
     const identityTransformation: DataSourceTransformationPipeline<
       T,
       Data<T, T>
     > = (dataSource) => dataSource;
-    // > = (dataSource) => dataSource.pipe(tap(console.log(t)));
     this.dataSourceTransformationPipelines.push(identityTransformation);
     return new AddSinksStepImpl(
       this,
       this.dataSourceTransformationPipelines,
+      metadata,
       this.monitorBuilderState.dialectNotificationSink,
       this.monitorBuilderState.dialectSdkNotificationSink,
       this.monitorBuilderState.emailNotificationSink,
@@ -302,10 +296,11 @@ class NotifyStepImpl<T extends object, R> implements NotifyStep<T, R> {
     private readonly monitorBuilderState: MonitorsBuilderState<T>,
   ) {}
 
-  notify(props?: NotifyStepProps): AddSinksStep<T, R> {
+  notify(metadata?: NotificationMetadata): AddSinksStep<T, R> {
     return new AddSinksStepImpl(
       this.addTransformationsStep,
       this.dataSourceTransformationPipelines,
+      metadata,
       this.monitorBuilderState.dialectNotificationSink,
       this.monitorBuilderState.dialectSdkNotificationSink,
       this.monitorBuilderState.emailNotificationSink,
@@ -325,7 +320,8 @@ class AddSinksStepImpl<T extends object, R> implements AddSinksStep<T, R> {
       T,
       Data<R, T>
     >[],
-    private readonly dialectNotificationSink?: DialectNotificationSink,
+    private readonly notificationMetadata?: NotificationMetadata,
+    private readonly dialectNotificationSink?: DialectThreadNotificationSink,
     private readonly dialectSdkNotificationSink?: DialectSdkNotificationSink,
     private readonly emailNotificationSink?: SengridEmailNotificationSink,
     private readonly smsNotificationSink?: TwilioSmsNotificationSink,
@@ -373,7 +369,10 @@ class AddSinksStepImpl<T extends object, R> implements AddSinksStep<T, R> {
   ) {
     const sinkWriter: (data: Data<R, T>) => Promise<void> = (data) => {
       const toBeNotified = this.selectResources(dispatchStrategy, data);
-      return sink!.push(adapter(data), toBeNotified, dispatchStrategy.dispatch);
+      return sink!.push(adapter(data), toBeNotified, {
+        dispatchType: dispatchStrategy.dispatch,
+        notificationMetadata: this.notificationMetadata,
+      });
     };
     this.sinkWriters.push(sinkWriter);
     return this;

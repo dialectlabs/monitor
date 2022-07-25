@@ -7,7 +7,7 @@ export * from './transformation-pipeline-operators';
 export * from './transformation-pipelines';
 export * from './sengrid-email-notification-sink';
 export * from './telegram-notification-sink';
-export * from './dialect-notification-sink';
+export * from './dialect-thread-notification-sink';
 export * from './dialect-sdk-notification-sink';
 export * from './twilio-sms-notification-sink';
 export * from './dialect-sdk-subscriber.repository';

@@ -2,9 +2,9 @@ import { PublicKey } from '@solana/web3.js';
 import {
   Subscriber,
   SubscriberEventHandler,
+  SubscriberNotificationSubscription,
   SubscriberRepository,
 } from './ports';
-import { ResourceId } from './data-model';
 import _ from 'lodash';
 import {
   AddressType,
@@ -25,15 +25,22 @@ export class DialectSdkSubscriberRepository implements SubscriberRepository {
     throw new Error('Method not implemented.');
   }
 
-  async findByResourceId(resourceId: ResourceId): Promise<Subscriber | null> {
-    const subscribers = await this.findAll();
-    return subscribers.find((it) => it.resourceId.equals(resourceId)) ?? null;
+  async findAll(): Promise<Subscriber[]> {
+    const addressSubscribers = await this.findAddressSubscribers();
+    const notificationSubscribers =
+      await this.findNotificationTypeSubscribers();
+    return _.values(
+      _.merge(
+        _.keyBy(addressSubscribers, (it) => it.resourceId.toBase58()),
+        _.keyBy(notificationSubscribers, (it) => it.resourceId.toBase58()),
+      ),
+    );
   }
 
-  async findAll(resourceIds?: ResourceId[]): Promise<Subscriber[]> {
+  private async findAddressSubscribers(): Promise<Subscriber[]> {
     const dapp = await this.lookupDapp();
     const dappAddresses = await dapp.dappAddresses.findAll();
-    const subscribers = _(dappAddresses)
+    return _(dappAddresses)
       .filter(({ enabled, address: { verified } }) => enabled && verified)
       .map((it) => ({
         resourceId: it.address.wallet.publicKey,
@@ -62,11 +69,44 @@ export class DialectSdkSubscriberRepository implements SubscriberRepository {
       }))
       .values()
       .value();
-    return resourceIds
-      ? subscribers.filter(({ resourceId }) =>
-          resourceIds.find((it) => it.equals(resourceId)),
-        )
-      : subscribers;
+  }
+
+  private async findNotificationTypeSubscribers(): Promise<Subscriber[]> {
+    const dapp = await this.lookupDapp();
+    const notificationTypes = await dapp.notificationTypes.findAll();
+    if (notificationTypes.length === 0) {
+      return [];
+    }
+    const dappNotificationSubscriptions =
+      await dapp.notificationSubscriptions.findAll();
+    return _(dappNotificationSubscriptions)
+      .flatMap(({ subscriptions, notificationType }) =>
+        subscriptions.map((subscription) => {
+          const notificationSubscription: SubscriberNotificationSubscription = {
+            notificationType: {
+              id: notificationType.id,
+              humanReadableId: notificationType.humanReadableId,
+            },
+            config: subscription.config,
+          };
+          return {
+            resourceId: subscription.wallet.publicKey,
+            subscription: notificationSubscription,
+          };
+        }),
+      )
+      .groupBy('resourceId')
+      .mapValues((s, resourceId) => {
+        const subscriber: Subscriber = {
+          resourceId: new PublicKey(resourceId),
+          notificationSubscriptions: s
+            .filter((it) => it.subscription.config.enabled)
+            .map((it) => it.subscription),
+        };
+        return subscriber;
+      })
+      .values()
+      .value();
   }
 
   private async lookupDapp() {

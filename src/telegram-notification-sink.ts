@@ -1,6 +1,11 @@
 import { Notification, ResourceId } from './data-model';
-import { NotificationSink, SubscriberRepository } from './ports';
+import {
+  NotificationSink,
+  NotificationSinkMetadata,
+  SubscriberRepository,
+} from './ports';
 import { Telegraf } from 'telegraf';
+import { NotificationTypeEligibilityPredicate } from './internal/notification-type-eligibility-predicate';
 
 /**
  * Telegram notification
@@ -17,20 +22,30 @@ export class TelegramNotificationSink
   constructor(
     private readonly telegramBotToken: string,
     private readonly subscriberRepository: SubscriberRepository,
+    private readonly notificationTypeEligibilityPredicate: NotificationTypeEligibilityPredicate,
   ) {
     this.bot = new Telegraf(telegramBotToken);
   }
 
-  async push(notification: TelegramNotification, recipients: ResourceId[]) {
+  async push(
+    notification: TelegramNotification,
+    recipients: ResourceId[],
+    { notificationMetadata }: NotificationSinkMetadata,
+  ) {
     const recipientTelegramNumbers = await this.subscriberRepository.findAll(
       recipients,
     );
     console.log('tg-notif-sink, recipients:\n');
     console.log(recipientTelegramNumbers);
-
     const results = await Promise.allSettled(
       recipientTelegramNumbers
         .filter(({ telegramChatId }) => telegramChatId)
+        .filter((it) =>
+          this.notificationTypeEligibilityPredicate.isEligible(
+            it,
+            notificationMetadata,
+          ),
+        )
         .map(({ telegramChatId }) => {
           this.bot.telegram
             .sendMessage(telegramChatId!, notification.body)

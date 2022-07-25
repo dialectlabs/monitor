@@ -36,11 +36,6 @@ export class InMemorySubscriberRepository implements SubscriberRepository {
       : subscribers;
   }
 
-  async findByResourceId(resourceId: ResourceId): Promise<Subscriber | null> {
-    await this.lazyInit();
-    return Promise.resolve(this.subscribers.get(resourceId.toString()) ?? null);
-  }
-
   private async lazyInit() {
     if (this.isInitialized) {
       return;
@@ -96,8 +91,8 @@ export class InMemorySubscriberRepository implements SubscriberRepository {
     );
     if (removed.length > 0) {
       console.log(
-        `${added.length} subscriber(s) removed: ${JSON.stringify(
-          added,
+        `${removed.length} subscriber(s) removed: ${JSON.stringify(
+          removed,
           null,
           2,
         )}`,

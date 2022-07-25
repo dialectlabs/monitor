@@ -44,7 +44,7 @@ const dummySubscriberRepository = new DummySubscriberRepository(1);
 const publicKey = Keypair.generate().publicKey;
 
 const monitor: Monitor<DataType> = Monitors.builder({
-  sdk: sdk,
+  sdk,
   subscriberRepository: dummySubscriberRepository,
 })
   .defineDataSource<DataType>()
