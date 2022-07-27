@@ -7,7 +7,7 @@ import {
 } from './ports';
 import { Monitor } from './monitor-api';
 import { Context, Data, ResourceId, SubscriberEvent } from './data-model';
-import { DialectNotification } from './dialect-notification-sink';
+import { DialectNotification } from './dialect-thread-notification-sink';
 import { EmailNotification } from './sengrid-email-notification-sink';
 import { SmsNotification } from './twilio-sms-notification-sink';
 import { TelegramNotification } from './telegram-notification-sink';
@@ -100,14 +100,14 @@ export interface MulticastDispatchStrategy<T extends object>
 export interface AddTransformationsStep<T extends object> {
   transform<V, R>(transformation: Transformation<T, V, R>): NotifyStep<T, R>;
 
-  notify(): AddSinksStep<T, T>;
+  notify(metadata?: NotificationMetadata): AddSinksStep<T, T>;
 }
 
-export interface NotifyStepProps {
-  notificationType: NotificationTypeProps;
+export interface NotificationMetadata {
+  type: NotificationTypeMetadata;
 }
 
-export interface NotificationTypeProps {
+export interface NotificationTypeMetadata {
   id: string;
 }
 
@@ -115,7 +115,7 @@ export interface NotifyStep<T extends object, R> {
   /**
    * Finish adding transformations and configure how to dispatch notifications
    */
-  notify(props?: NotifyStepProps): AddSinksStep<T, R>;
+  notify(metadata?: NotificationMetadata): AddSinksStep<T, R>;
 }
 
 export interface AddSinksStep<T extends object, R> {

@@ -1,7 +1,7 @@
 import { Observable } from 'rxjs';
 import { Data, Notification, ResourceId, SourceData } from './data-model';
 import { PublicKey } from '@solana/web3.js';
-import { DispatchType } from './monitor-builder';
+import { DispatchType, NotificationMetadata } from './monitor-builder';
 
 /**
  * An abstraction that represents a source of data, bound to specific type
@@ -53,11 +53,6 @@ export interface SubscriberRepository {
   findAll(resourceIds?: ResourceId[]): Promise<Subscriber[]>;
 
   /**
-   * Finds subscriber by resource id
-   */
-  findByResourceId(resourceId: ResourceId): Promise<Subscriber | null>;
-
-  /**
    * Can be used to set handlers to react if set of subscribers is changed
    */
   subscribe(
@@ -72,8 +67,27 @@ export interface Subscriber {
   telegramChatId?: string | null;
   phoneNumber?: string | null;
   wallet?: PublicKey | null;
+  notificationSubscriptions?: SubscriberNotificationSubscription[];
 }
 
+export interface SubscriberNotificationSubscription {
+  notificationType: NotificationType;
+  config: SubscriptionConfig;
+}
+
+export interface NotificationType {
+  id: string;
+  humanReadableId: string;
+}
+
+export interface SubscriptionConfig {
+  enabled: boolean;
+}
+
+export interface NotificationSinkMetadata {
+  dispatchType: DispatchType;
+  notificationMetadata?: NotificationMetadata;
+}
 /**
  * An interface that abstracts the destination where events are sent/persisted
  */
@@ -81,6 +95,6 @@ export interface NotificationSink<N extends Notification> {
   push(
     notification: N,
     recipients: ResourceId[],
-    dispatchType: DispatchType,
+    metadata: NotificationSinkMetadata,
   ): Promise<any>;
 }

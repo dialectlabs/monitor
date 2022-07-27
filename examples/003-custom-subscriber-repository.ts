@@ -27,12 +27,6 @@ export class DummySubscriberRepository implements SubscriberRepository {
     return Promise.resolve(this.subscribers);
   }
 
-  findByResourceId(resourceId: ResourceId): Promise<Subscriber | null> {
-    return Promise.resolve(
-      this.subscribers.find((it) => it.resourceId.equals(resourceId)) ?? null,
-    );
-  }
-
   subscribe(
     onSubscriberAdded: SubscriberEventHandler,
     onSubscriberRemoved: SubscriberEventHandler,
