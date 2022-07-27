@@ -2,7 +2,9 @@
 
 ## [UNRELEASED]
 
-- Add dialect sdk sink for destination agnostic notification sending.
+## [3.3.0] - 2022-07-27
+
+- Add configurable notification types.
 
 ## [3.1.0] - 2022-07-06
 
