@@ -1,0 +1,14 @@
+version: 2
+updates:
+  - package-ecosystem: "npm"
+    versioning-strategy: increase
+    directory: "/"
+    schedule:
+      interval: "daily"
+    labels:
+      - "dependencies"
+    open-pull-requests-limit: 100
+    pull-request-branch-name:
+      separator: "-"
+    allow:
+      - dependency-name: "dialectlabs*"
