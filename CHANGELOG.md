@@ -2,6 +2,10 @@
 
 ## [UNRELEASED]
 
+## [3.3.1] - 2022-08-07
+
+- Bump sdk dependency to 0.5.1.
+
 ## [3.3.0] - 2022-07-27
 
 - Add configurable notification types.
