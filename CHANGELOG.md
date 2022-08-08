@@ -2,6 +2,10 @@
 
 ## [UNRELEASED]
 
+## [3.3.2] - 2022-08-08
+
+- chore: shorten subscribers logging.
+
 ## [3.3.1] - 2022-08-07
 
 - Bump sdk dependency to 0.5.1.
