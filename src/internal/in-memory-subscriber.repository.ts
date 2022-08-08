@@ -75,11 +75,12 @@ export class InMemorySubscriberRepository implements SubscriberRepository {
     });
     if (added.length > 0) {
       console.log(
-        `${added.length} subscriber(s) added: ${JSON.stringify(
-          added,
-          null,
-          2,
-        )}`,
+        `${added.length} subscriber(s) added: [${added.map(
+          (it) => it.resourceId,
+        )}]`,
+      );
+      console.debug(
+        `${added.length} subscriber(s) added: ${JSON.stringify(added)}`,
       );
     }
     added.forEach((subscriber) => {
@@ -91,11 +92,12 @@ export class InMemorySubscriberRepository implements SubscriberRepository {
     );
     if (removed.length > 0) {
       console.log(
-        `${removed.length} subscriber(s) removed: ${JSON.stringify(
-          removed,
-          null,
-          2,
-        )}`,
+        `${removed.length} subscriber(s) removed: [${removed.map(
+          (it) => it.resourceId,
+        )}]`,
+      );
+      console.debug(
+        `${removed.length} subscriber(s) removed: ${JSON.stringify(removed)}`,
       );
     }
     removed.forEach((subscriber) => {
