@@ -4,11 +4,11 @@ updates:
     versioning-strategy: increase
     directory: "/"
     schedule:
-      interval: "daily"
+      interval: "weekly"
     labels:
       - "dependencies"
     open-pull-requests-limit: 100
     pull-request-branch-name:
       separator: "-"
     allow:
-      - dependency-name: "dialectlabs*"
+      - dependency-name: "@dialectlabs*"
