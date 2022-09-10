@@ -33,13 +33,22 @@ export class DialectSdkNotificationSink
       );
       const dapp = await this.lookupDapp();
       if (dispatchType === 'unicast') {
+        const theOnlyRecipient = recipients[0];
+        if (!theOnlyRecipient) {
+          throw new IllegalStateError(
+            `No recipient specified for unicast notification`,
+          );
+        }
         await dapp.messages.send({
           title: title,
           message: message,
-          recipient: recipients[0],
+          recipient: theOnlyRecipient,
           notificationTypeId,
         });
       } else if (dispatchType === 'multicast') {
+        if (recipients.length === 0) {
+          return;
+        }
         await dapp.messages.send({
           title: title,
           message: message,
