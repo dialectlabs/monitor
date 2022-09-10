@@ -2,6 +2,10 @@
 
 ## [UNRELEASED]
 
+## [3.3.3] - 2022-09-11
+
+- fix: skip sending notifications for empty recipient sets in dialect sdk sink
+
 ## [3.3.2] - 2022-08-08
 
 - chore: shorten subscribers logging.
