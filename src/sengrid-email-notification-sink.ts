@@ -7,11 +7,17 @@ import {
 import sgMail from '@sendgrid/mail';
 import { MailDataRequired } from '@sendgrid/helpers/classes/mail';
 import { NotificationTypeEligibilityPredicate } from './internal/notification-type-eligibility-predicate';
+import { PublicKey } from '@solana/web3.js';
 
 /**
  * Email notification
  */
 export interface EmailNotification extends Notification {
+  mail: MailData;
+  custom?: Map<PublicKey, MailData>;
+}
+
+export interface MailData {
   subject: string;
   text: string;
 }
@@ -44,11 +50,28 @@ export class SengridEmailNotificationSink
           notificationMetadata,
         ),
       )
-      .map(({ email }) => ({
-        ...notification,
+      .map((subscriber) => {
+        let subject = notification.mail.subject;
+        let text = notification.mail.text;
+        
+        // try find custom mail data
+        if (notification.custom) {
+        let tryFindCustom = notification.custom.get(
+          subscriber.wallet!,
+        );
+        if (tryFindCustom) {
+          subject = tryFindCustom.subject;
+          text = tryFindCustom.text;
+        }
+      }
+
+        return ({
+        subject: subject,
+        text: text,
         from: this.senderEmail,
-        to: email!,
-      }));
+        to: subscriber.email!,
+      })
+    });
 
     const results = await Promise.allSettled(await sgMail.send(emails));
 
