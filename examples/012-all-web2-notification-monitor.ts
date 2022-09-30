@@ -67,8 +67,11 @@ const monitor: Monitor<DataType> = Monitors.builder({
   .notify()
   .email(
     ({ value }) => ({
-      subject: '[WARNING] Cratio above warning threshold',
-      text: `Your cratio = ${value} above warning threshold`,
+      mail: {
+        subject: '[WARNING] Cratio above warning threshold',
+        text: `Your cratio = ${value} above warning threshold`,
+      }
+      // custom: override mail content for particular recipients
     }),
     { dispatch: 'unicast', to: ({ origin }) => origin.resourceId },
   )
