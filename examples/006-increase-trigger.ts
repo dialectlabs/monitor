@@ -52,7 +52,7 @@ const monitor: Monitor<DataPool> = Monitors.builder({
       }),
     ],
   })
-  .notify({ notificationType: { id: 'notification_1' } })
+  .notify()
   .custom<DialectNotification>(
     ({ value, context }) => ({
       message: `Value: ${value} increase by ${getTriggerOutput(context)} `,

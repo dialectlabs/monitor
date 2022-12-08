@@ -10,12 +10,20 @@ import { DummySubscriberRepository } from './003-custom-subscriber-repository';
 import { ConsoleNotificationSink } from './004-custom-notification-sink';
 import { Observable } from 'rxjs';
 import { Keypair } from '@solana/web3.js';
+
+// Common Dialect SDK imports
 import {
   Dialect,
-  Environment,
-  NodeDialectWalletAdapter,
-  SolanaNetwork,
+  DialectCloudEnvironment,
+  DialectSdk,
 } from '@dialectlabs/sdk';
+
+// Solana-specific imports
+import {
+  Solana,
+  SolanaSdkFactory,
+  NodeDialectSolanaWalletAdapter
+} from '@dialectlabs/blockchain-sdk-solana';
 
 type DataType = {
   cratio: number;
@@ -25,16 +33,18 @@ type DataType = {
 
 const threshold = 0.5;
 
-const sdk = Dialect.sdk({
-  environment: process.env.ENVIROMENT! as Environment,
-  solana: {
-    rpcUrl: process.env.RPC_URL!,
-    network: process.env.NETWORK_NAME! as SolanaNetwork,
+// 3. Create Dialect Solana SDK
+const environment: DialectCloudEnvironment = 'development';
+const dialectSolanaSdk: DialectSdk<Solana> = Dialect.sdk(
+  {
+    environment,
   },
-  // Note: You must first add your dapp to the Dialect Cloud
-  //       See readme section TODO
-  wallet: NodeDialectWalletAdapter.create(),
-});
+  SolanaSdkFactory.create({
+    // IMPORTANT: must set environment variable DIALECT_SDK_CREDENTIALS
+    // to your dapp's Solana messaging wallet keypair e.g. [170,23, . . . ,300]
+    wallet: NodeDialectSolanaWalletAdapter.create(),
+  }),
+);
 
 const consoleNotificationSink =
   new ConsoleNotificationSink<DialectNotification>();
@@ -44,7 +54,7 @@ const dummySubscriberRepository = new DummySubscriberRepository(1);
 const publicKey = Keypair.generate().publicKey;
 
 const monitor: Monitor<DataType> = Monitors.builder({
-  sdk,
+  sdk: dialectSolanaSdk,
   subscriberRepository: dummySubscriberRepository,
 })
   .defineDataSource<DataType>()

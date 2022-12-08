@@ -11,4 +11,3 @@ export * from './dialect-thread-notification-sink';
 export * from './dialect-sdk-notification-sink';
 export * from './twilio-sms-notification-sink';
 export * from './dialect-sdk-subscriber.repository';
-export * from './utils/client';

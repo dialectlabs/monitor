@@ -4,7 +4,7 @@ import {
   SubscriberRepository,
 } from './ports';
 import { Notification, ResourceId } from './data-model';
-import { Dapp, DialectSdk, IllegalStateError } from '@dialectlabs/sdk';
+import { BlockchainSdk, Dapp, DialectSdk, IllegalStateError } from '@dialectlabs/sdk';
 import { NotificationMetadata } from './monitor-builder';
 
 export interface DialectSdkNotification extends Notification {
@@ -18,7 +18,7 @@ export class DialectSdkNotificationSink
   private dapp: Dapp | null = null;
 
   constructor(
-    private readonly sdk: DialectSdk,
+    private readonly sdk: DialectSdk<BlockchainSdk>,
     private readonly subscriberRepository: SubscriberRepository,
   ) {}
 
@@ -42,7 +42,7 @@ export class DialectSdkNotificationSink
         await dapp.messages.send({
           title: title,
           message: message,
-          recipient: theOnlyRecipient,
+          recipient: theOnlyRecipient.toBase58(),
           notificationTypeId,
         });
       } else if (dispatchType === 'multicast') {
@@ -52,7 +52,7 @@ export class DialectSdkNotificationSink
         await dapp.messages.send({
           title: title,
           message: message,
-          recipients: recipients,
+          recipients: recipients.map(it=>it.toBase58()),
           notificationTypeId,
         });
       } else if (dispatchType === 'broadcast') {
@@ -108,8 +108,8 @@ export class DialectSdkNotificationSink
       const dapp = await this.sdk.dapps.find();
       if (!dapp) {
         throw new IllegalStateError(
-          `Dapp ${this.sdk.info.wallet.publicKey?.toBase58()} not registered in dialect cloud ${
-            this.sdk.info.config.dialectCloud.url
+          `Dapp ${this.sdk.wallet.address} not registered in dialect cloud ${
+            this.sdk.config.dialectCloud
           }`,
         );
       }
