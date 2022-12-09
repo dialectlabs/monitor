@@ -2,6 +2,10 @@
 
 ## [UNRELEASED]
 
+## [3.4.0] - 2022-12-09
+
+- Bump SDK to 1.4.0, blockchain-sdk-aptos 1.0.3, blockchain-sdk-solana 1.0.1
+
 ## [3.3.3] - 2022-09-11
 
 - fix: skip sending notifications for empty recipient sets in dialect sdk sink

@@ -3,30 +3,30 @@ import { DefaultMonitorFactory } from './internal/default-monitor-factory';
 import { ChooseDataSourceStep } from './monitor-builder';
 import { MonitorFactory } from './monitor-factory';
 import { ChooseDataSourceStepImpl } from './internal/monitor-builder';
-import { DialectSdk } from '@dialectlabs/sdk';
+import { BlockchainSdk, DialectSdk } from '@dialectlabs/sdk';
 import { SubscriberRepository } from './ports';
 import { Duration } from 'luxon';
 
-export type MonitorProps = GenericMonitorProps | DialectSdkMonitorProps;
+export type MonitorProps = GenericMonitorProps<BlockchainSdk> | DialectSdkMonitorProps<BlockchainSdk>;
 
-export interface GenericMonitorProps {
+export interface GenericMonitorProps<ChainSdk extends BlockchainSdk> {
   subscriberRepository: SubscriberRepository;
   subscribersCacheTTL?: Duration;
-  sinks?: SinksConfiguration;
+  sinks?: SinksConfiguration<ChainSdk>;
 }
 
-export interface DialectSdkMonitorProps {
-  sdk: DialectSdk;
+export interface DialectSdkMonitorProps<ChainSdk extends BlockchainSdk> {
+  sdk: DialectSdk<ChainSdk>;
   subscriberRepository?: SubscriberRepository;
   subscribersCacheTTL?: Duration;
-  sinks?: Omit<SinksConfiguration, 'dialectThread' | 'dialectSdk'>;
+  sinks?: Omit<SinksConfiguration<ChainSdk>, 'dialectThread' | 'dialectSdk'>;
 }
 
-export interface SinksConfiguration {
+export interface SinksConfiguration<ChainSdk extends BlockchainSdk> {
   email?: EmailSinkConfiguration;
   sms?: SmsSinkConfiguration;
   telegram?: TelegramSinkConfiguration;
-  dialect?: DialectSinksConfiguration;
+  dialect?: DialectSinksConfiguration<ChainSdk>;
   solflare?: SolflareSinkConfiguration;
 }
 
@@ -45,8 +45,8 @@ export interface TelegramSinkConfiguration {
   telegramBotToken: string;
 }
 
-export interface DialectSinksConfiguration {
-  sdk: DialectSdk;
+export interface DialectSinksConfiguration<ChainSdk extends BlockchainSdk> {
+  sdk: DialectSdk<ChainSdk>;
 }
 
 export interface SolflareSinkConfiguration {

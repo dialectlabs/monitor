@@ -7,6 +7,7 @@ import { InMemorySubscriberRepository } from './in-memory-subscriber.repository'
 import { DialectSdkSubscriberRepository } from '../dialect-sdk-subscriber.repository';
 import { Duration } from 'luxon';
 import { SubscriberRepository } from '../ports';
+import { BlockchainSdk } from '@dialectlabs/sdk';
 
 const DEFAULT_SUBSCRIBERS_CACHE_TTL = Duration.fromObject({ minutes: 1 });
 
@@ -21,12 +22,12 @@ export class SubscriberRepositoryFactory {
     }
   }
 
-  private createFromRepository(monitorProps: GenericMonitorProps) {
+  private createFromRepository(monitorProps: GenericMonitorProps<BlockchainSdk>) {
     const { subscriberRepository } = monitorProps;
     return this.decorateWithInmemoryIfNeeded(subscriberRepository);
   }
 
-  private createFromSdk(monitorProps: DialectSdkMonitorProps) {
+  private createFromSdk(monitorProps: DialectSdkMonitorProps<BlockchainSdk>) {
     const { sdk, subscriberRepository, subscribersCacheTTL } = monitorProps;
     return subscriberRepository
       ? this.decorateWithInmemoryIfNeeded(subscriberRepository)

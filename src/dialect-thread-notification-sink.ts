@@ -4,7 +4,7 @@ import {
   SubscriberRepository,
 } from './ports';
 import { Notification, ResourceId } from './data-model';
-import { DialectSdk } from '@dialectlabs/sdk';
+import { BlockchainSdk, DialectSdk } from '@dialectlabs/sdk';
 import { compact } from 'lodash';
 import { NotificationTypeEligibilityPredicate } from './internal/notification-type-eligibility-predicate';
 
@@ -16,7 +16,7 @@ export class DialectThreadNotificationSink
   implements NotificationSink<DialectNotification>
 {
   constructor(
-    private readonly sdk: DialectSdk,
+    private readonly sdk: DialectSdk<BlockchainSdk>,
     private readonly subscriberRepository: SubscriberRepository,
     private readonly notificationTypeEligibilityPredicate: NotificationTypeEligibilityPredicate,
   ) {}
@@ -40,7 +40,7 @@ export class DialectThreadNotificationSink
     const results = await Promise.allSettled(
       wallets.map(async (it) => {
         const thread = await this.sdk.threads.find({
-          otherMembers: [it],
+          otherMembers: [it.toBase58()],
         });
         if (!thread) {
           throw new Error(

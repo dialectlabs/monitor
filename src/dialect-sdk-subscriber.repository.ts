@@ -8,6 +8,7 @@ import {
 import _ from 'lodash';
 import {
   AddressType,
+  BlockchainSdk,
   Dapp,
   DialectSdk,
   IllegalStateError,
@@ -16,7 +17,7 @@ import {
 export class DialectSdkSubscriberRepository implements SubscriberRepository {
   private dapp: Dapp | null = null;
 
-  constructor(private sdk: DialectSdk) {}
+  constructor(private sdk: DialectSdk<BlockchainSdk>) {}
 
   subscribe(
     onSubscriberAdded?: SubscriberEventHandler,
@@ -43,7 +44,7 @@ export class DialectSdkSubscriberRepository implements SubscriberRepository {
     return _(dappAddresses)
       .filter(({ enabled, address: { verified } }) => enabled && verified)
       .map((it) => ({
-        resourceId: it.address.wallet.publicKey,
+        resourceId: it.address.wallet.address,
         ...(it.address.type === AddressType.Email && {
           email: it.address.value,
         }),
@@ -90,7 +91,7 @@ export class DialectSdkSubscriberRepository implements SubscriberRepository {
             config: subscription.config,
           };
           return {
-            resourceId: subscription.wallet.publicKey,
+            resourceId: subscription.wallet.address,
             subscription: notificationSubscription,
           };
         }),
@@ -114,8 +115,8 @@ export class DialectSdkSubscriberRepository implements SubscriberRepository {
       const dapp = await this.sdk.dapps.find();
       if (!dapp) {
         throw new IllegalStateError(
-          `Dapp ${this.sdk.info.wallet.publicKey?.toBase58()} not registered in dialect cloud ${
-            this.sdk.info.config.dialectCloud.url
+          `Dapp ${this.sdk.wallet.address} not registered in dialect cloud ${
+            this.sdk.config.dialectCloud
           }`,
         );
       }

@@ -1,25 +1,48 @@
 import { Monitor, Monitors, Pipelines, ResourceId, SourceData } from '../src';
 import { Duration } from 'luxon';
-import { Dialect, NodeDialectWalletAdapter } from '@dialectlabs/sdk';
 
-type DataType = {
+// 1. Common Dialect SDK imports
+import {
+  Dialect,
+  DialectCloudEnvironment,
+  DialectSdk,
+} from '@dialectlabs/sdk';
+
+// 2. Aptos-specific imports
+import {
+  Aptos,
+  AptosSdkFactory,
+  NodeDialectAptosWalletAdapter
+} from '@dialectlabs/blockchain-sdk-aptos';
+
+
+// 3. Create Dialect Aptos SDK
+const environment: DialectCloudEnvironment = 'development';
+const dialectAptosSdk: DialectSdk<Aptos> = Dialect.sdk(
+  {
+    environment,
+  },
+  AptosSdkFactory.create({
+    // IMPORTANT: must set environment variable DIALECT_SDK_CREDENTIALS
+    // to your dapp's Aptos messaging wallet keypair e.g. [170,23, . . . ,300]
+    wallet: NodeDialectAptosWalletAdapter.create(),
+  }),
+);
+
+// 4. Define a data type to monitor
+type YourDataType = {
   cratio: number;
   healthRatio: number;
   resourceId: ResourceId;
 };
 
-const sdk = Dialect.sdk({
-  environment: 'local-development',
-  wallet: NodeDialectWalletAdapter.create(),
-});
-
-const dataSourceMonitor: Monitor<DataType> = Monitors.builder({
-  sdk,
+const dataSourceMonitor: Monitor<YourDataType> = Monitors.builder({
+  sdk: dialectAptosSdk,
   subscribersCacheTTL: Duration.fromObject({ seconds: 5 }),
 })
-  .defineDataSource<DataType>()
+  .defineDataSource<YourDataType>()
   .poll((subscribers: ResourceId[]) => {
-    const sourceData: SourceData<DataType>[] = subscribers.map(
+    const sourceData: SourceData<YourDataType>[] = subscribers.map(
       (resourceId) => ({
         data: {
           cratio: Math.random(),
