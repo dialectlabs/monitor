@@ -13,7 +13,7 @@
   "dependencies": {
     "@dialectlabs/blockchain-sdk-aptos": "^1.0.3",
     "@dialectlabs/blockchain-sdk-solana": "^1.0.1",
-    "@dialectlabs/sdk": "^1.4.0",
+    "@dialectlabs/sdk": "^1.5.0",
     "@project-serum/anchor": "0.23.0",
     "@sendgrid/mail": "^7.6.2",
     "@solana/web3.js": "^1.27.0",
