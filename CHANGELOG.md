@@ -2,7 +2,11 @@
 
 ## [UNRELEASED]
 
-## [3.4.1] - 2022-12-09
+## [3.4.2] - 2022-12-23
+
+- chore: add available notification type ids to notification type id resolving error
+
+## [3.4.1] - 2022-12-23
 
 - chore: shorten error message in dialect-sdk notification sink on notification type mismatch
 

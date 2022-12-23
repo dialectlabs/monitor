@@ -91,10 +91,11 @@ export class DialectSdkNotificationSink
 
   private async resolveNotificationTypeId(notificationTypeId: string) {
     const subscribers = await this.subscriberRepository.findAll();
-    const availableNotificationTypes = _.uniq(
+    const availableNotificationTypes = _.uniqBy(
       subscribers
         .flatMap((it) => it.notificationSubscriptions ?? [])
         .map((it) => it.notificationType),
+      (it) => it.id,
     );
     const notificationType = availableNotificationTypes.find(
       (it) =>
@@ -105,7 +106,7 @@ export class DialectSdkNotificationSink
       throw new IllegalStateError(
         `Unknown notification type ${notificationTypeId}, must be one of [${availableNotificationTypes.map(
           (it) => it.humanReadableId,
-        )}]`,
+        )}] or one of [${availableNotificationTypes.map((it) => it.id)}]`,
       );
     }
     return notificationType?.id;
