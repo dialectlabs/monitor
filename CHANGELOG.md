@@ -2,6 +2,10 @@
 
 ## [UNRELEASED]
 
+## [3.4.1] - 2022-12-09
+
+- chore: shorten error message in dialect-sdk notification sink on notification type mismatch
+
 ## [3.4.0] - 2022-12-09
 
 - Bump SDK to 1.4.0, blockchain-sdk-aptos 1.0.3, blockchain-sdk-solana 1.0.1

@@ -4,8 +4,14 @@ import {
   SubscriberRepository,
 } from './ports';
 import { Notification, ResourceId } from './data-model';
-import { BlockchainSdk, Dapp, DialectSdk, IllegalStateError } from '@dialectlabs/sdk';
+import {
+  BlockchainSdk,
+  Dapp,
+  DialectSdk,
+  IllegalStateError,
+} from '@dialectlabs/sdk';
 import { NotificationMetadata } from './monitor-builder';
+import _ from 'lodash';
 
 export interface DialectSdkNotification extends Notification {
   title: string;
@@ -52,7 +58,7 @@ export class DialectSdkNotificationSink
         await dapp.messages.send({
           title: title,
           message: message,
-          recipients: recipients.map(it=>it.toBase58()),
+          recipients: recipients.map((it) => it.toBase58()),
           notificationTypeId,
         });
       } else if (dispatchType === 'broadcast') {
@@ -85,9 +91,11 @@ export class DialectSdkNotificationSink
 
   private async resolveNotificationTypeId(notificationTypeId: string) {
     const subscribers = await this.subscriberRepository.findAll();
-    const availableNotificationTypes = subscribers
-      .flatMap((it) => it.notificationSubscriptions ?? [])
-      .map((it) => it.notificationType);
+    const availableNotificationTypes = _.uniq(
+      subscribers
+        .flatMap((it) => it.notificationSubscriptions ?? [])
+        .map((it) => it.notificationType),
+    );
     const notificationType = availableNotificationTypes.find(
       (it) =>
         it.humanReadableId.toLowerCase() === notificationTypeId.toLowerCase() ||
@@ -108,9 +116,7 @@ export class DialectSdkNotificationSink
       const dapp = await this.sdk.dapps.find();
       if (!dapp) {
         throw new IllegalStateError(
-          `Dapp ${this.sdk.wallet.address} not registered in dialect cloud ${
-            this.sdk.config.dialectCloud
-          }`,
+          `Dapp ${this.sdk.wallet.address} not registered in dialect cloud ${this.sdk.config.dialectCloud}`,
         );
       }
       this.dapp = dapp;
