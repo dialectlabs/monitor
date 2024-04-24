@@ -10,7 +10,7 @@ import {
   NotifyStep,
   Transformation,
 } from '../monitor-builder';
-import { Data, SubscriberEvent } from '../data-model';
+import { Data, Notification, SubscriberEvent } from '../data-model';
 import {
   ContextEnrichedPushyDataSource,
   DataSourceTransformationPipeline,
@@ -362,7 +362,7 @@ class AddSinksStepImpl<T extends object, R> implements AddSinksStep<T, R> {
     );
   }
 
-  custom<N>(
+  custom<N extends Notification>(
     adapter: (data: Data<R, T>) => N,
     sink: NotificationSink<N>,
     dispatchStrategy: DispatchStrategy<T>,

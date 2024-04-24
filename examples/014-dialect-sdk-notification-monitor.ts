@@ -9,10 +9,11 @@ import {
 import { DummySubscriberRepository } from './003-custom-subscriber-repository';
 import { ConsoleNotificationSink } from './004-custom-notification-sink';
 import { Observable } from 'rxjs';
-import { Keypair } from '@solana/web3.js';
+import { Keypair, PublicKey } from '@solana/web3.js';
 
 // Common Dialect SDK imports
 import {
+  DappMessageActionType,
   Dialect,
   DialectCloudEnvironment,
   DialectSdk,
@@ -20,9 +21,9 @@ import {
 
 // Solana-specific imports
 import {
+  NodeDialectSolanaWalletAdapter,
   Solana,
   SolanaSdkFactory,
-  NodeDialectSolanaWalletAdapter
 } from '@dialectlabs/blockchain-sdk-solana';
 
 type DataType = {
@@ -55,7 +56,7 @@ const publicKey = Keypair.generate().publicKey;
 
 const monitor: Monitor<DataType> = Monitors.builder({
   sdk: dialectSolanaSdk,
-  subscriberRepository: dummySubscriberRepository,
+  // subscriberRepository: dummySubscriberRepository,
 })
   .defineDataSource<DataType>()
   .push(
@@ -81,34 +82,63 @@ const monitor: Monitor<DataType> = Monitors.builder({
       }),
     ],
   })
-  .notify()
+  .notify({
+    type: {
+      id: '434ee971-44ad-4021-98fe-3140a627bca8',
+    },
+  })
   .dialectSdk(
     ({ value }) => ({
       title: 'dApp cratio warning',
       message: `Your cratio = ${value} above warning threshold`,
     }),
-    { dispatch: 'unicast', to: ({ origin }) => origin.resourceId },
+    {
+      dispatch: 'unicast',
+      to: ({ origin }) =>
+        new PublicKey('6MKeaLnTnhXM6Qo8gHEgbeqeoUqbg4Re4FL5UHXMjetJ'),
+    },
   )
   .dialectSdk(
     ({ value }) => ({
       title: 'dApp cratio warning',
       message: `Your cratio = ${value} above warning threshold`,
     }),
-    { dispatch: 'multicast', to: ({ origin }) => [origin.resourceId] },
+    {
+      dispatch: 'unicast',
+      to: ({ origin }) =>
+        new PublicKey('6MKeaLnTnhXM6Qo8gHEgbeqeoUqbg4Re4FL5UHXMjetJ'),
+    },
   )
   .dialectSdk(
     ({ value }) => ({
       title: 'dApp cratio warning',
       message: `Your cratio = ${value} above warning threshold`,
+      actions: {
+        type: DappMessageActionType.LINK,
+        links: [
+          {
+            url: 'https://dialect.to/',
+            label: 'Open Dialect',
+          },
+        ],
+      },
     }),
-    { dispatch: 'broadcast' },
+    {
+      dispatch: 'unicast',
+      to: ({ origin }) =>
+        new PublicKey('6MKeaLnTnhXM6Qo8gHEgbeqeoUqbg4Re4FL5UHXMjetJ'),
+    },
   )
   .custom<DialectNotification>(
     ({ value }) => ({
       message: `Your cratio = ${value} above warning threshold`,
     }),
     consoleNotificationSink,
-    { dispatch: 'unicast', to: ({ origin }) => origin.resourceId },
+    {
+      dispatch: 'unicast',
+      to: ({ origin }) =>
+        new PublicKey('6MKeaLnTnhXM6Qo8gHEgbeqeoUqbg4Re4FL5UHXMjetJ'),
+    },
   )
   .and()
   .build();

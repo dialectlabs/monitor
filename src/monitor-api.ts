@@ -7,7 +7,9 @@ import { BlockchainSdk, DialectSdk } from '@dialectlabs/sdk';
 import { SubscriberRepository } from './ports';
 import { Duration } from 'luxon';
 
-export type MonitorProps = GenericMonitorProps<BlockchainSdk> | DialectSdkMonitorProps<BlockchainSdk>;
+export type MonitorProps =
+  | GenericMonitorProps<BlockchainSdk>
+  | DialectSdkMonitorProps<BlockchainSdk>;
 
 export interface GenericMonitorProps<ChainSdk extends BlockchainSdk> {
   subscriberRepository: SubscriberRepository;

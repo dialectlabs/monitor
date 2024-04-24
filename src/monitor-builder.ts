@@ -6,7 +6,13 @@ import {
   TransformationPipeline,
 } from './ports';
 import { Monitor } from './monitor-api';
-import { Context, Data, ResourceId, SubscriberEvent } from './data-model';
+import {
+  Context,
+  Data,
+  Notification,
+  ResourceId,
+  SubscriberEvent,
+} from './data-model';
 import { DialectNotification } from './dialect-thread-notification-sink';
 import { EmailNotification } from './sengrid-email-notification-sink';
 import { SmsNotification } from './twilio-sms-notification-sink';
@@ -149,7 +155,7 @@ export interface AddSinksStep<T extends object, R> {
     dispatchStrategy: DispatchStrategy<T>,
   ): AddSinksStep<T, R>;
 
-  custom<N>(
+  custom<N extends Notification>(
     adapter: (data: Data<R, T>) => N,
     sink: NotificationSink<N>,
     dispatchStrategy: DispatchStrategy<T>,

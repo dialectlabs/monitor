@@ -2,6 +2,11 @@
 
 ## [UNRELEASED]
 
+## [3.5.0] - 2024-04-24
+
+- feat: support actions in sdk notifications
+- chore: bump deps
+
 ## [3.4.2] - 2022-12-23
 
 - chore: add available notification type ids to notification type id resolving error

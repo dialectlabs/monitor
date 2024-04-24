@@ -7,15 +7,17 @@ import { Notification, ResourceId } from './data-model';
 import {
   BlockchainSdk,
   Dapp,
+  DappMessageLinksAction,
   DialectSdk,
   IllegalStateError,
 } from '@dialectlabs/sdk';
 import { NotificationMetadata } from './monitor-builder';
-import _ from 'lodash';
+import { uniqBy } from 'lodash';
 
 export interface DialectSdkNotification extends Notification {
   title: string;
   message: string;
+  actions?: DappMessageLinksAction;
 }
 
 export class DialectSdkNotificationSink
@@ -29,7 +31,7 @@ export class DialectSdkNotificationSink
   ) {}
 
   async push(
-    { title, message }: DialectSdkNotification,
+    { title, message, actions }: DialectSdkNotification,
     recipients: ResourceId[],
     { dispatchType, notificationMetadata }: NotificationSinkMetadata,
   ) {
@@ -50,6 +52,7 @@ export class DialectSdkNotificationSink
           message: message,
           recipient: theOnlyRecipient.toBase58(),
           notificationTypeId,
+          actionsV2: actions,
         });
       } else if (dispatchType === 'multicast') {
         if (recipients.length === 0) {
@@ -60,12 +63,14 @@ export class DialectSdkNotificationSink
           message: message,
           recipients: recipients.map((it) => it.toBase58()),
           notificationTypeId,
+          actionsV2: actions,
         });
       } else if (dispatchType === 'broadcast') {
         await dapp.messages.send({
           title: title,
           message: message,
           notificationTypeId,
+          actionsV2: actions,
         });
       } else {
         console.error(
@@ -91,7 +96,7 @@ export class DialectSdkNotificationSink
 
   private async resolveNotificationTypeId(notificationTypeId: string) {
     const subscribers = await this.subscriberRepository.findAll();
-    const availableNotificationTypes = _.uniqBy(
+    const availableNotificationTypes = uniqBy(
       subscribers
         .flatMap((it) => it.notificationSubscriptions ?? [])
         .map((it) => it.notificationType),

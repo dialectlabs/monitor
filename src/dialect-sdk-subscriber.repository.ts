@@ -115,9 +115,7 @@ export class DialectSdkSubscriberRepository implements SubscriberRepository {
       const dapp = await this.sdk.dapps.find();
       if (!dapp) {
         throw new IllegalStateError(
-          `Dapp ${this.sdk.wallet.address} not registered in dialect cloud ${
-            this.sdk.config.dialectCloud
-          }`,
+          `Dapp ${this.sdk.wallet.address} not registered in dialect cloud ${this.sdk.config.dialectCloud}`,
         );
       }
       this.dapp = dapp;

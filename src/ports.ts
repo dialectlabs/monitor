@@ -88,6 +88,7 @@ export interface NotificationSinkMetadata {
   dispatchType: DispatchType;
   notificationMetadata?: NotificationMetadata;
 }
+
 /**
  * An interface that abstracts the destination where events are sent/persisted
  */

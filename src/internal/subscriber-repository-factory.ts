@@ -22,7 +22,9 @@ export class SubscriberRepositoryFactory {
     }
   }
 
-  private createFromRepository(monitorProps: GenericMonitorProps<BlockchainSdk>) {
+  private createFromRepository(
+    monitorProps: GenericMonitorProps<BlockchainSdk>,
+  ) {
     const { subscriberRepository } = monitorProps;
     return this.decorateWithInmemoryIfNeeded(subscriberRepository);
   }
