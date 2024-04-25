@@ -1,6 +1,6 @@
 {
   "name": "@dialectlabs/monitor",
-  "version": "3.5.0",
+  "version": "3.5.1",
   "repository": "git@github.com:dialectlabs/monitor.git",
   "author": "dialectlabs",
   "license": "Apache-2.0",
@@ -13,7 +13,7 @@
   "dependencies": {
     "@dialectlabs/blockchain-sdk-aptos": "^1.0.3",
     "@dialectlabs/blockchain-sdk-solana": "^1.2.0",
-    "@dialectlabs/sdk": "^1.9.0",
+    "@dialectlabs/sdk": "^1.9.1",
     "@sendgrid/mail": "^7.6.2",
     "@solana/web3.js": "^1.91.7",
     "axios": "^1.6.8",

@@ -317,10 +317,10 @@
   resolved "https://registry.yarnpkg.com/@dialectlabs/blockchain-sdk-solana/-/blockchain-sdk-solana-1.2.0.tgz#9bc73519d0ba326b6e5dda90972e617f8d8e5265"
   integrity sha512-gluOP6+xEWmL59BCvZBQhisn91+lrGRE8NJ5oRRjgbRjgsLOR0xYGzNe4LSfB6CYG26Yv1kLPIRGsqHZQf+pNg==
 
-"@dialectlabs/sdk@^1.9.0":
-  version "1.9.0"
-  resolved "https://registry.yarnpkg.com/@dialectlabs/sdk/-/sdk-1.9.0.tgz#13bdccf187767d1584ce74b3cd065cd25c06e047"
-  integrity sha512-vXAFRL6L/+vzJVFUR0JbOghzEabM1CMKKWcYZ28UHCBwedLloY6fBD02xtKXHlUq2bTJikblWHtBFtIcOIMoqQ==
+"@dialectlabs/sdk@^1.9.1":
+  version "1.9.1"
+  resolved "https://registry.yarnpkg.com/@dialectlabs/sdk/-/sdk-1.9.1.tgz#a69af79d07f2cd11d5be77a573c654eecab9967e"
+  integrity sha512-pSxMiFbgvD9nE7F6EZrXSKySKkD5GzFyXnM2FYNj1eKQonGChw2ldYtnizR6Gm8Ct38Ly7e0R8P8TDh78Msg+g==
   dependencies:
     "@stablelib/base64" "^1.0.1"
     axios "^0.27.2"

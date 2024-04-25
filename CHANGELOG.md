@@ -2,6 +2,10 @@
 
 ## [UNRELEASED]
 
+## [3.5.1] - 2024-04-26
+
+- libs: bump dialect sdk version
+
 ## [3.5.0] - 2024-04-24
 
 - feat: support actions in sdk notifications
