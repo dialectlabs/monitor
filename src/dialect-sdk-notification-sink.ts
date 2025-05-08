@@ -17,6 +17,7 @@ import { uniqBy } from 'lodash';
 export interface DialectSdkNotification extends Notification {
   title: string;
   message: string;
+  imageUrl?: string;
   actions?: DappMessageLinksAction;
 }
 
@@ -31,7 +32,7 @@ export class DialectSdkNotificationSink
   ) {}
 
   async push(
-    { title, message, actions }: DialectSdkNotification,
+    { title, message, actions, imageUrl }: DialectSdkNotification,
     recipients: ResourceId[],
     { dispatchType, notificationMetadata }: NotificationSinkMetadata,
   ) {
@@ -52,6 +53,7 @@ export class DialectSdkNotificationSink
           message: message,
           recipient: theOnlyRecipient.toBase58(),
           notificationTypeId,
+          imageUrl,
           actionsV2: actions,
         });
       } else if (dispatchType === 'multicast') {
