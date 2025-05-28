@@ -310,17 +310,17 @@
   dependencies:
     tweetnacl "^1.0.3"
 
-"@dialectlabs/blockchain-sdk-solana@2.0.0-beta.1":
-  version "2.0.0-beta.1"
-  resolved "https://registry.yarnpkg.com/@dialectlabs/blockchain-sdk-solana/-/blockchain-sdk-solana-2.0.0-beta.1.tgz#cf6a6d3695ee3b92c7feb801ee30e27566437887"
-  integrity sha512-aBXSkrlr8sCeuscAADW4IKEq9sVMDKTK/qUAQmHxTk4w4BbwyFJ/ubmnac0ftUKDyQAWSF0fbJbHHCcLR6y5iw==
+"@dialectlabs/blockchain-sdk-solana@2.0.0-beta.4":
+  version "2.0.0-beta.4"
+  resolved "https://registry.yarnpkg.com/@dialectlabs/blockchain-sdk-solana/-/blockchain-sdk-solana-2.0.0-beta.4.tgz#0cd05ceb8b0d33d807165fe555be47af8b2f8d68"
+  integrity sha512-JapMTOJebDOdELdbx566dF1DHfrFPtfjgdZhcWmrD0iRPEBaV+tQE5rc7uHVPVBiU7SD2d/q8w++aFPFDqC0Dw==
   dependencies:
     "@solana/web3.js" "^1.95.2"
 
-"@dialectlabs/sdk@^2.0.0-beta.2":
-  version "2.0.0-beta.2"
-  resolved "https://registry.yarnpkg.com/@dialectlabs/sdk/-/sdk-2.0.0-beta.2.tgz#d45341aff72004c3b86521f8c2da2a0bb5b850ed"
-  integrity sha512-wDx99LSdbCiWEiplSkDEZgoo90S6xOdzlR1W6KbkV0+k35d11A7uK6jKbx1Cx267amjPryRvOCF7Z+3NMCqj+Q==
+"@dialectlabs/sdk@^2.0.0-beta.5":
+  version "2.0.0-beta.5"
+  resolved "https://registry.yarnpkg.com/@dialectlabs/sdk/-/sdk-2.0.0-beta.5.tgz#4147b3ac9b631a7771702be44ff7bf298d73689c"
+  integrity sha512-o8ngqmKE4ALZC2O1xK3L5F3qFO22NWkDT6IELAiaWSxGAi3QTy06NKXAH1DQWmXZ7j18oVg7rWdh80KVkocrGA==
   dependencies:
     "@stablelib/base64" "^1.0.1"
     axios "^0.27.2"
