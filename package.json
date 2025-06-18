@@ -1,6 +1,6 @@
 {
   "name": "@dialectlabs/monitor",
-  "version": "4.0.0-beta.3",
+  "version": "4.0.0-beta.4",
   "repository": "git@github.com:dialectlabs/monitor.git",
   "author": "dialectlabs",
   "license": "Apache-2.0",
@@ -10,10 +10,13 @@
   "scripts": {
     "build": "rm -rf lib && tsc"
   },
+  "files": [
+    "lib"
+  ],
   "dependencies": {
     "@dialectlabs/blockchain-sdk-aptos": "^1.0.3",
     "@dialectlabs/blockchain-sdk-solana": "2.0.0-beta.4",
-    "@dialectlabs/sdk": "^2.0.0-beta.5",
+    "@dialectlabs/sdk": "^2.0.0-beta.6",
     "@sendgrid/mail": "^7.6.2",
     "@solana/web3.js": "^1.98.2",
     "axios": "^1.9.0",
