@@ -10,6 +10,7 @@ import {
   DappMessageLinksAction,
   DialectSdk,
   IllegalStateError,
+  UnicastDappMessageCommand,
 } from '@dialectlabs/sdk';
 import { NotificationMetadata } from './monitor-builder';
 import { uniqBy } from 'lodash';
@@ -192,13 +193,14 @@ export class DialectSdkNotificationSink
     try {
       const dapp = await this.lookupDapp();
 
-      // Send each buffered notification
+      // Prepare batch messages
+      const batchMessages: UnicastDappMessageCommand[] = [];
       for (const { notification, recipient, metadata } of notificationsToSend) {
         const notificationTypeId = await this.tryResolveNotificationTypeId(
           metadata.notificationMetadata,
         );
 
-        await dapp.messages.send({
+        batchMessages.push({
           title: notification.title,
           message: notification.message,
           recipient: recipient.toBase58(),
@@ -207,6 +209,9 @@ export class DialectSdkNotificationSink
           actionsV2: notification.actions,
         });
       }
+
+      // Send as batch
+      await dapp.messages.sendBatch(batchMessages);
 
       if (this.debug) {
         console.log(
