@@ -21,15 +21,34 @@ export interface DialectSdkNotification extends Notification {
   actions?: DappMessageLinksAction;
 }
 
+interface BufferedUnicastNotification {
+  notification: DialectSdkNotification;
+  recipient: ResourceId;
+  metadata: NotificationSinkMetadata;
+}
+
+interface DialectSdkNotificationSinkOptions {
+  debug?: boolean;
+}
+
 export class DialectSdkNotificationSink
   implements NotificationSink<DialectSdkNotification>
 {
   private dapp: Dapp | null = null;
+  private unicastBuffer: BufferedUnicastNotification[] = [];
+  private flushInterval: ReturnType<typeof setInterval> | null = null;
+  private readonly bufferTimeMs: number = 10000; // 10 seconds
+  private readonly bufferSize: number = 500;
+  private readonly debug: boolean;
 
   constructor(
     private readonly sdk: DialectSdk<BlockchainSdk>,
     private readonly subscriberRepository: SubscriberRepository,
-  ) {}
+    options: DialectSdkNotificationSinkOptions = {},
+  ) {
+    this.debug = options.debug ?? false;
+    this.startFlushInterval();
+  }
 
   async push(
     { title, message, actions, imageUrl }: DialectSdkNotification,
@@ -41,6 +60,7 @@ export class DialectSdkNotificationSink
         notificationMetadata,
       );
       const dapp = await this.lookupDapp();
+
       if (dispatchType === 'unicast') {
         const theOnlyRecipient = recipients[0];
         if (!theOnlyRecipient) {
@@ -48,14 +68,25 @@ export class DialectSdkNotificationSink
             `No recipient specified for unicast notification`,
           );
         }
-        await dapp.messages.send({
-          title: title,
-          message: message,
-          recipient: theOnlyRecipient.toBase58(),
-          notificationTypeId,
-          imageUrl,
-          actionsV2: actions,
-        });
+
+        // Check if buffering should be used
+        if (this.sdk.config.dialectCloud.apiVersion === 2) {
+          await this.bufferUnicastNotification(
+            { title, message, actions, imageUrl },
+            theOnlyRecipient,
+            { dispatchType, notificationMetadata },
+          );
+        } else {
+          // Send immediately for non-v2 API
+          await dapp.messages.send({
+            title: title,
+            message: message,
+            recipient: theOnlyRecipient.toBase58(),
+            notificationTypeId,
+            imageUrl,
+            actionsV2: actions,
+          });
+        }
       } else if (dispatchType === 'multicast') {
         if (recipients.length === 0) {
           return;
@@ -85,6 +116,140 @@ export class DialectSdkNotificationSink
       );
     }
     return;
+  }
+
+  private startFlushInterval() {
+    if (!this.flushInterval) {
+      this.flushInterval = setInterval(() => {
+        this.flushUnicastBuffer().catch(console.error);
+      }, this.bufferTimeMs);
+
+      if (this.debug) {
+        console.log(
+          `[${new Date().toISOString()}] BUFFER: Started flush interval (${
+            this.bufferTimeMs
+          }ms)`,
+        );
+      }
+    }
+  }
+
+  private async bufferUnicastNotification(
+    notification: DialectSdkNotification,
+    recipient: ResourceId,
+    metadata: NotificationSinkMetadata,
+  ) {
+    // Add to buffer
+    this.unicastBuffer.push({
+      notification,
+      recipient,
+      metadata,
+    });
+
+    if (this.debug) {
+      console.log(
+        `[${new Date().toISOString()}] BUFFER: Added unicast notification to buffer. Buffer size: ${
+          this.unicastBuffer.length
+        }/${this.bufferSize}`,
+      );
+    }
+
+    // Check if buffer size limit reached
+    if (this.unicastBuffer.length >= this.bufferSize) {
+      if (this.debug) {
+        console.log(
+          `[${new Date().toISOString()}] BUFFER: Buffer size limit reached (${
+            this.bufferSize
+          }), triggering flush`,
+        );
+      }
+      await this.flushUnicastBuffer();
+    }
+  }
+
+  private async flushUnicastBuffer() {
+    if (this.unicastBuffer.length === 0) {
+      if (this.debug) {
+        console.log(
+          `[${new Date().toISOString()}] BUFFER: Flush called but buffer is empty, skipping`,
+        );
+      }
+      return;
+    }
+
+    // Get buffered notifications
+    const notificationsToSend = [...this.unicastBuffer];
+    this.unicastBuffer = [];
+
+    if (this.debug) {
+      console.log(
+        `[${new Date().toISOString()}] BUFFER: Flushing ${
+          notificationsToSend.length
+        } notifications`,
+      );
+    }
+
+    try {
+      const dapp = await this.lookupDapp();
+
+      // Send each buffered notification
+      for (const { notification, recipient, metadata } of notificationsToSend) {
+        const notificationTypeId = await this.tryResolveNotificationTypeId(
+          metadata.notificationMetadata,
+        );
+
+        await dapp.messages.send({
+          title: notification.title,
+          message: notification.message,
+          recipient: recipient.toBase58(),
+          notificationTypeId,
+          imageUrl: notification.imageUrl,
+          actionsV2: notification.actions,
+        });
+      }
+
+      if (this.debug) {
+        console.log(
+          `[${new Date().toISOString()}] BUFFER: Successfully flushed ${
+            notificationsToSend.length
+          } notifications`,
+        );
+      }
+    } catch (e) {
+      console.error(
+        `Failed to flush unicast buffer, reason: ${JSON.stringify(e)}`,
+      );
+      if (this.debug) {
+        console.log(
+          `[${new Date().toISOString()}] BUFFER: Flush failed with error: ${JSON.stringify(
+            e,
+          )}`,
+        );
+      }
+    }
+  }
+
+  // Public method to manually flush buffer (useful for cleanup)
+  async flush() {
+    if (this.debug) {
+      console.log(
+        `[${new Date().toISOString()}] BUFFER: Manual flush requested`,
+      );
+    }
+    await this.flushUnicastBuffer();
+  }
+
+  // Cleanup method to clear interval
+  destroy() {
+    if (this.flushInterval) {
+      clearInterval(this.flushInterval);
+      this.flushInterval = null;
+      if (this.debug) {
+        console.log(
+          `[${new Date().toISOString()}] BUFFER: Destroyed - cleared flush interval`,
+        );
+      }
+    }
   }
 
   private tryResolveNotificationTypeId(
