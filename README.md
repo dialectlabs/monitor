@@ -1,6 +1,3 @@
-> [!WARNING]
-> Dialect is sunsetting its Alerts, Blockchain Links, Markets and Positions products. If you are using these products you will need to find alternative solutions.
-
 # Monitoring Toolkit
 
 Monitor is an open-source framework that makes it easy to extract and transform on-chain data into targeted, timely smart messages. You can implement a monitor service to provide your dApp's users with smart messages.
